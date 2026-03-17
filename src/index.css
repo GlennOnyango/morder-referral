@@ -1,0 +1,42 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+
+:root {
+  --font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --font-heading: "Sora", "Trebuchet MS", sans-serif;
+
+  --color-ink: #0d2230;
+  --color-muted: #506071;
+  --color-primary: #117a65;
+  --color-accent: #f08b2e;
+  --color-danger: #b43b33;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background:
+    radial-gradient(1300px 600px at 0% -20%, rgba(15, 122, 101, 0.15), transparent 70%),
+    radial-gradient(800px 500px at 100% 0%, rgba(240, 139, 46, 0.17), transparent 72%),
+    linear-gradient(180deg, #ecf4f2 0%, #edf3f9 58%, #f0f5f9 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+}

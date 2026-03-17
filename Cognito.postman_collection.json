@@ -1,0 +1,205 @@
+{
+  "info": {
+    "_postman_id": "1f2b19eb-18f3-4dc1-90a7-825ff6e55291",
+    "name": "Cognito",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "7935847",
+    "_collection_link": "https://go.postman.co/collection/7935847-1f2b19eb-18f3-4dc1-90a7-825ff6e55291?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "CreateUser",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": " application/x-amz-json-1.1",
+            "type": "text"
+          },
+          {
+            "key": "X-Amz-Target",
+            "value": " AWSCognitoIdentityProviderService.SignUp",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n   \"ClientId\": \"2v5fd6rccq9dsk1v0ijpjt02k0\",\r\n   \"Password\": \"Testing1234.?\",\r\n   \"UserAttributes\": [ \r\n      { \r\n         \"Name\": \"birthdate\",\r\n         \"Value\": \"2000-01-01\"\r\n      },\r\n      { \r\n         \"Name\": \"phone_number\",\r\n         \"Value\": \"+254700000000\"\r\n      },\r\n      { \r\n         \"Name\": \"name\",\r\n         \"Value\": \"John Doe\"\r\n      },\r\n      { \r\n         \"Name\": \"email\",\r\n         \"Value\": \"useactualmail\"\r\n      },\r\n      { \r\n         \"Name\": \"updated_at\",\r\n         \"Value\": \"1773090719\"\r\n      },\r\n      { \r\n         \"Name\": \"custom:facility_id\",\r\n         \"Value\": \"{{$guid}}\"\r\n      }\r\n   ],\r\n\r\n   \"Username\": \"johndoe\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://cognito-idp.us-east-1.amazonaws.com",
+          "protocol": "https",
+          "host": [
+            "cognito-idp",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ConfirmSignUp",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": " application/x-amz-json-1.1",
+            "type": "text"
+          },
+          {
+            "key": "X-Amz-Target",
+            "value": " AWSCognitoIdentityProviderService.ConfirmSignUp",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"ClientId\": \"#######\",\r\n  \"Username\": \"johndoe\",\r\n  \"ConfirmationCode\": \"#####\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://cognito-idp.us-east-1.amazonaws.com",
+          "protocol": "https",
+          "host": [
+            "cognito-idp",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "InitiateAuth (Login)",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": " application/x-amz-json-1.1",
+            "type": "text"
+          },
+          {
+            "key": "X-Amz-Target",
+            "value": " AWSCognitoIdentityProviderService.InitiateAuth",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\r\n    \"ClientId\": \"########\",\r\n    // pass session only for first time sign in\r\n    \"Session\": \"####-####\",\r\n    \"AuthParameters\": {\r\n        \"USERNAME\": \"useactualmail\",\r\n        \"PASSWORD\": \"Testing1234.?\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://cognito-idp.us-east-1.amazonaws.com",
+          "protocol": "https",
+          "host": [
+            "cognito-idp",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "InitiateAuth (Login)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/x-amz-json-1.1",
+                "type": "text"
+              },
+              {
+                "key": "X-Amz-Target",
+                "value": " AWSCognitoIdentityProviderService.InitiateAuth",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\r\n    \"ClientId\": \"#####\",\r\n    // pass session only for first time sign in\r\n    \"Session\": \"######\",\r\n    \"AuthParameters\": {\r\n        \"USERNAME\": \"######\",\r\n        \"PASSWORD\": \"Testing1234.?\"\r\n    }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://cognito-idp.us-east-1.amazonaws.com",
+              "protocol": "https",
+              "host": [
+                "cognito-idp",
+                "us-east-1",
+                "amazonaws",
+                "com"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Mon, 09 Mar 2026 21:36:26 GMT"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/x-amz-json-1.1"
+            },
+            {
+              "key": "Content-Length",
+              "value": "4201"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "x-amzn-RequestId",
+              "value": "####"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"AuthenticationResult\": {\n        \"AccessToken\": \"#####\",\n        \"TokenType\": \"Bearer\"\n    },\n    \"ChallengeParameters\": {}\n}"
+        }
+      ]
+    }
+  ]
+}
