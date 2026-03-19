@@ -29,6 +29,7 @@ function DashboardPage() {
   const { isAuthenticated, session } = useAuthContext();
   const role = session?.role ?? "unknown";
   const canViewMetrics = role === "super_admin";
+  const isRolePending = role === "unknown";
 
   const dashboardQuery = useQuery({
     queryKey: ["dashboard-metrics", session?.accessToken],
@@ -39,7 +40,7 @@ function DashboardPage() {
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
   }
-
+  
   return (
     <section className="dashboard-shell reveal delay-1">
       <div className="dashboard-heading">
@@ -51,7 +52,14 @@ function DashboardPage() {
         </p>
       </div>
 
-      {!canViewMetrics ? (
+      {isRolePending ? (
+        <article className="access-note">
+          <h2>Role pending</h2>
+          <p>Wait for admin to give you a role to be able to access the system.</p>
+        </article>
+      ) : null}
+
+      {!canViewMetrics && !isRolePending ? (
         <article className="access-note">
           <h2>Restricted dashboard</h2>
           <p>Only `super_admin` users can view organization, service, and patient metrics.</p>

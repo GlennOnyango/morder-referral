@@ -2,11 +2,15 @@ import { Link, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { useAuthContext } from "./context/AuthContext";
 import DashboardPage from "./pages/DashboardPage";
+import ConfirmSignUpPage from "./pages/ConfirmSignUpPage";
 import HomePage from "./pages/HomePage";
 import OrganizationFormPage from "./pages/OrganizationFormPage";
 import OrganizationServicesPage from "./pages/OrganizationServicesPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
+import UserRolesPage from "./pages/UserRolesPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 
@@ -14,6 +18,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 function App() {
   const { logout, isAuthenticated, session } = useAuthContext();
   const canManageOrganizations = session?.role === "admin" || session?.role === "super_admin";
+  const canManageUsers = session?.role === "super_admin";
 
   return (
     <div className="landing-page">
@@ -39,6 +44,11 @@ function App() {
                 Organizations
               </Link>
             ) : null}
+            {canManageUsers ? (
+              <Link className="btn btn-ghost" to="/users">
+                Users
+              </Link>
+            ) : null}
             <button
               type="button"
               className="btn btn-outline"
@@ -54,6 +64,9 @@ function App() {
             <Link className="btn btn-ghost" to="/signin">
               Sign in
             </Link>
+            <Link className="btn btn-primary" to="/signup">
+              Sign up
+            </Link>
           </div>
         )}
       </header>
@@ -62,6 +75,17 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={<SignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/confirm-signup" element={<ConfirmSignUpPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute allowedRoles={["super_admin"]}>
+                <UserRolesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

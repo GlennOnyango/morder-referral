@@ -238,6 +238,10 @@ main {
   padding: clamp(20px, 4vw, 34px);
 }
 
+.auth-card-wide {
+  width: min(100%, 760px);
+}
+
 .auth-card h1 {
   margin: 10px 0 0;
   font-family: var(--font-heading);
@@ -256,6 +260,27 @@ main {
 
 .auth-form {
   margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.auth-links-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.auth-text-link {
+  color: #0f5a78;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.auth-text-link:hover {
+  text-decoration: underline;
+}
+
+.auth-grid-two {
   display: grid;
   gap: 14px;
 }
@@ -549,6 +574,11 @@ main {
 .org-btn {
   padding: 8px 13px;
   font-size: 0.84rem;
+}
+
+.user-role-select {
+  min-width: 150px;
+  padding-block: 8px;
 }
 
 .org-form {
@@ -899,6 +929,12 @@ main {
 
   .org-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 981px) {
+  .auth-grid-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 
 function EyeIcon() {
@@ -121,6 +121,12 @@ function SignInPage() {
               </button>
             </div>
           </label>
+
+          <div className="auth-links-row">
+            <Link className="auth-text-link" to={`/reset-password?username=${encodeURIComponent(email.trim())}`}>
+              Forgot password?
+            </Link>
+          </div>
 
           <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign in"}
