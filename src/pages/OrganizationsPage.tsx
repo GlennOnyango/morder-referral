@@ -61,7 +61,7 @@ function OrganizationsPage() {
         <div>
           <p className="eyebrow">Organizations</p>
           <h1>Manage organizations</h1>
-          <p>View, create, update, and delete organization records.</p>
+          <p>View, create, update, and delete organizations, then open users per organization.</p>
         </div>
         {canManageOrganizations ? (
           <Link className="btn btn-primary" to="/organizations/new">
@@ -112,6 +112,7 @@ function OrganizationsPage() {
                   {organizationsQuery.data.map((organization) => {
                     const organizationId = organization.id ?? "";
                     const organizationName = organization.name ?? "Unnamed";
+                    const facilityCode = organization.facility_code?.trim() ?? "";
 
                     return (
                       <tr key={organizationId || organizationName}>
@@ -136,6 +137,11 @@ function OrganizationsPage() {
                                 to={`/organizations/${organizationId}/services`}
                               >
                                 Services
+                              </Link>
+                            ) : null}
+                            {organizationId && facilityCode ? (
+                              <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/users`}>
+                                Users
                               </Link>
                             ) : null}
                             {organizationId ? (

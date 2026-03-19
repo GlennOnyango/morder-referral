@@ -6,11 +6,11 @@ import ConfirmSignUpPage from "./pages/ConfirmSignUpPage";
 import HomePage from "./pages/HomePage";
 import OrganizationFormPage from "./pages/OrganizationFormPage";
 import OrganizationServicesPage from "./pages/OrganizationServicesPage";
+import OrganizationUsersPage from "./pages/OrganizationUsersPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
-import UserRolesPage from "./pages/UserRolesPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 
@@ -18,7 +18,6 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 function App() {
   const { logout, isAuthenticated, session } = useAuthContext();
   const canManageOrganizations = session?.role === "admin" || session?.role === "super_admin";
-  const canManageUsers = session?.role === "super_admin";
 
   return (
     <div className="landing-page">
@@ -42,11 +41,6 @@ function App() {
             {canManageOrganizations ? (
               <Link className="btn btn-ghost" to="/organizations">
                 Organizations
-              </Link>
-            ) : null}
-            {canManageUsers ? (
-              <Link className="btn btn-ghost" to="/users">
-                Users
               </Link>
             ) : null}
             <button
@@ -81,8 +75,8 @@ function App() {
           <Route
             path="/users"
             element={
-              <ProtectedRoute allowedRoles={["super_admin"]}>
-                <UserRolesPage />
+              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                <Navigate to="/organizations" replace />
               </ProtectedRoute>
             }
           />
@@ -123,6 +117,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
                 <OrganizationServicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organizations/:id/users"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                <OrganizationUsersPage />
               </ProtectedRoute>
             }
           />

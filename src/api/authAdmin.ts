@@ -5,10 +5,10 @@ const AUTHENTICATION_BASE_URL =
   "https://nrs-authentication-production.up.railway.app";
 const ATTACH_ROLE_PATH =
   (import.meta.env.VITE_AUTH_ATTACH_ROLE_PATH as string | undefined) ??
-  "/api/v1/auth/me/attach-role";
-const AUTH_USERS_PATH =
-  (import.meta.env.VITE_AUTH_USERS_PATH as string | undefined) ??
-  "/api/v1/auth/users";
+  "/auth/me/attach-role";
+const FACILITY_USERS_PATH =
+  (import.meta.env.VITE_AUTH_FACILITY_USERS_PATH as string | undefined) ??
+  "/get-facility-users";
 
 const authAdminApi = axios.create({
   baseURL: AUTHENTICATION_BASE_URL,
@@ -112,6 +112,13 @@ function extractUsersPayload(payload: unknown): unknown[] {
     if (Array.isArray(value)) {
       return value;
     }
+
+    if (isRecord(value)) {
+      const nested = extractUsersPayload(value);
+      if (nested.length > 0) {
+        return nested;
+      }
+    }
   }
 
   return [];
@@ -137,8 +144,18 @@ function normalizeUser(input: unknown): AuthUser | null {
 
   const attributes = parseAttributes(input.Attributes ?? input.attributes ?? input.userAttributes);
   const username =
-    pickString(input, ["username", "Username", "userName", "preferred_username"]) ??
+    pickString(input, [
+      "username",
+      "Username",
+      "userName",
+      "preferred_username",
+      "user_id",
+      "userId",
+      "id",
+      "sub",
+    ]) ??
     attributes.preferred_username ??
+    attributes.sub ??
     attributes.email;
 
   if (!username) {
@@ -146,7 +163,7 @@ function normalizeUser(input: unknown): AuthUser | null {
   }
 
   const email = pickString(input, ["email", "Email"]) ?? attributes.email;
-  const name = pickString(input, ["name", "Name"]) ?? attributes.name;
+  const name = pickString(input, ["name", "Name", "full_name", "fullName"]) ?? attributes.name;
   const status =
     pickString(input, ["status", "Status", "UserStatus", "userStatus"]) ?? attributes.status;
   const enabled = pickBoolean(input, ["enabled", "Enabled"]);
@@ -156,7 +173,7 @@ function normalizeUser(input: unknown): AuthUser | null {
     pickString(input, ["updatedAt", "UpdatedAt", "UserLastModifiedDate"]) ??
     attributes.updated_at;
   const groups = parseGroups(
-    input.groups ?? input.groupNames ?? input.roles ?? input["cognito:groups"],
+    input.groups ?? input.groupNames ?? input.roles ?? input.role ?? input["cognito:groups"],
   );
 
   return {
@@ -178,33 +195,21 @@ function normalizeUsers(payload: unknown): AuthUser[] {
     .filter((user): user is AuthUser => Boolean(user));
 }
 
-export async function listAllAuthUsers(accessToken?: string): Promise<AuthUser[]> {
-  const candidatePaths = Array.from(new Set([AUTH_USERS_PATH, "/api/v1/auth/me/users"]));
-  let last404 = false;
-
-  for (const path of candidatePaths) {
-    try {
-      const response = await authAdminApi.get<unknown>(path, {
-        headers: authHeaders(accessToken),
-      });
-
-      return normalizeUsers(response.data);
-    } catch (error) {
-      if (!axios.isAxiosError(error) || error.response?.status !== 404) {
-        throw error;
-      }
-
-      last404 = true;
-    }
+export async function listFacilityUsers(
+  facilityId: string,
+  accessToken?: string,
+): Promise<AuthUser[]> {
+  const trimmedFacilityId = facilityId.trim();
+  if (!trimmedFacilityId) {
+    throw new Error("Missing facility_id. Sign in again or contact support.");
   }
 
-  if (last404) {
-    throw new Error(
-      "Could not find a users endpoint. Set VITE_AUTH_USERS_PATH to your authentication users route.",
-    );
-  }
+  const response = await authAdminApi.get<unknown>(FACILITY_USERS_PATH, {
+    params: { facility_id: trimmedFacilityId },
+    headers: authHeaders(accessToken),
+  });
 
-  return [];
+  return normalizeUsers(response.data);
 }
 
 export async function attachRoleToUser(

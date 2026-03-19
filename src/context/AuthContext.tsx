@@ -16,6 +16,7 @@ export type AuthSession = {
   idToken: string;
   role: AppRole;
   email?: string;
+  facilityId?: string;
 };
 
 type AuthContextValue = {
@@ -116,6 +117,22 @@ function extractEmail(claims?: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+function extractFacilityId(claims?: Record<string, unknown>): string | undefined {
+  if (!claims) {
+    return undefined;
+  }
+
+  const candidates = ["custom:facility_id", "facility_id", "facilityId"] as const;
+  for (const key of candidates) {
+    const value = claims[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
 function readStoredSession(): AuthSession | null {
   if (typeof window === "undefined") {
     return null;
@@ -171,12 +188,14 @@ async function buildSession(): Promise<AuthSession | null> {
           ? roleFromAccessToken
           : roleFromIdToken;
     const email = extractEmail(idTokenPayload) ?? extractEmail(accessTokenPayload);
+    const facilityId = extractFacilityId(idTokenPayload) ?? extractFacilityId(accessTokenPayload);
 
     return {
       accessToken,
       idToken,
       role,
       email,
+      facilityId,
     };
   } catch {
     return null;
