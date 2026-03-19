@@ -110,6 +110,8 @@ function OrganizationsPage() {
                 </thead>
                 <tbody>
                   {organizationsQuery.data.map((organization) => {
+
+                    console.log("Rendering organization:", organization); // Debug log to check organization data
                     const organizationId = organization.id ?? "";
                     const organizationName = organization.name ?? "Unnamed";
                     const facilityCode = organization.facility_code?.trim() ?? "";

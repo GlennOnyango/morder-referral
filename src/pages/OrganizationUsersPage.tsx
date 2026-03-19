@@ -65,7 +65,7 @@ function OrganizationUsersPage() {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
-  const facilityId = organizationQuery.data?.facility_code?.trim() ?? "";
+  const facilityId = organizationQuery.data?.id?.trim() ?? "";
 
   const usersQuery = useQuery({
     queryKey: ["organization-users", organizationId, facilityId, session?.accessToken],
