@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
   attachRoleToUser,
+  FACILITY_USER_GROUP_FILTERS,
   listFacilityUsers,
   type AuthGroupName,
   type AuthUser,
+  type FacilityUserGroupFilter,
 } from "../api/authAdmin";
 import { useAuthContext } from "../context/AuthContext";
 
@@ -44,6 +46,14 @@ function inferDefaultGroup(user: AuthUser): AuthGroupName {
   return "USER";
 }
 
+const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string> = {
+  none: "none",
+  all: "all",
+  hospital_admin: "hospital_admin",
+  doctor: "doctor",
+  nurse: "nurse",
+};
+
 function UserRolesPage() {
   const { session, isAuthenticated } = useAuthContext();
   const role = session?.role ?? "unknown";
@@ -53,11 +63,19 @@ function UserRolesPage() {
   const [selectedGroupByUsername, setSelectedGroupByUsername] = useState<
     Record<string, AuthGroupName>
   >({});
+  const [selectedUserGroupFilter, setSelectedUserGroupFilter] =
+    useState<FacilityUserGroupFilter>("none");
   const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
 
   const usersQuery = useQuery({
-    queryKey: ["auth-users", session?.accessToken, session?.facilityId],
-    queryFn: () => listFacilityUsers(session?.facilityId ?? "", session?.accessToken),
+    queryKey: [
+      "auth-users",
+      session?.accessToken,
+      session?.facilityId,
+      selectedUserGroupFilter,
+    ],
+    queryFn: () =>
+      listFacilityUsers(session?.facilityId ?? "", selectedUserGroupFilter, session?.accessToken),
     enabled: isAuthenticated && isSuperAdmin && Boolean(session?.facilityId),
   });
 
@@ -100,6 +118,25 @@ function UserRolesPage() {
           <p className="eyebrow">Access Control</p>
           <h1>Manage user roles</h1>
           <p>View facility users and attach a role group (`USER`, `ADMIN`, `SUPER_ADMIN`).</p>
+        </div>
+        <div className="org-actions">
+          <label className="org-filter-control" htmlFor="facility-group-filter">
+            Group filter
+            <select
+              id="facility-group-filter"
+              className="field-input org-filter-select"
+              value={selectedUserGroupFilter}
+              onChange={(event) =>
+                setSelectedUserGroupFilter(event.target.value as FacilityUserGroupFilter)
+              }
+            >
+              {FACILITY_USER_GROUP_FILTERS.map((group) => (
+                <option key={group} value={group}>
+                  {FACILITY_USER_GROUP_FILTER_LABELS[group]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 

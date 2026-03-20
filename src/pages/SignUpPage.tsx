@@ -9,10 +9,10 @@ type SignUpFormState = {
   phoneNumber: string;
   password: string;
   birthdate: string;
-  facilityId: string;
+  facility_code: string;
 };
 
-const FACILITY_ID_MIN_LENGTH = 20;
+const FACILITY_CODE_MIN_LENGTH = 2;
 
 const defaultFormState: SignUpFormState = {
   email: "",
@@ -20,7 +20,7 @@ const defaultFormState: SignUpFormState = {
   phoneNumber: "",
   password: "",
   birthdate: "",
-  facilityId: "",
+  facility_code: "",
 };
 
 function EyeIcon() {
@@ -71,11 +71,11 @@ function SignUpPage() {
       phone_number: formState.phoneNumber.trim(),
       password: formState.password,
       birthdate: formState.birthdate,
-      facility_id: formState.facilityId.trim(),
+      facility_code: formState.facility_code.trim(),
     };
 
-    if (payload.facility_id.length < FACILITY_ID_MIN_LENGTH) {
-      setMessage(`Facility ID must be at least ${FACILITY_ID_MIN_LENGTH} characters.`);
+    if (payload.facility_code.length < FACILITY_CODE_MIN_LENGTH) {
+      setMessage(`Facility Code must be at least ${FACILITY_CODE_MIN_LENGTH} characters.`);
       setIsSubmitting(false);
       return;
     }
@@ -159,16 +159,16 @@ function SignUpPage() {
             </label>
 
             <label className="field">
-              <span>Facility ID</span>
+              <span>Facility Code</span>
               <input
                 className="field-input"
-                value={formState.facilityId}
+                value={formState.facility_code}
                 onChange={(event) =>
-                  setFormState((current) => ({ ...current, facilityId: event.target.value }))
+                  setFormState((current) => ({ ...current, facility_code: event.target.value }))
                 }
                 required
-                minLength={FACILITY_ID_MIN_LENGTH}
-                title={`Facility ID must be at least ${FACILITY_ID_MIN_LENGTH} characters`}
+                minLength={FACILITY_CODE_MIN_LENGTH}
+                title={`Facility Code must be at least ${FACILITY_CODE_MIN_LENGTH} characters`}
                 placeholder="FAC-001"
               />
             </label>

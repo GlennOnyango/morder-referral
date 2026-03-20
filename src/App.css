@@ -530,6 +530,12 @@ main {
   overflow-x: auto;
 }
 
+.org-table-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
 .org-table {
   width: 100%;
   border-collapse: collapse;
@@ -569,6 +575,23 @@ main {
 .org-actions {
   display: inline-flex;
   gap: 8px;
+  align-items: end;
+}
+
+.org-filter-control {
+  display: grid;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: #375163;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.org-filter-select {
+  min-width: 170px;
+  padding-block: 8px;
+  text-transform: none;
+  font-size: 0.9rem;
 }
 
 .org-btn {
@@ -972,6 +995,10 @@ main {
   .org-header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .org-table-tools {
+    justify-content: flex-start;
   }
 }
 

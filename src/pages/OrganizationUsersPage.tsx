@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
   attachRoleToUser,
+  FACILITY_USER_GROUP_FILTERS,
   listFacilityUsers,
   type AuthGroupName,
   type AuthUser,
+  type FacilityUserGroupFilter,
 } from "../api/authAdmin";
 import { getOrganizationById } from "../api/organizations";
 import { useAuthContext } from "../context/AuthContext";
@@ -45,6 +47,14 @@ function inferDefaultGroup(user: AuthUser): AuthGroupName {
   return "USER";
 }
 
+const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string> = {
+  none: "none",
+  all: "all",
+  hospital_admin: "hospital_admin",
+  doctor: "doctor",
+  nurse: "nurse",
+};
+
 function OrganizationUsersPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
@@ -57,6 +67,8 @@ function OrganizationUsersPage() {
   const [selectedGroupByUsername, setSelectedGroupByUsername] = useState<
     Record<string, AuthGroupName>
   >({});
+  const [selectedUserGroupFilter, setSelectedUserGroupFilter] =
+    useState<FacilityUserGroupFilter>("none");
   const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
 
   const organizationQuery = useQuery({
@@ -65,12 +77,18 @@ function OrganizationUsersPage() {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
-  const facilityId = organizationQuery.data?.id?.trim() ?? "";
+  const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
   const usersQuery = useQuery({
-    queryKey: ["organization-users", organizationId, facilityId, session?.accessToken],
-    queryFn: () => listFacilityUsers(facilityId, session?.accessToken),
-    enabled: canManageOrganizations && facilityId.length > 0,
+    queryKey: [
+      "organization-users",
+      organizationId,
+      facilityCode,
+      selectedUserGroupFilter,
+      session?.accessToken,
+    ],
+    queryFn: () => listFacilityUsers(facilityCode, selectedUserGroupFilter, session?.accessToken),
+    enabled: canManageOrganizations && facilityCode.length > 0,
   });
 
   const attachRoleMutation = useMutation({
@@ -143,7 +161,7 @@ function OrganizationUsersPage() {
         </article>
       ) : null}
 
-      {organizationQuery.data && !facilityId ? (
+      {organizationQuery.data && !facilityCode ? (
         <article className="access-note error-block">
           <h2>Missing facility code</h2>
           <p>This organization has no facility code, so users cannot be loaded.</p>
@@ -166,6 +184,25 @@ function OrganizationUsersPage() {
 
       {usersQuery.data ? (
         <article className="org-table-card">
+          <div className="org-table-tools">
+            <label className="org-filter-control" htmlFor="organization-group-filter">
+              Group filter
+              <select
+                id="organization-group-filter"
+                className="field-input org-filter-select"
+                value={selectedUserGroupFilter}
+                onChange={(event) =>
+                  setSelectedUserGroupFilter(event.target.value as FacilityUserGroupFilter)
+                }
+              >
+                {FACILITY_USER_GROUP_FILTERS.map((group) => (
+                  <option key={group} value={group}>
+                    {FACILITY_USER_GROUP_FILTER_LABELS[group]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           {users.length === 0 ? (
             <p className="org-empty">No users found for this organization.</p>
           ) : (

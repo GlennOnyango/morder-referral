@@ -61,7 +61,7 @@ export async function registerUser(input: {
     phone_number: string;
     password: string;
     birthdate: string;
-    facility_id: string
+    facility_code: string
 }) {
     const username = makeUsername(input.email);
 
@@ -75,7 +75,7 @@ export async function registerUser(input: {
                 name: input.name,
                 phone_number: input.phone_number,
                 updated_at: Math.floor(Date.now() / 1000).toString(),
-                "custom:facility_id": input.facility_id
+                "custom:facility_code": input.facility_code.trim(),
             },
         },
     });

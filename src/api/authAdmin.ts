@@ -136,6 +136,14 @@ export type AuthUser = {
 };
 
 export type AuthGroupName = "USER" | "ADMIN" | "SUPER_ADMIN";
+export const FACILITY_USER_GROUP_FILTERS = [
+  "none",
+  "all",
+  "hospital_admin",
+  "doctor",
+  "nurse",
+] as const;
+export type FacilityUserGroupFilter = (typeof FACILITY_USER_GROUP_FILTERS)[number];
 
 function normalizeUser(input: unknown): AuthUser | null {
   if (!isRecord(input)) {
@@ -196,16 +204,17 @@ function normalizeUsers(payload: unknown): AuthUser[] {
 }
 
 export async function listFacilityUsers(
-  facilityId: string,
+  facility_code: string,
+  group: FacilityUserGroupFilter,
   accessToken?: string,
 ): Promise<AuthUser[]> {
-  const trimmedFacilityId = facilityId.trim();
-  if (!trimmedFacilityId) {
-    throw new Error("Missing facility_id. Sign in again or contact support.");
+  const trimmedFacilityCode = facility_code.trim();
+  if (!trimmedFacilityCode) {
+    throw new Error("Missing facility_code. Sign in again or contact support.");
   }
 
   const response = await authAdminApi.get<unknown>(FACILITY_USERS_PATH, {
-    params: { facility_id: trimmedFacilityId },
+    params: { facility_code: trimmedFacilityCode, group },
     headers: authHeaders(accessToken),
   });
 
