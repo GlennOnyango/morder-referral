@@ -36,15 +36,15 @@ function formatError(error: unknown): string {
 function inferDefaultGroup(user: AuthUser): AuthGroupName {
   const normalizedGroups = user.groups.map((group) => group.trim().toUpperCase());
 
-  if (normalizedGroups.includes("SUPER_ADMIN")) {
-    return "SUPER_ADMIN";
+  if (normalizedGroups.includes("HOSPITAL_ADMIN")) {
+    return "HOSPITAL_ADMIN";
   }
 
-  if (normalizedGroups.includes("ADMIN")) {
-    return "ADMIN";
+  if (normalizedGroups.includes("DOCTOR")) {
+    return "DOCTOR";
   }
 
-  return "USER";
+  return "NURSE";
 }
 
 const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string> = {
@@ -237,9 +237,9 @@ function OrganizationUsersPage() {
                               }))
                             }
                           >
-                            <option value="USER">USER</option>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                            <option value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</option>
+                            <option value="DOCTOR">DOCTOR</option>
+                            <option value="NURSE">NURSE</option>
                           </select>
                         </td>
                       ) : null}

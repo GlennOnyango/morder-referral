@@ -5,7 +5,7 @@ const AUTHENTICATION_BASE_URL =
   "https://nrs-authentication-production.up.railway.app";
 const ATTACH_ROLE_PATH =
   (import.meta.env.VITE_AUTH_ATTACH_ROLE_PATH as string | undefined) ??
-  "/auth/me/attach-role";
+  "/attach-role";
 const FACILITY_USERS_PATH =
   (import.meta.env.VITE_AUTH_FACILITY_USERS_PATH as string | undefined) ??
   "/get-facility-users";
@@ -135,7 +135,7 @@ export type AuthUser = {
   updatedAt?: string;
 };
 
-export type AuthGroupName = "USER" | "ADMIN" | "SUPER_ADMIN";
+export type AuthGroupName = "HOSPITAL_ADMIN" | "DOCTOR" | "NURSE";
 export const FACILITY_USER_GROUP_FILTERS = [
   "none",
   "all",
