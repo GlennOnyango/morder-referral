@@ -91,7 +91,7 @@ function OrganizationWorkspacePage() {
   }
 
   if (!organizationId) {
-    return <Navigate to="/organizations" replace />;
+    return <Navigate to="/facilities" replace />;
   }
 
   const servicesCount =
@@ -121,25 +121,25 @@ function OrganizationWorkspacePage() {
     <section className="org-shell reveal delay-1">
       <div className="org-header">
         <div>
-          <p className="eyebrow">Organizations</p>
+          <p className="eyebrow">Facilities</p>
           <h1>
-            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading organization..." : "Organization")}
+            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading facility..." : "Facility")}
           </h1>
-          <p>Organization workspace with high-level statistics and quick actions.</p>
+          <p>Facility workspace with high-level statistics and quick actions.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to="/organizations">
-            Back to Organizations
+          <Link className="btn btn-ghost org-btn" to="/facilities">
+            Back to Facilities
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/edit`}>
-            Edit Organization
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/edit`}>
+            Edit Facility
           </Link>
         </div>
       </div>
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">
-          <h2>Could not load organization</h2>
+          <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
       ) : null}
@@ -148,23 +148,23 @@ function OrganizationWorkspacePage() {
         <StatCard
           title="Services"
           value={servicesCount}
-          description="Total services configured for this organization."
+          description="Total services configured for this facility."
           actionLabel="Open Services"
-          actionTo={`/organizations/${organizationId}/services`}
+          actionTo={`/facilities/${organizationId}/services`}
         />
         <StatCard
           title="Users"
           value={usersCount}
           description="Users discovered from the facility user registry."
           actionLabel="Open Users"
-          actionTo={`/organizations/${organizationId}/users`}
+          actionTo={`/facilities/${organizationId}/users`}
         />
         <StatCard
           title="Patients"
           value={patientsCount}
           description="Current patient records available in the patient service."
           actionLabel="Open Patients"
-          actionTo={`/organizations/${organizationId}/patients`}
+          actionTo={`/facilities/${organizationId}/patients`}
         />
         <StatCard
           title="Referrals"
@@ -189,3 +189,5 @@ function OrganizationWorkspacePage() {
 }
 
 export default OrganizationWorkspacePage;
+
+

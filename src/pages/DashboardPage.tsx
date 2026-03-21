@@ -37,7 +37,7 @@ function MetricCard({
 function DashboardPage() {
   const { isAuthenticated, session } = useAuthContext();
   const role = session?.role ?? "unknown";
-  const canManageOrganizations = role === "admin" || role === "super_admin";
+  const canManageFacilities = role === "admin" || role === "super_admin";
   const canViewMetrics = role === "super_admin";
   const isRolePending = role === "unknown";
 
@@ -72,14 +72,14 @@ function DashboardPage() {
       {!canViewMetrics && !isRolePending ? (
         <article className="access-note">
           <h2>Restricted dashboard</h2>
-          <p>Only `super_admin` users can view organization, service, and patient metrics.</p>
+          <p>Only `super_admin` users can view facility, service, and patient metrics.</p>
         </article>
       ) : null}
 
       {canViewMetrics && dashboardQuery.isLoading ? (
         <article className="access-note">
           <h2>Loading metrics</h2>
-          <p>Pulling organization, service, and patient data...</p>
+          <p>Pulling facility, service, and patient data...</p>
         </article>
       ) : null}
 
@@ -93,13 +93,13 @@ function DashboardPage() {
       {canViewMetrics && dashboardQuery.data ? (
         <div className="metric-grid">
           <MetricCard
-            title="Organization Metrics"
+            title="Facility Metrics"
             items={dashboardQuery.data.organizationMetrics}
             action={
-              canManageOrganizations
+              canManageFacilities
                 ? {
-                    label: "View organizations",
-                    to: "/organizations",
+                    label: "View facilities",
+                    to: "/facilities",
                   }
                 : undefined
             }
@@ -113,3 +113,4 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+

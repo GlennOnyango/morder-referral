@@ -128,13 +128,13 @@ export async function fetchDashboardMetrics(accessToken?: string): Promise<Dashb
 
   return {
     organizationMetrics: [
-      { label: "Total Organizations", value: organizations.length },
+      { label: "Total Facilities", value: organizations.length },
       { label: "Top Facility Level", value: pickTopLabel(levelCounts, "n/a") },
       { label: "Top Ownership Type", value: pickTopLabel(ownershipCounts, "n/a") },
     ],
     serviceMetrics: [
       { label: "Total Services", value: services.length },
-      { label: "Average Services / Organization", value: servicesPerOrganization },
+      { label: "Average Services / Facility", value: servicesPerOrganization },
       { label: "Most Common Availability", value: pickTopLabel(availabilityCounts, "n/a") },
     ],
     patientMetrics: [

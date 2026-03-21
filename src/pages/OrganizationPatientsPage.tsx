@@ -242,7 +242,7 @@ function OrganizationPatientsPage() {
   }
 
   if (!organizationId) {
-    return <Navigate to="/organizations" replace />;
+    return <Navigate to="/facilities" replace />;
   }
 
   return (
@@ -252,29 +252,29 @@ function OrganizationPatientsPage() {
           <p className="eyebrow">Patients</p>
           <h1>
             Patient workflow:{" "}
-            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading organization..." : "Organization")}
+            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading facility..." : "Facility")}
           </h1>
           <p>Search, create, update, and delete patient records.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}`}>
             Workspace
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/services`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/services`}>
             Services
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/users`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/users`}>
             Users
           </Link>
-          <Link className="btn btn-ghost org-btn" to="/organizations">
-            Back to Organizations
+          <Link className="btn btn-ghost org-btn" to="/facilities">
+            Back to Facilities
           </Link>
         </div>
       </div>
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">
-          <h2>Could not load organization</h2>
+          <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
       ) : null}
@@ -551,3 +551,5 @@ function OrganizationPatientsPage() {
 }
 
 export default OrganizationPatientsPage;
+
+

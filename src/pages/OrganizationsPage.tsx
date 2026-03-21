@@ -42,34 +42,34 @@ function OrganizationsPage() {
     <section className="org-shell reveal delay-1">
       <div className="org-header">
         <div>
-          <p className="eyebrow">Organizations</p>
-          <h1>Manage organizations</h1>
-          <p>View and update organizations, then open each organization workspace for services, users, and patients.</p>
+          <p className="eyebrow">Facilities</p>
+          <h1>Manage facilities</h1>
+          <p>View and update facilities, then open each facility workspace for services, users, and patients.</p>
         </div>
         {canManageOrganizations ? (
-          <Link className="btn btn-primary" to="/organizations/new">
-            Create Organization
+          <Link className="btn btn-primary" to="/facilities/new">
+            Create Facility
           </Link>
         ) : null}
       </div>
 
       {!canManageOrganizations ? (
         <article className="access-note">
-          <h2>Restricted organizations module</h2>
-          <p>Only users with the `admin` role can manage organizations.</p>
+          <h2>Restricted facilities module</h2>
+          <p>Only users with the `admin` role can manage facilities.</p>
         </article>
       ) : null}
 
       {canManageOrganizations && organizationsQuery.isLoading ? (
         <article className="access-note">
-          <h2>Loading organizations</h2>
-          <p>Fetching latest organization data...</p>
+          <h2>Loading facilities</h2>
+          <p>Fetching latest facility data...</p>
         </article>
       ) : null}
 
       {canManageOrganizations && organizationsQuery.isError ? (
         <article className="access-note error-block">
-          <h2>Could not load organizations</h2>
+          <h2>Could not load facilities</h2>
           <p>{formatError(organizationsQuery.error)}</p>
         </article>
       ) : null}
@@ -77,7 +77,7 @@ function OrganizationsPage() {
       {canManageOrganizations && organizationsQuery.data ? (
         <article className="org-table-card">
           {organizationsQuery.data.length === 0 ? (
-            <p className="org-empty">No organizations found. Create the first one.</p>
+            <p className="org-empty">No facilities found. Create the first one.</p>
           ) : (
             <div className="org-table-wrap">
               <table className="org-table">
@@ -94,13 +94,13 @@ function OrganizationsPage() {
                 <tbody>
                   {organizationsQuery.data.map((organization) => {
                     const organizationId = organization.id ?? "";
-                    const organizationName = organization.name ?? "Unnamed";
+                    const organizationName = organization.name ?? "Unnamed facility";
 
                     return (
                       <tr key={organizationId || organizationName}>
                         <td>
                           {organizationId ? (
-                            <Link className="org-link" to={`/organizations/${organizationId}`}>
+                            <Link className="org-link" to={`/facilities/${organizationId}`}>
                               {organizationName}
                             </Link>
                           ) : (
@@ -114,7 +114,7 @@ function OrganizationsPage() {
                         <td>
                           <div className="org-actions">
                             {organizationId ? (
-                              <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/edit`}>
+                              <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/edit`}>
                                 Edit
                               </Link>
                             ) : null}
@@ -134,3 +134,5 @@ function OrganizationsPage() {
 }
 
 export default OrganizationsPage;
+
+

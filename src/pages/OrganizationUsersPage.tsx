@@ -130,39 +130,39 @@ function OrganizationUsersPage() {
   }
 
   if (!organizationId) {
-    return <Navigate to="/organizations" replace />;
+    return <Navigate to="/facilities" replace />;
   }
 
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
         <div>
-          <p className="eyebrow">Organizations</p>
+          <p className="eyebrow">Facilities</p>
           <h1>
-            Organization users:{" "}
-            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Organization")}
+            Facility users:{" "}
+            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
           </h1>
-          <p>View users registered under this organization.</p>
+          <p>View users registered under this facility.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}`}>
             Workspace
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/patients`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/patients`}>
             Patients
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/services`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/services`}>
             Services
           </Link>
-          <Link className="btn btn-ghost org-btn" to="/organizations">
-            Back to Organizations
+          <Link className="btn btn-ghost org-btn" to="/facilities">
+            Back to Facilities
           </Link>
         </div>
       </div>
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">
-          <h2>Could not load organization</h2>
+          <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
       ) : null}
@@ -170,14 +170,14 @@ function OrganizationUsersPage() {
       {organizationQuery.data && !facilityCode ? (
         <article className="access-note error-block">
           <h2>Missing facility code</h2>
-          <p>This organization has no facility code, so users cannot be loaded.</p>
+          <p>This facility has no facility code, so users cannot be loaded.</p>
         </article>
       ) : null}
 
       {usersQuery.isLoading ? (
         <article className="access-note">
           <h2>Loading users</h2>
-          <p>Fetching organization users from the authentication service...</p>
+          <p>Fetching facility users from the authentication service...</p>
         </article>
       ) : null}
 
@@ -191,10 +191,10 @@ function OrganizationUsersPage() {
       {usersQuery.data ? (
         <article className="org-table-card">
           <div className="org-table-tools">
-            <label className="org-filter-control" htmlFor="organization-group-filter">
+            <label className="org-filter-control" htmlFor="facility-group-filter">
               Group filter
               <select
-                id="organization-group-filter"
+                id="facility-group-filter"
                 className="field-input org-filter-select"
                 value={selectedUserGroupFilter}
                 onChange={(event) =>
@@ -210,7 +210,7 @@ function OrganizationUsersPage() {
             </label>
           </div>
           {users.length === 0 ? (
-            <p className="org-empty">No users found for this organization.</p>
+            <p className="org-empty">No users found for this facility.</p>
           ) : (
             <div className="org-table-wrap">
               <table className="org-table">
@@ -280,3 +280,5 @@ function OrganizationUsersPage() {
 }
 
 export default OrganizationUsersPage;
+
+

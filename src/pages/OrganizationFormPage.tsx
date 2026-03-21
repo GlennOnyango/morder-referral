@@ -116,7 +116,7 @@ function OrganizationFormPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-      navigate("/organizations", { replace: true });
+      navigate("/facilities", { replace: true });
     },
   });
 
@@ -126,7 +126,7 @@ function OrganizationFormPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-      navigate("/organizations", { replace: true });
+      navigate("/facilities", { replace: true });
     },
   });
 
@@ -135,7 +135,7 @@ function OrganizationFormPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-      navigate("/organizations", { replace: true });
+      navigate("/facilities", { replace: true });
     },
   });
 
@@ -180,25 +180,25 @@ function OrganizationFormPage() {
     <section className="org-shell reveal delay-1">
       <div className="org-header">
         <div>
-          <p className="eyebrow">Organizations</p>
-          <h1>{isEdit ? "Update organization" : "Create organization"}</h1>
-          <p>{isEdit ? "Edit organization details and save updates." : "Register a new organization."}</p>
+          <p className="eyebrow">Facilities</p>
+          <h1>{isEdit ? "Update facility" : "Create facility"}</h1>
+          <p>{isEdit ? "Edit facility details and save updates." : "Register a new facility."}</p>
         </div>
-        <Link className="btn btn-ghost" to={isEdit && id ? `/organizations/${id}` : "/organizations"}>
-          {isEdit ? "Back to Workspace" : "Back to Organizations"}
+        <Link className="btn btn-ghost" to={isEdit && id ? `/facilities/${id}` : "/facilities"}>
+          {isEdit ? "Back to Facility Workspace" : "Back to Facilities"}
         </Link>
       </div>
 
       {isEdit && organizationQuery.isLoading ? (
         <article className="access-note">
-          <h2>Loading organization</h2>
-          <p>Fetching organization details...</p>
+          <h2>Loading facility</h2>
+          <p>Fetching facility details...</p>
         </article>
       ) : null}
 
       {isEdit && organizationQuery.isError ? (
         <article className="access-note error-block">
-          <h2>Could not load organization</h2>
+          <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
       ) : null}
@@ -207,7 +207,7 @@ function OrganizationFormPage() {
         <article className="org-form-card">
           <form className="org-form" onSubmit={handleSubmit}>
             <label className="field">
-              <span>Organization Name</span>
+              <span>Facility Name</span>
               <input
                 className="field-input"
                 value={formState.name}
@@ -308,7 +308,7 @@ function OrganizationFormPage() {
                     : "Creating..."
                   : isEdit
                     ? "Save Changes"
-                    : "Create Organization"}
+                    : "Create Facility"}
               </button>
 
               {isEdit ? (
@@ -318,7 +318,7 @@ function OrganizationFormPage() {
                   disabled={isSubmitting || deleteMutation.isPending}
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
-                  Delete Organization
+                  Delete Facility
                 </button>
               ) : null}
             </div>
@@ -337,10 +337,10 @@ function OrganizationFormPage() {
       {isDeleteDialogOpen ? (
         <div className="dialog-backdrop" role="presentation">
           <article className="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="delete-org-title">
-            <h2 id="delete-org-title">Delete organization?</h2>
+            <h2 id="delete-org-title">Delete facility?</h2>
             <p>
               Are you sure you wish to delete{" "}
-              <strong>{organizationQuery.data?.name ?? "this organization"}</strong>? This action cannot be undone.
+              <strong>{organizationQuery.data?.name ?? "this facility"}</strong>? This action cannot be undone.
             </p>
             <div className="dialog-actions">
               <button
@@ -368,3 +368,5 @@ function OrganizationFormPage() {
 }
 
 export default OrganizationFormPage;
+
+

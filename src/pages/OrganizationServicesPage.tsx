@@ -181,7 +181,7 @@ function OrganizationServicesPage() {
   }
 
   if (!organizationId) {
-    return <Navigate to="/organizations" replace />;
+    return <Navigate to="/facilities" replace />;
   }
 
   return (
@@ -191,29 +191,29 @@ function OrganizationServicesPage() {
           <p className="eyebrow">Services</p>
           <h1>
             Manage Services:{" "}
-            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Organization")}
+            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
           </h1>
-          <p>Create, update, and delete service records for this organization.</p>
+          <p>Create, update, and delete service records for this facility.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}`}>
             Workspace
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/patients`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/patients`}>
             Patients
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/users`}>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/users`}>
             Users
           </Link>
-          <Link className="btn btn-ghost org-btn" to="/organizations">
-            Back to Organizations
+          <Link className="btn btn-ghost org-btn" to="/facilities">
+            Back to Facilities
           </Link>
         </div>
       </div>
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">
-          <h2>Could not load organization</h2>
+          <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
       ) : null}
@@ -289,7 +289,7 @@ function OrganizationServicesPage() {
       {servicesQuery.isLoading ? (
         <article className="access-note">
           <h2>Loading services</h2>
-          <p>Fetching organization services...</p>
+          <p>Fetching facility services...</p>
         </article>
       ) : null}
 
@@ -303,7 +303,7 @@ function OrganizationServicesPage() {
       {servicesQuery.data ? (
         <article className="org-table-card">
           {servicesQuery.data.length === 0 ? (
-            <p className="org-empty">No services found for this organization.</p>
+            <p className="org-empty">No services found for this facility.</p>
           ) : (
             <div className="org-table-wrap">
               <table className="org-table">
@@ -363,3 +363,5 @@ function OrganizationServicesPage() {
 }
 
 export default OrganizationServicesPage;
+
+
