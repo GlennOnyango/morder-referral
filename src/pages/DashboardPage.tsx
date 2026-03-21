@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { fetchDashboardMetrics } from "../api/metrics";
 import { useAuthContext } from "../context/AuthContext";
 
 function MetricCard({
   title,
   items,
+  action,
 }: {
   title: string;
   items: { label: string; value: string | number }[];
+  action?: { label: string; to: string };
 }) {
   return (
     <article className="metric-card">
@@ -21,6 +23,13 @@ function MetricCard({
           </li>
         ))}
       </ul>
+      {action ? (
+        <div className="metric-card-action">
+          <Link className="btn btn-ghost org-btn" to={action.to}>
+            {action.label}
+          </Link>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -28,6 +37,7 @@ function MetricCard({
 function DashboardPage() {
   const { isAuthenticated, session } = useAuthContext();
   const role = session?.role ?? "unknown";
+  const canManageOrganizations = role === "admin" || role === "super_admin";
   const canViewMetrics = role === "super_admin";
   const isRolePending = role === "unknown";
 
@@ -82,7 +92,18 @@ function DashboardPage() {
 
       {canViewMetrics && dashboardQuery.data ? (
         <div className="metric-grid">
-          <MetricCard title="Organization Metrics" items={dashboardQuery.data.organizationMetrics} />
+          <MetricCard
+            title="Organization Metrics"
+            items={dashboardQuery.data.organizationMetrics}
+            action={
+              canManageOrganizations
+                ? {
+                    label: "View organizations",
+                    to: "/organizations",
+                  }
+                : undefined
+            }
+          />
           <MetricCard title="Service Metrics" items={dashboardQuery.data.serviceMetrics} />
           <MetricCard title="Patient Metrics" items={dashboardQuery.data.patientMetrics} />
         </div>

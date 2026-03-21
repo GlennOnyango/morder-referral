@@ -145,11 +145,17 @@ function OrganizationUsersPage() {
           <p>View users registered under this organization.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to="/organizations">
-            Back
+          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}`}>
+            Workspace
+          </Link>
+          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/patients`}>
+            Patients
           </Link>
           <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/services`}>
             Services
+          </Link>
+          <Link className="btn btn-ghost org-btn" to="/organizations">
+            Back to Organizations
           </Link>
         </div>
       </div>

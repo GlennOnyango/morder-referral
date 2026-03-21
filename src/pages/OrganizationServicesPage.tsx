@@ -195,9 +195,20 @@ function OrganizationServicesPage() {
           </h1>
           <p>Create, update, and delete service records for this organization.</p>
         </div>
-        <Link className="btn btn-ghost" to="/organizations">
-          Back to Organizations
-        </Link>
+        <div className="org-actions">
+          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}`}>
+            Workspace
+          </Link>
+          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/patients`}>
+            Patients
+          </Link>
+          <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/users`}>
+            Users
+          </Link>
+          <Link className="btn btn-ghost org-btn" to="/organizations">
+            Back to Organizations
+          </Link>
+        </div>
       </div>
 
       {organizationQuery.isError ? (

@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, Navigate } from "react-router-dom";
-import { deleteOrganization, listOrganizations } from "../api/organizations";
+import { listOrganizations } from "../api/organizations";
 import { useAuthContext } from "../context/AuthContext";
 
 function formatError(error: unknown): string {
@@ -27,29 +27,12 @@ function OrganizationsPage() {
   const { session, isAuthenticated } = useAuthContext();
   const role = session?.role ?? "unknown";
   const canManageOrganizations = role === "admin" || role === "super_admin";
-  const queryClient = useQueryClient();
 
   const organizationsQuery = useQuery({
     queryKey: ["organizations", session?.accessToken],
     queryFn: () => listOrganizations(session?.accessToken),
     enabled: isAuthenticated && canManageOrganizations,
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: (organizationId: string) => deleteOrganization(organizationId, session?.accessToken),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-    },
-  });
-
-  const handleDelete = (organizationId: string, organizationName: string) => {
-    const shouldDelete = window.confirm(`Delete organization "${organizationName}"?`);
-    if (!shouldDelete) {
-      return;
-    }
-    deleteMutation.mutate(organizationId);
-  };
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
@@ -61,7 +44,7 @@ function OrganizationsPage() {
         <div>
           <p className="eyebrow">Organizations</p>
           <h1>Manage organizations</h1>
-          <p>View, create, update, and delete organizations, then open users per organization.</p>
+          <p>View and update organizations, then open each organization workspace for services, users, and patients.</p>
         </div>
         {canManageOrganizations ? (
           <Link className="btn btn-primary" to="/organizations/new">
@@ -110,17 +93,14 @@ function OrganizationsPage() {
                 </thead>
                 <tbody>
                   {organizationsQuery.data.map((organization) => {
-
-                    console.log("Rendering organization:", organization); // Debug log to check organization data
                     const organizationId = organization.id ?? "";
                     const organizationName = organization.name ?? "Unnamed";
-                    const facilityCode = organization.facility_code?.trim() ?? "";
 
                     return (
                       <tr key={organizationId || organizationName}>
                         <td>
                           {organizationId ? (
-                            <Link className="org-link" to={`/organizations/${organizationId}/services`}>
+                            <Link className="org-link" to={`/organizations/${organizationId}`}>
                               {organizationName}
                             </Link>
                           ) : (
@@ -134,31 +114,10 @@ function OrganizationsPage() {
                         <td>
                           <div className="org-actions">
                             {organizationId ? (
-                              <Link
-                                className="btn btn-ghost org-btn"
-                                to={`/organizations/${organizationId}/services`}
-                              >
-                                Services
-                              </Link>
-                            ) : null}
-                            {organizationId && facilityCode ? (
-                              <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/users`}>
-                                Users
-                              </Link>
-                            ) : null}
-                            {organizationId ? (
                               <Link className="btn btn-ghost org-btn" to={`/organizations/${organizationId}/edit`}>
                                 Edit
                               </Link>
                             ) : null}
-                            <button
-                              type="button"
-                              className="btn btn-outline org-btn"
-                              disabled={!organizationId || deleteMutation.isPending}
-                              onClick={() => handleDelete(organizationId, organizationName)}
-                            >
-                              Delete
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -169,10 +128,6 @@ function OrganizationsPage() {
             </div>
           )}
         </article>
-      ) : null}
-
-      {deleteMutation.isError ? (
-        <p className="result-note error-note">{formatError(deleteMutation.error)}</p>
       ) : null}
     </section>
   );

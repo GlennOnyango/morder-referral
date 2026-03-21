@@ -5,6 +5,7 @@ import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   createOrganization,
+  deleteOrganization,
   getOrganizationById,
   updateOrganization,
   type OrganizationUpsertInput,
@@ -82,6 +83,7 @@ function OrganizationFormPage() {
 
   const [formState, setFormState] = useState<OrganizationFormState>(defaultFormState);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const organizationQuery = useQuery({
     queryKey: ["organizations", "detail", id, session?.accessToken],
@@ -128,6 +130,15 @@ function OrganizationFormPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteOrganization(id!, session?.accessToken),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      navigate("/organizations", { replace: true });
+    },
+  });
+
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const submitError = createMutation.error ?? updateMutation.error;
 
@@ -149,6 +160,14 @@ function OrganizationFormPage() {
     createMutation.mutate(payload);
   };
 
+  const handleConfirmDelete = () => {
+    if (!isEdit || !id || deleteMutation.isPending) {
+      return;
+    }
+
+    deleteMutation.mutate();
+  };
+
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
   }
@@ -165,8 +184,8 @@ function OrganizationFormPage() {
           <h1>{isEdit ? "Update organization" : "Create organization"}</h1>
           <p>{isEdit ? "Edit organization details and save updates." : "Register a new organization."}</p>
         </div>
-        <Link className="btn btn-ghost" to="/organizations">
-          Back to Organizations
+        <Link className="btn btn-ghost" to={isEdit && id ? `/organizations/${id}` : "/organizations"}>
+          {isEdit ? "Back to Workspace" : "Back to Organizations"}
         </Link>
       </div>
 
@@ -281,15 +300,28 @@ function OrganizationFormPage() {
               </select>
             </label>
 
-            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting
-                ? isEdit
-                  ? "Saving..."
-                  : "Creating..."
-                : isEdit
-                  ? "Save Changes"
-                  : "Create Organization"}
-            </button>
+            <div className="org-form-actions">
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting || deleteMutation.isPending}>
+                {isSubmitting
+                  ? isEdit
+                    ? "Saving..."
+                    : "Creating..."
+                  : isEdit
+                    ? "Save Changes"
+                    : "Create Organization"}
+              </button>
+
+              {isEdit ? (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={isSubmitting || deleteMutation.isPending}
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  Delete Organization
+                </button>
+              ) : null}
+            </div>
           </form>
         </article>
       ) : null}
@@ -297,6 +329,40 @@ function OrganizationFormPage() {
       {validationError ? <p className="result-note error-note">{validationError}</p> : null}
 
       {submitError ? <p className="result-note error-note">{formatError(submitError)}</p> : null}
+
+      {deleteMutation.isError ? (
+        <p className="result-note error-note">{formatError(deleteMutation.error)}</p>
+      ) : null}
+
+      {isDeleteDialogOpen ? (
+        <div className="dialog-backdrop" role="presentation">
+          <article className="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="delete-org-title">
+            <h2 id="delete-org-title">Delete organization?</h2>
+            <p>
+              Are you sure you wish to delete{" "}
+              <strong>{organizationQuery.data?.name ?? "this organization"}</strong>? This action cannot be undone.
+            </p>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={deleteMutation.isPending}
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={deleteMutation.isPending}
+                onClick={handleConfirmDelete}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </article>
+        </div>
+      ) : null}
     </section>
   );
 }
