@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../api/organizations";
 import {
   createPatient,
@@ -64,9 +64,9 @@ function patientToFormState(patient: Patient): PatientFormState {
     date_of_birth: patient.date_of_birth ?? "",
     gender:
       patient.gender === "male" ||
-      patient.gender === "female" ||
-      patient.gender === "other" ||
-      patient.gender === "unknown"
+        patient.gender === "female" ||
+        patient.gender === "other" ||
+        patient.gender === "unknown"
         ? patient.gender
         : "unknown",
     primary_phone: patient.primary_phone ?? "",
