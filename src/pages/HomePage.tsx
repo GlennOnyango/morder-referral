@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import Breadcrumbs from "../components/Breadcrumbs";
 
 const performanceHighlights = [
   { label: "County Coverage", value: "47 Counties" },
@@ -126,7 +125,6 @@ const operationalMetrics = [
 function HomePage() {
   return (
     <>
-      <Breadcrumbs items={[{ label: "Home" }]} />
 
       <section className="hero">
         <div className="hero-content reveal delay-1">
