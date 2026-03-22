@@ -13,6 +13,51 @@ const organizationsApi = axios.create({
   baseURL: ORGANIZATIONS_BASE_URL,
 });
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function pickString(
+  source: Record<string, unknown>,
+  keys: readonly string[],
+): string | undefined {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function extractFacilityId(payload: unknown): string | undefined {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+
+  const directFacilityId = pickString(payload, [
+    "facility_id",
+    "facilityId",
+    "organization_id",
+    "organizationId",
+    "id",
+  ]);
+  if (directFacilityId) {
+    return directFacilityId;
+  }
+
+  const nestedCandidates = ["organization", "data", "result", "item"] as const;
+  for (const key of nestedCandidates) {
+    const nestedFacilityId = extractFacilityId(payload[key]);
+    if (nestedFacilityId) {
+      return nestedFacilityId;
+    }
+  }
+
+  return undefined;
+}
+
 function authHeaders(accessToken?: string) {
   if (!accessToken) {
     return undefined;
@@ -24,6 +69,41 @@ function authHeaders(accessToken?: string) {
 }
 
 export type OrganizationUpsertInput = InternalApiCreateOrganizationRequest;
+export type FacilityCodeValidationResult = {
+  exists: boolean;
+  facilityId?: string;
+};
+
+export async function validateOrganizationFacilityCode(
+  facilityCode: string,
+): Promise<FacilityCodeValidationResult> {
+  const trimmedFacilityCode = facilityCode.trim();
+  if (!trimmedFacilityCode) {
+    return { exists: false };
+  }
+
+  try {
+    const response = await organizationsApi.get<unknown>(
+      `/organizations/validate/${encodeURIComponent(trimmedFacilityCode)}`,
+    );
+    const facilityId = extractFacilityId(response.data);
+
+    if (!facilityId) {
+      return { exists: false };
+    }
+
+    return {
+      exists: true,
+      facilityId,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return { exists: false };
+    }
+
+    throw error;
+  }
+}
 
 export async function listOrganizations(accessToken?: string): Promise<Organization[]> {
   const response = await organizationsApi.get<Organization[]>("/organizations", {

@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState, type SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { validateOrganizationFacilityCode } from "../api/organizations";
 import { registerUser } from "../auth";
 import { useAuthContext } from "../context/AuthContext";
 
@@ -52,6 +54,37 @@ function EyeOffIcon() {
   );
 }
 
+function FacilityCodeValidIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="m8.2 12.2 2.5 2.5 5.2-5.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function FacilityCodeInvalidIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="m9 9 6 6m0-6-6 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function SignUpPage() {
   const [formState, setFormState] = useState<SignUpFormState>(defaultFormState);
   const [showPassword, setShowPassword] = useState(false);
@@ -59,10 +92,44 @@ function SignUpPage() {
   const [message, setMessage] = useState("");
   const { isAuthenticated } = useAuthContext();
   const navigate = useNavigate();
+  const trimmedFacilityCode = formState.facility_code.trim();
+  const shouldValidateFacilityCode = trimmedFacilityCode.length >= FACILITY_CODE_MIN_LENGTH;
+
+  const facilityValidationQuery = useQuery({
+    queryKey: ["organizations", "validate", trimmedFacilityCode],
+    queryFn: () => validateOrganizationFacilityCode(trimmedFacilityCode),
+    enabled: shouldValidateFacilityCode,
+    retry: false,
+  });
+
+  const validatedFacilityId = facilityValidationQuery.data?.facilityId;
+  const isFacilityCodeValidationPending = shouldValidateFacilityCode && facilityValidationQuery.isFetching;
+  const isFacilityCodeValid = Boolean(validatedFacilityId);
+  const hasFacilityCodeInput = trimmedFacilityCode.length > 0;
+  const showFacilityCodeValidIcon = hasFacilityCodeInput && isFacilityCodeValid;
+  const showFacilityCodeInvalidIcon =
+    hasFacilityCodeInput && !isFacilityCodeValidationPending && !isFacilityCodeValid;
+  const canSubmit = !isSubmitting && isFacilityCodeValid && !isFacilityCodeValidationPending;
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
+
+    if (trimmedFacilityCode.length < FACILITY_CODE_MIN_LENGTH) {
+      setMessage(`Facility Code must be at least ${FACILITY_CODE_MIN_LENGTH} characters.`);
+      return;
+    }
+
+    if (facilityValidationQuery.isFetching) {
+      setMessage("Validating facility code. Please wait.");
+      return;
+    }
+
+    if (!validatedFacilityId) {
+      setMessage("Facility code not found. Enter a valid facility code.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload = {
@@ -71,14 +138,9 @@ function SignUpPage() {
       phone_number: formState.phoneNumber.trim(),
       password: formState.password,
       birthdate: formState.birthdate,
-      facility_code: formState.facility_code.trim(),
+      facility_code: trimmedFacilityCode,
+      facility_id: validatedFacilityId,
     };
-
-    if (payload.facility_code.length < FACILITY_CODE_MIN_LENGTH) {
-      setMessage(`Facility Code must be at least ${FACILITY_CODE_MIN_LENGTH} characters.`);
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       const result = await registerUser(payload);
@@ -160,17 +222,44 @@ function SignUpPage() {
 
             <label className="field">
               <span>Facility Code</span>
-              <input
-                className="field-input"
-                value={formState.facility_code}
-                onChange={(event) =>
-                  setFormState((current) => ({ ...current, facility_code: event.target.value }))
-                }
-                required
-                minLength={FACILITY_CODE_MIN_LENGTH}
-                title={`Facility Code must be at least ${FACILITY_CODE_MIN_LENGTH} characters`}
-                placeholder="FAC-001"
-              />
+              <div className="field-input-wrap">
+                <input
+                  className="field-input"
+                  value={formState.facility_code}
+                  onChange={(event) =>
+                    setFormState((current) => ({ ...current, facility_code: event.target.value }))
+                  }
+                  required
+                  minLength={FACILITY_CODE_MIN_LENGTH}
+                  title={`Facility Code must be at least ${FACILITY_CODE_MIN_LENGTH} characters`}
+                  placeholder="FAC-001"
+                />
+                {showFacilityCodeValidIcon ? (
+                  <span className="input-status-icon valid" aria-label="Facility code exists">
+                    <FacilityCodeValidIcon />
+                  </span>
+                ) : null}
+                {showFacilityCodeInvalidIcon ? (
+                  <span className="input-status-icon invalid" aria-label="Facility code is incorrect">
+                    <FacilityCodeInvalidIcon />
+                  </span>
+                ) : null}
+              </div>
+              {shouldValidateFacilityCode ? (
+                isFacilityCodeValidationPending ? (
+                  <small>Checking facility code...</small>
+                ) : facilityValidationQuery.isError ? (
+                  <small className="error-note">
+                    {facilityValidationQuery.error instanceof Error
+                      ? facilityValidationQuery.error.message
+                      : "Failed to validate facility code."}
+                  </small>
+                ) : isFacilityCodeValid ? (
+                  <small className="success-note">Facility code found.</small>
+                ) : (
+                  <small className="error-note">Facility code does not exist.</small>
+                )
+              ) : null}
             </label>
 
             <label className="field">
@@ -200,7 +289,7 @@ function SignUpPage() {
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={isSubmitting}>
+          <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={!canSubmit}>
             {isSubmitting ? "Creating account..." : "Sign up"}
           </button>
         </form>

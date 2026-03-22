@@ -352,6 +352,34 @@ main {
   height: 18px;
 }
 
+.input-status-icon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.input-status-icon.valid {
+  color: #0f7a65;
+  background: rgba(17, 122, 101, 0.12);
+}
+
+.input-status-icon.invalid {
+  color: var(--color-danger);
+  background: rgba(180, 59, 51, 0.14);
+}
+
+.input-status-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .auth-submit {
   margin-top: 2px;
 }
