@@ -3,6 +3,7 @@ import { useState, type SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { validateOrganizationFacilityCode } from "../api/organizations";
 import { registerUser } from "../auth";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 
 type SignUpFormState = {
@@ -166,6 +167,14 @@ function SignUpPage() {
         <p className="auth-intro">
           Register your account, then confirm your email with the code sent by Cognito.
         </p>
+
+        <Breadcrumbs
+          className="auth-breadcrumbs"
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Sign up" },
+          ]}
+        />
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-grid-two">

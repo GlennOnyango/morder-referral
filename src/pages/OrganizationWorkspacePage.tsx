@@ -5,6 +5,7 @@ import { listFacilityUsers } from "../api/authAdmin";
 import { getOrganizationById } from "../api/organizations";
 import { listPatients } from "../api/patients";
 import { listOrganizationServices } from "../api/services";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { canAccessOrganization, canManageFacilityCatalog, isFacilityManager } from "../utils/facilityAccess";
 
@@ -135,6 +136,8 @@ function OrganizationWorkspacePage() {
       : patientsQuery.isError
         ? "n/a"
         : patientsQuery.data?.length ?? 0;
+  const facilityName =
+    organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
 
   return (
     <section className="org-shell reveal delay-1">
@@ -147,9 +150,7 @@ function OrganizationWorkspacePage() {
           <p>Facility workspace with high-level statistics and quick actions.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to="/facilities">
-            Back to Facilities
-          </Link>
+          
           {canEditFacility ? (
             <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/edit`}>
               Edit Facility
@@ -157,6 +158,15 @@ function OrganizationWorkspacePage() {
           ) : null}
         </div>
       </div>
+
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Facilities", to: "/facilities" },
+          { label: facilityName },
+        ]}
+      />
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">

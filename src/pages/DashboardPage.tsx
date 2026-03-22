@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import { fetchDashboardMetrics } from "../api/metrics";
 import { listOrganizations } from "../api/organizations";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
 
@@ -107,6 +108,13 @@ function DashboardPage() {
         </p>
       </div>
 
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard" },
+        ]}
+      />
+
       {isRolePending ? (
         <article className="access-note">
           <h2>Role pending</h2>
@@ -205,4 +213,3 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
-

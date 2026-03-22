@@ -12,6 +12,7 @@ import {
   type PatientListQuery,
   type PatientUpsertInput,
 } from "../api/patients";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import type { MsOrganizationsInternalDomainModelPatient as Patient } from "../types/api.generated";
 import { canAccessOrganization, isFacilityManager } from "../utils/facilityAccess";
@@ -257,6 +258,9 @@ function OrganizationPatientsPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const facilityName =
+    organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
+
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
@@ -268,24 +272,17 @@ function OrganizationPatientsPage() {
           </h1>
           <p>Search, create, update, and delete patient records.</p>
         </div>
-        <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}`}>
-            Workspace
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/services`}>
-            Services
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/users`}>
-            Users
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
-            Referrals
-          </Link>
-          <Link className="btn btn-ghost org-btn" to="/facilities">
-            Back to Facilities
-          </Link>
-        </div>
       </div>
+
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Facilities", to: "/facilities" },
+          { label: facilityName, to: `/facilities/${organizationId}` },
+          { label: "Patients" },
+        ]}
+      />
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">

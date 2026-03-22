@@ -1,5 +1,6 @@
 import { useEffect, useState, type SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 
 function EyeIcon() {
@@ -83,6 +84,14 @@ function SignInPage() {
         <p className="auth-intro">
           Enter your referral desk email and password to start a secure session.
         </p>
+
+        <Breadcrumbs
+          className="auth-breadcrumbs"
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Sign in" },
+          ]}
+        />
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="field">

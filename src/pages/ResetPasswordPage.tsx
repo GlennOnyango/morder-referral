@@ -1,6 +1,7 @@
 import { useMemo, useState, type SubmitEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { confirmPasswordReset, requestPasswordReset } from "../auth";
+import Breadcrumbs from "../components/Breadcrumbs";
 
 type ResetStage = "request" | "confirm";
 
@@ -94,6 +95,15 @@ function ResetPasswordPage() {
             ? "Enter your sign-in email/username to get a reset code."
             : "Enter the reset code and choose a new password."}
         </p>
+
+        <Breadcrumbs
+          className="auth-breadcrumbs"
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Sign in", to: "/signin" },
+            { label: "Reset password" },
+          ]}
+        />
 
         <form className="auth-form" onSubmit={stage === "request" ? handleRequest : handleConfirm}>
           <label className="field">

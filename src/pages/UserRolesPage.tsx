@@ -10,6 +10,7 @@ import {
   type AuthUser,
   type FacilityUserGroupFilter,
 } from "../api/authAdmin";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 
 function formatError(error: unknown): string {
@@ -139,6 +140,14 @@ function UserRolesPage() {
           </label>
         </div>
       </div>
+
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "User Roles" },
+        ]}
+      />
 
       {!session?.facilityId ? (
         <article className="access-note error-block">

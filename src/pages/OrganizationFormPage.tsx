@@ -10,6 +10,7 @@ import {
   updateOrganization,
   type OrganizationUpsertInput,
 } from "../api/organizations";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { canManageFacilityCatalog } from "../utils/facilityAccess";
 
@@ -177,6 +178,8 @@ function OrganizationFormPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const facilityNameForEdit = organizationQuery.data?.name ?? "Facility";
+
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
@@ -189,6 +192,25 @@ function OrganizationFormPage() {
           {isEdit ? "Back to Facility Workspace" : "Back to Facilities"}
         </Link>
       </div>
+
+      <Breadcrumbs
+        items={
+          isEdit && id
+            ? [
+                { label: "Home", to: "/" },
+                { label: "Dashboard", to: "/dashboard" },
+                { label: "Facilities", to: "/facilities" },
+                { label: facilityNameForEdit, to: `/facilities/${id}` },
+                { label: "Edit" },
+              ]
+            : [
+                { label: "Home", to: "/" },
+                { label: "Dashboard", to: "/dashboard" },
+                { label: "Facilities", to: "/facilities" },
+                { label: "Create" },
+              ]
+        }
+      />
 
       {isEdit && organizationQuery.isLoading ? (
         <article className="access-note">

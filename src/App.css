@@ -258,6 +258,10 @@ main {
   line-height: 1.55;
 }
 
+.auth-breadcrumbs {
+  margin-top: 14px;
+}
+
 .auth-form {
   margin-top: 18px;
   display: grid;
@@ -543,6 +547,38 @@ main {
 .org-header p {
   margin: 12px 0 0;
   color: var(--color-muted);
+}
+
+.org-breadcrumbs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(10, 45, 55, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 9px 13px;
+  color: #3f5568;
+  font-size: 0.84rem;
+}
+
+.org-breadcrumb-link {
+  color: #0f5a78;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.org-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.org-breadcrumb-separator {
+  color: #6f8292;
+}
+
+.org-breadcrumb-current {
+  color: #1e394b;
+  font-weight: 700;
 }
 
 .org-table-card,

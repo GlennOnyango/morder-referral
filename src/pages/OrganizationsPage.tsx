@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, Navigate } from "react-router-dom";
 import { listOrganizations } from "../api/organizations";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import {
   canManageFacilityCatalog,
@@ -112,6 +113,14 @@ function OrganizationsPage() {
           </Link>
         ) : null}
       </div>
+
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Facilities" },
+        ]}
+      />
 
       {!canManageOrganizations ? (
         <article className="access-note">

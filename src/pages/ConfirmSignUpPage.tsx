@@ -1,6 +1,7 @@
 import { useMemo, useState, type SubmitEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { confirmUser, resendSignUpCode } from "../auth";
+import Breadcrumbs from "../components/Breadcrumbs";
 
 function ConfirmSignUpPage() {
   const [searchParams] = useSearchParams();
@@ -71,6 +72,15 @@ function ConfirmSignUpPage() {
         <p className="auth-intro">
           Enter the code sent to your email to activate your account.
         </p>
+
+        <Breadcrumbs
+          className="auth-breadcrumbs"
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Sign up", to: "/signup" },
+            { label: "Confirm" },
+          ]}
+        />
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="field">

@@ -86,15 +86,84 @@ function parseAttributes(rawAttributes: unknown): Record<string, string> {
 }
 
 function parseGroups(raw: unknown): string[] {
-  if (Array.isArray(raw)) {
-    return raw.filter((value): value is string => typeof value === "string");
-  }
+  const groups = new Set<string>();
 
-  if (typeof raw === "string" && raw.trim().length > 0) {
-    return [raw.trim()];
-  }
+  const addGroup = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    groups.add(trimmed);
+  };
 
-  return [];
+  const visit = (value: unknown) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+        try {
+          const parsed = JSON.parse(trimmed) as unknown;
+          visit(parsed);
+          return;
+        } catch {
+          // Fall through to delimiter parsing when JSON parsing fails.
+        }
+      }
+
+      if (trimmed.includes(",")) {
+        trimmed.split(",").forEach((part) => addGroup(part));
+        return;
+      }
+
+      addGroup(trimmed);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item));
+      return;
+    }
+
+    if (!isRecord(value)) {
+      return;
+    }
+
+    const objectGroupName = pickString(value, [
+      "GroupName",
+      "groupName",
+      "name",
+      "Name",
+      "role",
+      "Role",
+      "value",
+      "Value",
+    ]);
+    if (objectGroupName) {
+      addGroup(objectGroupName);
+    }
+
+    const nestedKeys = [
+      "groups",
+      "groupNames",
+      "roles",
+      "role",
+      "cognito:groups",
+      "Groups",
+      "UserGroups",
+      "items",
+      "data",
+      "results",
+    ] as const;
+    for (const key of nestedKeys) {
+      visit(value[key]);
+    }
+  };
+
+  visit(raw);
+  return Array.from(groups);
 }
 
 function extractUsersPayload(payload: unknown): unknown[] {
@@ -180,9 +249,18 @@ function normalizeUser(input: unknown): AuthUser | null {
   const updatedAt =
     pickString(input, ["updatedAt", "UpdatedAt", "UserLastModifiedDate"]) ??
     attributes.updated_at;
-  const groups = parseGroups(
-    input.groups ?? input.groupNames ?? input.roles ?? input.role ?? input["cognito:groups"],
-  );
+  const groups = parseGroups([
+    input.groups,
+    input.groupNames,
+    input.roles,
+    input.role,
+    input["cognito:groups"],
+    input.Groups,
+    input.UserGroups,
+    attributes["cognito:groups"],
+    attributes["custom:role"],
+    attributes.role,
+  ]);
 
   return {
     username,

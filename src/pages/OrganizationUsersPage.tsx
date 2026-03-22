@@ -11,6 +11,7 @@ import {
   type FacilityUserGroupFilter,
 } from "../api/authAdmin";
 import { getOrganizationById } from "../api/organizations";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { canAccessOrganization, isFacilityManager } from "../utils/facilityAccess";
 
@@ -79,6 +80,8 @@ function OrganizationUsersPage() {
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
+  const facilityName =
+    organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
 
   const usersQuery = useQuery({
     queryKey: [
@@ -156,24 +159,17 @@ function OrganizationUsersPage() {
           </h1>
           <p>View users registered under this facility.</p>
         </div>
-        <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}`}>
-            Workspace
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/patients`}>
-            Patients
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/services`}>
-            Services
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
-            Referrals
-          </Link>
-          <Link className="btn btn-ghost org-btn" to="/facilities">
-            Back to Facilities
-          </Link>
-        </div>
       </div>
+
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Facilities", to: "/facilities" },
+          { label: facilityName, to: `/facilities/${organizationId}` },
+          { label: "Users" },
+        ]}
+      />
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">

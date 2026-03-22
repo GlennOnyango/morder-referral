@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../api/organizations";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { canAccessOrganization, isFacilityManager } from "../utils/facilityAccess";
 
@@ -57,6 +58,9 @@ function OrganizationReferralsPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const facilityName =
+    organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
+
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
@@ -68,24 +72,17 @@ function OrganizationReferralsPage() {
           </h1>
           <p>Referral management is scoped to this facility.</p>
         </div>
-        <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}`}>
-            Workspace
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/services`}>
-            Services
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/users`}>
-            Users
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/patients`}>
-            Patients
-          </Link>
-          <Link className="btn btn-ghost org-btn" to="/facilities">
-            Back to Facilities
-          </Link>
-        </div>
       </div>
+
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Facilities", to: "/facilities" },
+          { label: facilityName, to: `/facilities/${organizationId}` },
+          { label: "Referrals" },
+        ]}
+      />
 
       {organizationQuery.isError ? (
         <article className="access-note error-block">
