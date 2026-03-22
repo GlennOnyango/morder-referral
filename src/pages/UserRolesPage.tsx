@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { updateSignedInUserFacilityId } from "../auth";
 import {
   attachRoleToUser,
   FACILITY_USER_GROUP_FILTERS,
@@ -56,7 +55,7 @@ const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string>
 };
 
 function UserRolesPage() {
-  const { session, isAuthenticated, refreshSession } = useAuthContext();
+  const { session, isAuthenticated } = useAuthContext();
   const role = session?.role;
   const isSuperAdmin = role === "SUPER_ADMIN";
   const queryClient = useQueryClient();
@@ -84,21 +83,7 @@ function UserRolesPage() {
     mutationFn: ({ username, groupName }: { username: string; groupName: AuthGroupName }) =>
       attachRoleToUser({ username, groupName }, session?.accessToken),
     onSuccess: async (_data, variables) => {
-      const baseMessage = `Updated ${variables.username} to ${variables.groupName}.`;
-      const facilityId = session?.facilityId?.trim() ?? "";
-      let nextMessage = baseMessage;
-
-      if (facilityId.length > 0) {
-        try {
-          await updateSignedInUserFacilityId(facilityId);
-          await refreshSession();
-          nextMessage = `${baseMessage} Updated custom:facility_id to ${facilityId}.`;
-        } catch (error) {
-          nextMessage = `${baseMessage} Failed to update custom:facility_id: ${formatError(error)}`;
-        }
-      }
-
-      setLastActionMessage(nextMessage);
+      setLastActionMessage(`Updated ${variables.username} to ${variables.groupName}.`);
       await queryClient.invalidateQueries({ queryKey: ["auth-users"] });
     },
   });

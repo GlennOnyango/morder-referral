@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { updateSignedInUserFacilityId } from "../auth";
 import {
   attachRoleToUser,
   FACILITY_USER_GROUP_FILTERS,
@@ -60,7 +59,7 @@ const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string>
 function OrganizationUsersPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
-  const { session, isAuthenticated, refreshSession } = useAuthContext();
+  const { session, isAuthenticated } = useAuthContext();
   const role = session?.role;
   const canManageOrganizations = isFacilityManager(role);
   const canAttachRoles = role === "HOSPITAL_ADMIN" || role === "SUPER_ADMIN";
@@ -80,7 +79,6 @@ function OrganizationUsersPage() {
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
-  const facilityId = organizationQuery.data?.id?.trim() ?? "";
 
   const usersQuery = useQuery({
     queryKey: [
@@ -101,20 +99,7 @@ function OrganizationUsersPage() {
     mutationFn: ({ username, groupName }: { username: string; groupName: AuthGroupName }) =>
       attachRoleToUser({ username, groupName }, session?.accessToken),
     onSuccess: async (_data, variables) => {
-      const baseMessage = `Updated ${variables.username} to ${variables.groupName}.`;
-      let nextMessage = baseMessage;
-
-      if (facilityId.length > 0) {
-        try {
-          await updateSignedInUserFacilityId(facilityId);
-          await refreshSession();
-          nextMessage = `${baseMessage} Updated custom:facility_id to ${facilityId}.`;
-        } catch (error) {
-          nextMessage = `${baseMessage} Failed to update custom:facility_id: ${formatError(error)}`;
-        }
-      }
-
-      setLastActionMessage(nextMessage);
+      setLastActionMessage(`Updated ${variables.username} to ${variables.groupName}.`);
       await queryClient.invalidateQueries({
         queryKey: ["organization-users", organizationId],
       });
