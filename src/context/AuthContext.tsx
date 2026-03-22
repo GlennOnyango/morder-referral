@@ -9,12 +9,12 @@ import {
   type LoginUserResult,
 } from "../auth";
 
-export type AppRole = "super_admin" | "admin" | "user" | "unknown";
+export type AppRole = "SUPER_ADMIN" | "HOSPITAL_ADMIN" | "DOCTOR" | "NURSE";
 
 export type AuthSession = {
   accessToken: string;
   idToken: string;
-  role: AppRole;
+  role: AppRole | null;
   email?: string;
   facilityId?: string;
 };
@@ -31,29 +31,37 @@ const AUTH_STORAGE_KEY = "refconnect.auth.session";
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function normalizeRole(input?: string | null): AppRole {
-  if (!input) {
-    return "unknown";
-  }
-
-  const cleaned = input.trim().toLowerCase().replace(/[\s-]+/g, "_");
-
-  if (cleaned === "super_admin") {
-    return "super_admin";
-  }
-
-  if (cleaned === "admin") {
-    return "admin";
-  }
-
-  if (cleaned === "user") {
-    return "user";
-  }
-
-  return "unknown";
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
-function extractRoleFromClaimValue(value: unknown): AppRole {
+function normalizeRole(input?: string | null): AppRole | null {
+  if (!input) {
+    return null;
+  }
+
+  const cleaned = input.trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+  if (cleaned === "SUPER_ADMIN") {
+    return "SUPER_ADMIN";
+  }
+
+  if (cleaned === "HOSPITAL_ADMIN" || cleaned === "ADMIN") {
+    return "HOSPITAL_ADMIN";
+  }
+
+  if (cleaned === "DOCTOR") {
+    return "DOCTOR";
+  }
+
+  if (cleaned === "NURSE" || cleaned === "USER") {
+    return "NURSE";
+  }
+
+  return null;
+}
+
+function extractRoleFromClaimValue(value: unknown): AppRole | null {
   if (typeof value === "string") {
     return normalizeRole(value);
   }
@@ -65,40 +73,40 @@ function extractRoleFromClaimValue(value: unknown): AppRole {
       }
 
       const normalizedRole = normalizeRole(roleCandidate);
-      if (normalizedRole !== "unknown") {
+      if (normalizedRole) {
         return normalizedRole;
       }
     }
   }
 
-  return "unknown";
+  return null;
 }
 
-function extractRoleFromClaims(claims?: Record<string, unknown>): AppRole {
+function extractRoleFromClaims(claims?: Record<string, unknown>): AppRole | null {
   if (!claims) {
-    return "unknown";
+    return null;
   }
 
   const directClaims = ["custom:role", "role", "roles", "cognito:groups"] as const;
   for (const claim of directClaims) {
     const role = extractRoleFromClaimValue(claims[claim]);
-    if (role !== "unknown") {
+    if (role) {
       return role;
     }
   }
 
-  return "unknown";
+  return null;
 }
 
-function extractRoleFromGroups(groups: string[]): AppRole {
+function extractRoleFromGroups(groups: string[]): AppRole | null {
   for (const group of groups) {
     const role = normalizeRole(group);
-    if (role !== "unknown") {
+    if (role) {
       return role;
     }
   }
 
-  return "unknown";
+  return null;
 }
 
 function extractEmail(claims?: Record<string, unknown>): string | undefined {
@@ -143,7 +151,28 @@ function readStoredSession(): AuthSession | null {
     if (!raw) {
       return null;
     }
-    return JSON.parse(raw) as AuthSession;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) {
+      return null;
+    }
+
+    const accessToken = typeof parsed.accessToken === "string" ? parsed.accessToken : "";
+    const idToken = typeof parsed.idToken === "string" ? parsed.idToken : "";
+    if (!accessToken || !idToken) {
+      return null;
+    }
+
+    const role = typeof parsed.role === "string" ? normalizeRole(parsed.role) : null;
+    const email = typeof parsed.email === "string" ? parsed.email : undefined;
+    const facilityId = typeof parsed.facilityId === "string" ? parsed.facilityId : undefined;
+
+    return {
+      accessToken,
+      idToken,
+      role,
+      email,
+      facilityId,
+    };
   } catch {
     return null;
   }
@@ -181,14 +210,11 @@ async function buildSession(): Promise<AuthSession | null> {
     const roleFromGroups = extractRoleFromGroups(userRoles);
     const roleFromAccessToken = extractRoleFromClaims(accessTokenPayload);
     const roleFromIdToken = extractRoleFromClaims(idTokenPayload);
-    const role =
-      roleFromGroups !== "unknown"
-        ? roleFromGroups
-        : roleFromAccessToken !== "unknown"
-          ? roleFromAccessToken
-          : roleFromIdToken;
+
+    const role = roleFromGroups ?? roleFromAccessToken ?? roleFromIdToken;
     const email = extractEmail(idTokenPayload) ?? extractEmail(accessTokenPayload);
     const facilityId = extractFacilityId(idTokenPayload) ?? extractFacilityId(accessTokenPayload);
+
 
     return {
       accessToken,

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { updateSignedInUserFacilityId } from "../auth";
 import {
   attachRoleToUser,
   FACILITY_USER_GROUP_FILTERS,
@@ -12,6 +13,7 @@ import {
 } from "../api/authAdmin";
 import { getOrganizationById } from "../api/organizations";
 import { useAuthContext } from "../context/AuthContext";
+import { canAccessOrganization, isFacilityManager } from "../utils/facilityAccess";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {
@@ -58,10 +60,10 @@ const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string>
 function OrganizationUsersPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
-  const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role ?? "unknown";
-  const canManageOrganizations = role === "admin" || role === "super_admin";
-  const canAttachRoles = role === "super_admin";
+  const { session, isAuthenticated, refreshSession } = useAuthContext();
+  const role = session?.role;
+  const canManageOrganizations = isFacilityManager(role);
+  const canAttachRoles = role === "HOSPITAL_ADMIN" || role === "SUPER_ADMIN";
   const queryClient = useQueryClient();
 
   const [selectedGroupByUsername, setSelectedGroupByUsername] = useState<
@@ -78,6 +80,7 @@ function OrganizationUsersPage() {
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
+  const facilityId = organizationQuery.data?.id?.trim() ?? "";
 
   const usersQuery = useQuery({
     queryKey: [
@@ -88,14 +91,30 @@ function OrganizationUsersPage() {
       session?.accessToken,
     ],
     queryFn: () => listFacilityUsers(facilityCode, selectedUserGroupFilter, session?.accessToken),
-    enabled: canManageOrganizations && facilityCode.length > 0,
+    enabled:
+      canManageOrganizations &&
+      facilityCode.length > 0 &&
+      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
   });
 
   const attachRoleMutation = useMutation({
     mutationFn: ({ username, groupName }: { username: string; groupName: AuthGroupName }) =>
       attachRoleToUser({ username, groupName }, session?.accessToken),
     onSuccess: async (_data, variables) => {
-      setLastActionMessage(`Updated ${variables.username} to ${variables.groupName}.`);
+      const baseMessage = `Updated ${variables.username} to ${variables.groupName}.`;
+      let nextMessage = baseMessage;
+
+      if (facilityId.length > 0) {
+        try {
+          await updateSignedInUserFacilityId(facilityId);
+          await refreshSession();
+          nextMessage = `${baseMessage} Updated custom:facility_id to ${facilityId}.`;
+        } catch (error) {
+          nextMessage = `${baseMessage} Failed to update custom:facility_id: ${formatError(error)}`;
+        }
+      }
+
+      setLastActionMessage(nextMessage);
       await queryClient.invalidateQueries({
         queryKey: ["organization-users", organizationId],
       });
@@ -133,6 +152,14 @@ function OrganizationUsersPage() {
     return <Navigate to="/facilities" replace />;
   }
 
+  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
@@ -153,6 +180,9 @@ function OrganizationUsersPage() {
           </Link>
           <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/services`}>
             Services
+          </Link>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+            Referrals
           </Link>
           <Link className="btn btn-ghost org-btn" to="/facilities">
             Back to Facilities

@@ -4,6 +4,7 @@ import {
     resendSignUpCode as amplifyResendSignUpCode,
     resetPassword as amplifyResetPassword,
     confirmResetPassword as amplifyConfirmResetPassword,
+    updateUserAttributes as amplifyUpdateUserAttributes,
     signIn,
     signOut,
     fetchAuthSession,
@@ -154,11 +155,27 @@ export async function getUserRoles(): Promise<string[]> {
         return accessGroups;
     }
 
+
     return extractGroups(idTokenPayload);
 }
 
 export async function getAuthenticatedUser() {
     return getCurrentUser();
+}
+
+export async function updateSignedInUserFacilityId(facilityId: string) {
+    const trimmedFacilityId = facilityId.trim();
+    if (!trimmedFacilityId) {
+        throw new Error("Missing facility_id. Unable to update user assignment.");
+    }
+
+    await amplifyUpdateUserAttributes({
+        userAttributes: {
+            "custom:facility_id": trimmedFacilityId,
+        },
+    });
+
+    await fetchAuthSession({ forceRefresh: true });
 }
 
 export async function logoutUser() {

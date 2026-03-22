@@ -3,6 +3,11 @@ import { isAxiosError } from "axios";
 import { Link, Navigate } from "react-router-dom";
 import { listOrganizations } from "../api/organizations";
 import { useAuthContext } from "../context/AuthContext";
+import {
+  canManageFacilityCatalog,
+  isFacilityManager,
+  isOrganizationOwnedBySessionFacility,
+} from "../utils/facilityAccess";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {
@@ -25,17 +30,72 @@ function formatError(error: unknown): string {
 
 function OrganizationsPage() {
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role ?? "unknown";
-  const canManageOrganizations = role === "admin" || role === "super_admin";
+  const role = session?.role;
+  const canManageOrganizations = isFacilityManager(role);
+  const canManageCatalog = canManageFacilityCatalog(role);
 
   const organizationsQuery = useQuery({
     queryKey: ["organizations", session?.accessToken],
     queryFn: () => listOrganizations(session?.accessToken),
     enabled: isAuthenticated && canManageOrganizations,
   });
+  const scopedOrganization =
+    role === "HOSPITAL_ADMIN" && organizationsQuery.data
+      ? organizationsQuery.data.find((organization) =>
+          isOrganizationOwnedBySessionFacility(organization, session?.facilityId),
+        )
+      : undefined;
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (role === "HOSPITAL_ADMIN") {
+    if (!session?.facilityId) {
+      return (
+        <section className="org-shell reveal delay-1">
+          <article className="access-note error-block">
+            <h2>Missing facility assignment</h2>
+            <p>Could not resolve your `facility_id` from token claims. Sign in again or contact support.</p>
+          </article>
+        </section>
+      );
+    }
+
+    if (organizationsQuery.isLoading) {
+      return (
+        <section className="org-shell reveal delay-1">
+          <article className="access-note">
+            <h2>Loading facility</h2>
+            <p>Resolving your assigned facility...</p>
+          </article>
+        </section>
+      );
+    }
+
+    if (organizationsQuery.isError) {
+      return (
+        <section className="org-shell reveal delay-1">
+          <article className="access-note error-block">
+            <h2>Could not load facility</h2>
+            <p>{formatError(organizationsQuery.error)}</p>
+          </article>
+        </section>
+      );
+    }
+
+    if (scopedOrganization?.id) {
+      return <Navigate to={`/facilities/${scopedOrganization.id}`} replace />;
+    }
+
+    return (
+      <section className="org-shell reveal delay-1">
+        <article className="access-note error-block">
+          <h2>Assigned facility not found</h2>
+          <p>We could not match your assigned facility to an organization record.</p>
+        </article>
+      </section>
+    );
   }
 
   return (
@@ -46,7 +106,7 @@ function OrganizationsPage() {
           <h1>Manage facilities</h1>
           <p>View and update facilities, then open each facility workspace for services, users, and patients.</p>
         </div>
-        {canManageOrganizations ? (
+        {canManageCatalog ? (
           <Link className="btn btn-primary" to="/facilities/new">
             Create Facility
           </Link>
@@ -56,7 +116,7 @@ function OrganizationsPage() {
       {!canManageOrganizations ? (
         <article className="access-note">
           <h2>Restricted facilities module</h2>
-          <p>Only users with the `admin` role can manage facilities.</p>
+          <p>Only users with `HOSPITAL_ADMIN` or `SUPER_ADMIN` role can manage facilities.</p>
         </article>
       ) : null}
 

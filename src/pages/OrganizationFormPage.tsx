@@ -11,6 +11,7 @@ import {
   type OrganizationUpsertInput,
 } from "../api/organizations";
 import { useAuthContext } from "../context/AuthContext";
+import { canManageFacilityCatalog } from "../utils/facilityAccess";
 
 type OrganizationFormState = {
   name: string;
@@ -78,8 +79,8 @@ function OrganizationFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role ?? "unknown";
-  const canManageOrganizations = role === "admin" || role === "super_admin";
+  const role = session?.role;
+  const canManageOrganizations = canManageFacilityCatalog(role);
 
   const [formState, setFormState] = useState<OrganizationFormState>(defaultFormState);
   const [validationError, setValidationError] = useState<string | null>(null);

@@ -6,6 +6,7 @@ import { getOrganizationById } from "../api/organizations";
 import { listPatients } from "../api/patients";
 import { listOrganizationServices } from "../api/services";
 import { useAuthContext } from "../context/AuthContext";
+import { canAccessOrganization, canManageFacilityCatalog, isFacilityManager } from "../utils/facilityAccess";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {
@@ -53,8 +54,9 @@ function OrganizationWorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role ?? "unknown";
-  const canManageOrganizations = role === "admin" || role === "super_admin";
+  const role = session?.role;
+  const canManageOrganizations = isFacilityManager(role);
+  const canEditFacility = canManageFacilityCatalog(role);
 
   const organizationQuery = useQuery({
     queryKey: ["organizations", "detail", organizationId, session?.accessToken],
@@ -65,7 +67,10 @@ function OrganizationWorkspacePage() {
   const servicesQuery = useQuery({
     queryKey: ["organizations", organizationId, "services", session?.accessToken],
     queryFn: () => listOrganizationServices(organizationId, session?.accessToken),
-    enabled: canManageOrganizations && organizationId.length > 0,
+    enabled:
+      canManageOrganizations &&
+      organizationId.length > 0 &&
+      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
@@ -73,13 +78,19 @@ function OrganizationWorkspacePage() {
   const usersQuery = useQuery({
     queryKey: ["organization-users", organizationId, facilityCode, "all", session?.accessToken],
     queryFn: () => listFacilityUsers(facilityCode, "all", session?.accessToken),
-    enabled: canManageOrganizations && facilityCode.length > 0,
+    enabled:
+      canManageOrganizations &&
+      facilityCode.length > 0 &&
+      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
   });
 
   const patientsQuery = useQuery({
     queryKey: ["patients", organizationId, session?.accessToken],
     queryFn: () => listPatients(undefined, session?.accessToken),
-    enabled: canManageOrganizations && organizationId.length > 0,
+    enabled:
+      canManageOrganizations &&
+      organizationId.length > 0 &&
+      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
   });
 
   if (!isAuthenticated) {
@@ -92,6 +103,14 @@ function OrganizationWorkspacePage() {
 
   if (!organizationId) {
     return <Navigate to="/facilities" replace />;
+  }
+
+  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   const servicesCount =
@@ -131,9 +150,11 @@ function OrganizationWorkspacePage() {
           <Link className="btn btn-ghost org-btn" to="/facilities">
             Back to Facilities
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/edit`}>
-            Edit Facility
-          </Link>
+          {canEditFacility ? (
+            <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/edit`}>
+              Edit Facility
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -168,8 +189,10 @@ function OrganizationWorkspacePage() {
         />
         <StatCard
           title="Referrals"
-          value="Coming soon"
-          description="Referral statistics will appear here when referral APIs are integrated."
+          value="Manage"
+          description="Open your facility referrals workspace."
+          actionLabel="Open Referrals"
+          actionTo={`/facilities/${organizationId}/referrals`}
         />
       </section>
 

@@ -14,6 +14,7 @@ import {
 } from "../api/patients";
 import { useAuthContext } from "../context/AuthContext";
 import type { MsOrganizationsInternalDomainModelPatient as Patient } from "../types/api.generated";
+import { canAccessOrganization, isFacilityManager } from "../utils/facilityAccess";
 
 type PatientFormState = {
   full_name: string;
@@ -115,8 +116,8 @@ function OrganizationPatientsPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role ?? "unknown";
-  const canManageOrganizations = role === "admin" || role === "super_admin";
+  const role = session?.role;
+  const canManageOrganizations = isFacilityManager(role);
   const queryClient = useQueryClient();
 
   const [patientFormState, setPatientFormState] = useState<PatientFormState>(defaultPatientFormState);
@@ -142,7 +143,10 @@ function OrganizationPatientsPage() {
       session?.accessToken,
     ],
     queryFn: () => listPatients(patientQuery, session?.accessToken),
-    enabled: canManageOrganizations && organizationId.length > 0,
+    enabled:
+      canManageOrganizations &&
+      organizationId.length > 0 &&
+      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
   });
 
   const createPatientMutation = useMutation({
@@ -245,6 +249,14 @@ function OrganizationPatientsPage() {
     return <Navigate to="/facilities" replace />;
   }
 
+  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
@@ -265,6 +277,9 @@ function OrganizationPatientsPage() {
           </Link>
           <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/users`}>
             Users
+          </Link>
+          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+            Referrals
           </Link>
           <Link className="btn btn-ghost org-btn" to="/facilities">
             Back to Facilities

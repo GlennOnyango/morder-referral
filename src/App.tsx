@@ -6,6 +6,7 @@ import ConfirmSignUpPage from "./pages/ConfirmSignUpPage";
 import HomePage from "./pages/HomePage";
 import OrganizationFormPage from "./pages/OrganizationFormPage";
 import OrganizationPatientsPage from "./pages/OrganizationPatientsPage";
+import OrganizationReferralsPage from "./pages/OrganizationReferralsPage";
 import OrganizationServicesPage from "./pages/OrganizationServicesPage";
 import OrganizationUsersPage from "./pages/OrganizationUsersPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
@@ -71,7 +72,7 @@ function App() {
           <Route
             path="/users"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <Navigate to="/facilities" replace />
               </ProtectedRoute>
             }
@@ -87,7 +88,7 @@ function App() {
           <Route
             path="/facilities"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <OrganizationsPage />
               </ProtectedRoute>
             }
@@ -95,7 +96,7 @@ function App() {
           <Route
             path="/facilities/new"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
                 <OrganizationFormPage />
               </ProtectedRoute>
             }
@@ -103,7 +104,7 @@ function App() {
           <Route
             path="/facilities/:id/edit"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
                 <OrganizationFormPage />
               </ProtectedRoute>
             }
@@ -111,7 +112,7 @@ function App() {
           <Route
             path="/facilities/:id"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <OrganizationWorkspacePage />
               </ProtectedRoute>
             }
@@ -119,7 +120,7 @@ function App() {
           <Route
             path="/facilities/:id/services"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <OrganizationServicesPage />
               </ProtectedRoute>
             }
@@ -127,7 +128,7 @@ function App() {
           <Route
             path="/facilities/:id/patients"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <OrganizationPatientsPage />
               </ProtectedRoute>
             }
@@ -135,8 +136,16 @@ function App() {
           <Route
             path="/facilities/:id/users"
             element={
-              <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <OrganizationUsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/facilities/:id/referrals"
+            element={
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+                <OrganizationReferralsPage />
               </ProtectedRoute>
             }
           />
