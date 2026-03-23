@@ -254,9 +254,9 @@ function OrganizationUsersPage() {
                               }))
                             }
                           >
-                            <option value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</option>
-                            <option value="DOCTOR">DOCTOR</option>
-                            <option value="NURSE">NURSE</option>
+                            <option value="HOSPITAL_ADMIN">hospital_admin</option>
+                            <option value="DOCTOR">doctor</option>
+                            <option value="NURSE">nurse</option>
                           </select>
                         </td>
                       ) : null}
