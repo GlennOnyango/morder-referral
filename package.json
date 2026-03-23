@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "serve -s dist -l $PORT",
-    "generate:types": "npx swagger-typescript-api generate --path swagger-doc.json --output src/types --name api.generated.ts"
+    "generate:types": "npx swagger-typescript-api generate --path swagger-doc.json --output src/types --name api.generated.ts",
+    "generate:referral:types": "npx swagger-typescript-api generate --path https://nrs-referrals-production.up.railway.app/swagger/doc.json --output src/types --name referrals.generated.ts"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.2",

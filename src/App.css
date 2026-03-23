@@ -519,6 +519,64 @@ main {
   margin-top: 12px;
 }
 
+.facility-operations-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.facility-operations-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(12, 66, 79, 0.2);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.95), rgba(234, 246, 244, 0.92));
+  box-shadow: 0 12px 30px rgba(10, 44, 53, 0.1);
+}
+
+.facility-operations-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -40px -70px auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 90, 120, 0.14), rgba(15, 90, 120, 0));
+  pointer-events: none;
+}
+
+.facility-operations-description {
+  margin: 10px 0 0;
+  max-width: 70ch;
+  color: #2b4a5c;
+  line-height: 1.5;
+}
+
+.facility-operations-actions {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.facility-operations-btn {
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 12px;
+  border-color: rgba(15, 90, 120, 0.2);
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(1px);
+}
+
+.facility-operations-btn::after {
+  content: "→";
+  font-weight: 800;
+  color: #0f5a78;
+}
+
+.facility-operations-btn:not(:disabled):hover {
+  border-color: rgba(15, 90, 120, 0.34);
+  background: #ffffff;
+}
+
 .org-shell {
   margin-top: 14px;
   display: grid;
@@ -604,6 +662,20 @@ main {
   margin-bottom: 12px;
 }
 
+.referrals-table-tools {
+  justify-content: space-between;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.referrals-table-controls {
+  display: inline-flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .org-table {
   width: 100%;
   border-collapse: collapse;
@@ -630,6 +702,20 @@ main {
   font-size: 0.92rem;
 }
 
+.org-table-row-clickable {
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.org-table-row-clickable:hover {
+  background: rgba(15, 90, 120, 0.08);
+}
+
+.org-table-row-clickable:focus-visible {
+  outline: 2px solid rgba(17, 122, 101, 0.45);
+  outline-offset: -2px;
+}
+
 .org-link {
   color: #0f5a78;
   font-weight: 700;
@@ -644,6 +730,12 @@ main {
   display: inline-flex;
   gap: 8px;
   align-items: end;
+}
+
+.referrals-page-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .org-filter-control {
@@ -665,6 +757,78 @@ main {
 .org-btn {
   padding: 8px 13px;
   font-size: 0.84rem;
+}
+
+.referrals-page-btn {
+  min-width: 186px;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+}
+
+.referrals-page-actions .btn-primary.referrals-page-btn {
+  box-shadow: 0 12px 24px rgba(15, 90, 120, 0.26);
+}
+
+.referrals-page-actions .btn-primary.referrals-page-btn:not(:disabled):hover {
+  box-shadow: 0 16px 30px rgba(15, 90, 120, 0.3);
+}
+
+.referrals-page-actions .btn-ghost.referrals-page-btn {
+  border-color: rgba(15, 90, 120, 0.28);
+  background: linear-gradient(180deg, #ffffff, #f4fbff);
+}
+
+.referrals-page-actions .btn-ghost.referrals-page-btn:not(:disabled):hover {
+  border-color: rgba(15, 90, 120, 0.42);
+  background: #ffffff;
+}
+
+.referrals-search-control {
+  flex: 1;
+  min-width: 260px;
+}
+
+.referrals-search-input {
+  min-width: 320px;
+}
+
+.referrals-filter-select {
+  min-width: 120px;
+}
+
+.referrals-clear-search-btn {
+  min-width: 90px;
+}
+
+.referrals-search-summary {
+  margin: -2px 0 12px;
+  color: #355367;
+}
+
+.referrals-pagination {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.referrals-page-indicator {
+  margin: 0;
+  color: #355367;
+}
+
+.referrals-pagination-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.referrals-pagination-btn {
+  min-width: 96px;
 }
 
 .user-role-select {
@@ -695,11 +859,25 @@ main {
   min-height: 92px;
 }
 
+.referral-readonly-input {
+  background: rgba(240, 247, 250, 0.9);
+  color: #1b3b4d;
+}
+
+.referral-readonly-input:focus {
+  border-color: rgba(14, 62, 72, 0.19);
+  box-shadow: none;
+}
+
 .service-form-actions {
   display: inline-flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.referral-detail-actions {
+  margin-top: 14px;
 }
 
 .org-action-grid {
@@ -772,43 +950,6 @@ main {
   margin: 8px 0 0;
   color: var(--color-muted);
   font-size: 0.9rem;
-}
-
-.patient-search-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.patient-form-wrap {
-  margin-top: 16px;
-}
-
-.patient-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.patient-address-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.patient-active-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #28465a;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.patient-active-toggle input {
-  width: 16px;
-  height: 16px;
 }
 
 .dialog-backdrop {
@@ -1178,10 +1319,11 @@ main {
   }
 
   .org-action-grid,
-  .org-stat-grid,
-  .patient-search-grid,
-  .patient-form-grid,
-  .patient-address-grid {
+  .org-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .facility-operations-actions {
     grid-template-columns: 1fr;
   }
 }
@@ -1230,6 +1372,53 @@ main {
 
   .org-table-tools {
     justify-content: flex-start;
+  }
+
+  .referrals-page-actions {
+    width: 100%;
+  }
+
+  .referrals-page-btn {
+    width: 100%;
+  }
+
+  .referrals-table-tools {
+    align-items: stretch;
+  }
+
+  .referrals-table-controls {
+    width: 100%;
+  }
+
+  .referrals-search-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .referrals-search-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .referrals-clear-search-btn {
+    width: 100%;
+  }
+
+  .referrals-filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .referrals-pagination {
+    align-items: stretch;
+  }
+
+  .referrals-pagination-actions {
+    width: 100%;
+  }
+
+  .referrals-pagination-btn {
+    flex: 1;
   }
 }
 

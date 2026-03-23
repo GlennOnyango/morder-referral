@@ -136,8 +136,8 @@ export async function loginUser(email: string, password: string): Promise<LoginU
     };
 }
 
-export async function getAuthTokens(): Promise<AuthTokenSnapshot> {
-    const session = await fetchAuthSession();
+export async function getAuthTokens(forceRefresh = false): Promise<AuthTokenSnapshot> {
+    const session = await fetchAuthSession({ forceRefresh });
     const accessToken = session.tokens?.accessToken;
     const idToken = session.tokens?.idToken;
 

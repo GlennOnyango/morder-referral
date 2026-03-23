@@ -45,8 +45,7 @@ const onboardingRequirements = [
 const workflowStates = [
   {
     name: "Draft and Submit",
-    detail:
-      "Hospital A creates a referral with patient context, urgency, requested service, and stabilization notes.",
+    detail: "Hospital A creates a referral with urgency, requested service, and stabilization notes.",
   },
   {
     name: "Broadcast or Target",
@@ -84,7 +83,7 @@ const responsePaths = [
   {
     title: "Request More Info",
     detail:
-      "Hospital B requests additional patient details, Hospital A responds, then acceptance decision proceeds.",
+      "Hospital B requests additional clinical details, Hospital A responds, then acceptance decision proceeds.",
   },
   {
     title: "Reject / Re-route",

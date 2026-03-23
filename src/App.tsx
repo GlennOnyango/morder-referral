@@ -5,7 +5,9 @@ import DashboardPage from "./pages/DashboardPage";
 import ConfirmSignUpPage from "./pages/ConfirmSignUpPage";
 import HomePage from "./pages/HomePage";
 import OrganizationFormPage from "./pages/OrganizationFormPage";
-import OrganizationPatientsPage from "./pages/OrganizationPatientsPage";
+import OrganizationCreateReferralPage from "./pages/OrganizationCreateReferralPage";
+import OrganizationFacilityReferralsPage from "./pages/OrganizationFacilityReferralsPage";
+import OrganizationPoolReferralDetailPage from "./pages/OrganizationPoolReferralDetailPage";
 import OrganizationReferralsPage from "./pages/OrganizationReferralsPage";
 import OrganizationServicesPage from "./pages/OrganizationServicesPage";
 import OrganizationUsersPage from "./pages/OrganizationUsersPage";
@@ -126,14 +128,6 @@ function App() {
             }
           />
           <Route
-            path="/facilities/:id/patients"
-            element={
-              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-                <OrganizationPatientsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/facilities/:id/users"
             element={
               <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
@@ -146,6 +140,30 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
                 <OrganizationReferralsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/facilities/:id/referrals/create"
+            element={
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+                <OrganizationCreateReferralPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/facilities/:id/referrals/pool/:referralCode"
+            element={
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+                <OrganizationPoolReferralDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/facilities/:id/referrals/facility"
+            element={
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+                <OrganizationFacilityReferralsPage />
               </ProtectedRoute>
             }
           />

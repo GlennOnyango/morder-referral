@@ -10,77 +10,160 @@
  * ---------------------------------------------------------------
  */
 
-export type GinH = Record<string, any>;
-
-export interface InternalApiCreateOrganizationRequest {
-  /**
-   * @min 1
-   * @max 47
-   */
-  county: number;
-  facility_code: string;
-  lat: number;
-  /**
-   * @min 1
-   * @max 6
-   */
-  level: number;
-  lng: number;
-  name: string;
-  ownership_type: "public" | "private" | "faith_based";
+export enum ModelsReferralStatus {
+  ReferralStatusOpen = "open",
+  ReferralStatusAccepted = "accepted",
+  ReferralStatusCancelled = "cancelled",
+  ReferralStatusClosed = "closed",
 }
 
-export interface InternalApiCreateServiceRequest {
-  availability: "available" | "limited" | "unavailable";
-  notes?: string;
-  service_name: string;
+export interface HandlerErrorResponse {
+  error?: string;
+  message?: string;
 }
 
-export interface InternalApiUpdateOrganizationRequest {
-  /**
-   * @min 1
-   * @max 47
-   */
-  county: number;
-  facility_code: string;
-  lat: number;
-  /**
-   * @min 1
-   * @max 6
-   */
-  level: number;
-  lng: number;
-  name: string;
-  ownership_type: "public" | "private" | "faith_based";
+export interface HandlerNotificationListResponse {
+  items?: ModelsNotification[];
 }
 
-export interface InternalApiUpdateServiceRequest {
-  availability: "available" | "limited" | "unavailable";
-  notes?: string;
-  service_name: string;
-}
-
-export interface MsOrganizationsInternalDomainModelOrganization {
-  county?: number;
-  created_at?: string;
-  facility_code?: string;
+export interface HandlerNotificationResponse {
+  createdAt?: string;
+  eventType?: string;
   id?: string;
-  lat?: number;
-  level?: number;
-  lng?: number;
-  name?: string;
-  ownership_type?: string;
-  updated_at?: string;
+  isRead?: boolean;
+  payload?: object;
+  referralCode?: string;
+  referralId?: string;
+  targetFacilityCode?: string;
+  updatedAt?: string;
 }
 
-export interface MsOrganizationsInternalDomainModelService {
-  availability?: string;
-  created_at?: string;
+export interface HandlerReferralHistoryListResponse {
+  items?: ModelsReferralHistory[];
+}
+
+export interface HandlerReferralListResponse {
+  items?: ModelsReferral[];
+}
+
+export interface HandlerReferralResponse {
+  acceptedAt?: string;
+  acceptedByFacilityCode?: string;
+  clinicalSummary?: string;
+  createdAt?: string;
   id?: string;
+  metadata?: object;
   notes?: string;
-  organization_id?: string;
-  service_name?: string;
-  updated_at?: string;
+  originFacilityCode?: string;
+  patient?: ModelsPatient;
+  priority?: string;
+  raisedBySub?: string;
+  raisedByUsername?: string;
+  reasonForReferral?: string;
+  referralCode?: string;
+  serviceType?: string;
+  status?: ModelsReferralStatus;
+  updatedAt?: string;
+}
+
+export interface HandlerStatusResponse {
+  status?: string;
+}
+
+export interface ModelsNotification {
+  createdAt?: string;
+  eventType?: string;
+  id?: string;
+  isRead?: boolean;
+  payload?: object;
+  referralCode?: string;
+  referralId?: string;
+  targetFacilityCode?: string;
+  updatedAt?: string;
+}
+
+export interface ModelsPatient {
+  additionalNotes?: string;
+  address?: string;
+  allergies?: string;
+  createdAt?: string;
+  dateOfBirth?: string;
+  diagnosis?: string;
+  fullName?: string;
+  gender?: string;
+  id?: string;
+  medicalRecordNumber?: string;
+  nationalId?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
+  phone?: string;
+  referralId?: string;
+  updatedAt?: string;
+  vitalSummary?: string;
+}
+
+export interface ModelsReferral {
+  acceptedAt?: string;
+  acceptedByFacilityCode?: string;
+  clinicalSummary?: string;
+  createdAt?: string;
+  id?: string;
+  metadata?: object;
+  notes?: string;
+  originFacilityCode?: string;
+  patient?: ModelsPatient;
+  priority?: string;
+  raisedBySub?: string;
+  raisedByUsername?: string;
+  reasonForReferral?: string;
+  referralCode?: string;
+  serviceType?: string;
+  status?: ModelsReferralStatus;
+  updatedAt?: string;
+}
+
+export interface ModelsReferralHistory {
+  action?: string;
+  actorName?: string;
+  actorSub?: string;
+  createdAt?: string;
+  description?: string;
+  facilityCode?: string;
+  id?: string;
+  metadata?: object;
+  referralId?: string;
+}
+
+export interface ServiceAcceptReferralInput {
+  facilityCode: string;
+  notes?: string;
+}
+
+export interface ServiceCreateReferralInput {
+  clinicalSummary?: string;
+  metadata?: Record<string, any>;
+  notes?: string;
+  originFacilityCode?: string;
+  patient: ServicePatientInput;
+  priority: string;
+  reasonForReferral: string;
+  serviceType: string;
+}
+
+export interface ServicePatientInput {
+  additionalNotes?: string;
+  address?: string;
+  allergies?: string;
+  dateOfBirth: string;
+  diagnosis?: string;
+  fullName: string;
+  gender: string;
+  medicalRecordNumber?: string;
+  nationalId?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
+  phone?: string;
+  vitalSummary?: string;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -136,7 +219,7 @@ export enum ContentType {
 }
 
 export class HttpClient<SecurityDataType = unknown> {
-  public baseUrl: string = "";
+  public baseUrl: string = "/api/v1";
   private securityData: SecurityDataType | null = null;
   private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
   private abortControllers = new Map<CancelToken, AbortController>();
@@ -339,210 +422,275 @@ export class HttpClient<SecurityDataType = unknown> {
 }
 
 /**
- * @title MS Organizations API
- * @version 1.0
+ * @title NRS Referrals API
+ * @version 1.0.0
+ * @baseUrl /api/v1
  * @contact
  *
- * Microservice for organizations and services.
+ * Referral microservice secured by Amazon Cognito.
  */
 export class Api<
   SecurityDataType extends unknown,
 > extends HttpClient<SecurityDataType> {
-  organizations = {
+  facilities = {
     /**
-     * No description
+     * @description Returns referrals created by or accepted by a facility.
      *
-     * @tags organizations
-     * @name OrganizationsList
-     * @summary List organizations
-     * @request GET:/organizations
+     * @tags facilities
+     * @name ReferralsList
+     * @summary Get facility referrals
+     * @request GET:/facilities/{facilityCode}/referrals
+     * @secure
      */
-    organizationsList: (
+    referralsList: (
+      facilityCode: string,
       query?: {
-        /**
-         * limit
-         * @default 50
-         */
+        /** Referral status filter */
+        status?: string;
+        /** origin or accepted */
+        role?: string;
+        /** Page size */
         limit?: number;
-        /**
-         * offset
-         * @default 0
-         */
+        /** Page offset */
         offset?: number;
       },
       params: RequestParams = {},
     ) =>
-      this.request<MsOrganizationsInternalDomainModelOrganization[], GinH>({
-        path: `/organizations`,
+      this.request<HandlerReferralListResponse, HandlerErrorResponse>({
+        path: `/facilities/${facilityCode}/referrals`,
         method: "GET",
         query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags organizations
-     * @name OrganizationsCreate
-     * @summary Create an organization
-     * @request POST:/organizations
-     */
-    organizationsCreate: (
-      body: InternalApiCreateOrganizationRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<MsOrganizationsInternalDomainModelOrganization, GinH>({
-        path: `/organizations`,
-        method: "POST",
-        body: body,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags organizations
-     * @name OrganizationsDetail
-     * @summary Get an organization
-     * @request GET:/organizations/{id}
-     */
-    organizationsDetail: (id: string, params: RequestParams = {}) =>
-      this.request<MsOrganizationsInternalDomainModelOrganization, GinH>({
-        path: `/organizations/${id}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags organizations
-     * @name OrganizationsUpdate
-     * @summary Update an organization
-     * @request PUT:/organizations/{id}
-     */
-    organizationsUpdate: (
-      id: string,
-      body: InternalApiUpdateOrganizationRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<MsOrganizationsInternalDomainModelOrganization, GinH>({
-        path: `/organizations/${id}`,
-        method: "PUT",
-        body: body,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags organizations
-     * @name OrganizationsDelete
-     * @summary Delete an organization
-     * @request DELETE:/organizations/{id}
-     */
-    organizationsDelete: (id: string, params: RequestParams = {}) =>
-      this.request<void, GinH>({
-        path: `/organizations/${id}`,
-        method: "DELETE",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags services
-     * @name ServicesList
-     * @summary List services for an organization
-     * @request GET:/organizations/{id}/services
-     */
-    servicesList: (id: string, params: RequestParams = {}) =>
-      this.request<MsOrganizationsInternalDomainModelService[], GinH>({
-        path: `/organizations/${id}/services`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags services
-     * @name ServicesCreate
-     * @summary Create a service for an organization
-     * @request POST:/organizations/{id}/services
-     */
-    servicesCreate: (
-      id: string,
-      body: InternalApiCreateServiceRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<MsOrganizationsInternalDomainModelService, GinH>({
-        path: `/organizations/${id}/services`,
-        method: "POST",
-        body: body,
-        type: ContentType.Json,
+        secure: true,
         format: "json",
         ...params,
       }),
   };
-  services = {
+  healthz = {
     /**
-     * No description
+     * @description Returns service health status.
      *
-     * @tags services
-     * @name ServicesDetail
-     * @summary Get a service
-     * @request GET:/services/{id}
+     * @tags health
+     * @name HealthzList
+     * @summary Health check
+     * @request GET:/healthz
      */
-    servicesDetail: (id: string, params: RequestParams = {}) =>
-      this.request<MsOrganizationsInternalDomainModelService, GinH>({
-        path: `/services/${id}`,
+    healthzList: (params: RequestParams = {}) =>
+      this.request<HandlerStatusResponse, any>({
+        path: `/healthz`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  notifications = {
+    /**
+     * @description Returns notifications for a facility.
+     *
+     * @tags notifications
+     * @name NotificationsList
+     * @summary List notifications
+     * @request GET:/notifications
+     * @secure
+     */
+    notificationsList: (
+      query?: {
+        /** Facility code */
+        facility_code?: string;
+        /** Unread only */
+        unread_only?: boolean;
+        /** Page size */
+        limit?: number;
+        /** Page offset */
+        offset?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<HandlerNotificationListResponse, HandlerErrorResponse>({
+        path: `/notifications`,
+        method: "GET",
+        query: query,
+        secure: true,
         format: "json",
         ...params,
       }),
 
     /**
-     * No description
+     * @description Opens a Server-Sent Events stream for facility and pool notifications.
      *
-     * @tags services
-     * @name ServicesUpdate
-     * @summary Update a service
-     * @request PUT:/services/{id}
+     * @tags notifications
+     * @name StreamList
+     * @summary Stream notifications
+     * @request GET:/notifications/stream
+     * @secure
      */
-    servicesUpdate: (
-      id: string,
-      body: InternalApiUpdateServiceRequest,
+    streamList: (
+      query?: {
+        /** Facility code */
+        facility_code?: string;
+      },
       params: RequestParams = {},
     ) =>
-      this.request<MsOrganizationsInternalDomainModelService, GinH>({
-        path: `/services/${id}`,
-        method: "PUT",
-        body: body,
+      this.request<string, HandlerErrorResponse>({
+        path: `/notifications/stream`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * @description Marks a facility notification as read.
+     *
+     * @tags notifications
+     * @name ReadPartialUpdate
+     * @summary Mark notification as read
+     * @request PATCH:/notifications/{id}/read
+     * @secure
+     */
+    readPartialUpdate: (
+      id: string,
+      query?: {
+        /** Facility code */
+        facility_code?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<HandlerNotificationResponse, HandlerErrorResponse>({
+        path: `/notifications/${id}/read`,
+        method: "PATCH",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+  };
+  readyz = {
+    /**
+     * @description Returns readiness status after checking database connectivity.
+     *
+     * @tags health
+     * @name ReadyzList
+     * @summary Readiness check
+     * @request GET:/readyz
+     */
+    readyzList: (params: RequestParams = {}) =>
+      this.request<HandlerStatusResponse, HandlerStatusResponse>({
+        path: `/readyz`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  referrals = {
+    /**
+     * @description Creates a new referral and publishes it to the referral pool. The raising user is derived from the Cognito token.
+     *
+     * @tags referrals
+     * @name ReferralsCreate
+     * @summary Create referral
+     * @request POST:/referrals
+     * @secure
+     */
+    referralsCreate: (
+      request: ServiceCreateReferralInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<HandlerReferralResponse, HandlerErrorResponse>({
+        path: `/referrals`,
+        method: "POST",
+        body: request,
+        secure: true,
         type: ContentType.Json,
         format: "json",
         ...params,
       }),
 
     /**
-     * No description
+     * @description Returns referrals currently available in the referral pool.
      *
-     * @tags services
-     * @name ServicesDelete
-     * @summary Delete a service
-     * @request DELETE:/services/{id}
+     * @tags referrals
+     * @name PoolList
+     * @summary List open referrals
+     * @request GET:/referrals/pool
+     * @secure
      */
-    servicesDelete: (id: string, params: RequestParams = {}) =>
-      this.request<void, GinH>({
-        path: `/services/${id}`,
-        method: "DELETE",
+    poolList: (
+      query?: {
+        /** Service type filter */
+        service_type?: string;
+        /** Page size */
+        limit?: number;
+        /** Page offset */
+        offset?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<HandlerReferralListResponse, HandlerErrorResponse>({
+        path: `/referrals/pool`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns a single referral using its referral code.
+     *
+     * @tags referrals
+     * @name ReferralsDetail
+     * @summary Get referral by code
+     * @request GET:/referrals/{referralCode}
+     * @secure
+     */
+    referralsDetail: (referralCode: string, params: RequestParams = {}) =>
+      this.request<HandlerReferralResponse, HandlerErrorResponse>({
+        path: `/referrals/${referralCode}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Accepts an open referral for a facility and removes it from the pool.
+     *
+     * @tags referrals
+     * @name AcceptCreate
+     * @summary Accept referral
+     * @request POST:/referrals/{referralCode}/accept
+     * @secure
+     */
+    acceptCreate: (
+      referralCode: string,
+      request: ServiceAcceptReferralInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<HandlerReferralResponse, HandlerErrorResponse>({
+        path: `/referrals/${referralCode}/accept`,
+        method: "POST",
+        body: request,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns audit history entries for a referral.
+     *
+     * @tags referrals
+     * @name HistoryList
+     * @summary Get referral history
+     * @request GET:/referrals/{referralCode}/history
+     * @secure
+     */
+    historyList: (referralCode: string, params: RequestParams = {}) =>
+      this.request<HandlerReferralHistoryListResponse, HandlerErrorResponse>({
+        path: `/referrals/${referralCode}/history`,
+        method: "GET",
+        secure: true,
+        format: "json",
         ...params,
       }),
   };

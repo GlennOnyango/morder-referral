@@ -3,7 +3,6 @@ import { isAxiosError } from "axios";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { listFacilityUsers } from "../api/authAdmin";
 import { getOrganizationById } from "../api/organizations";
-import { listPatients } from "../api/patients";
 import { listOrganizationServices } from "../api/services";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
@@ -85,15 +84,6 @@ function OrganizationWorkspacePage() {
       canAccessOrganization(role, session?.facilityId, organizationQuery.data),
   });
 
-  const patientsQuery = useQuery({
-    queryKey: ["patients", organizationId, session?.accessToken],
-    queryFn: () => listPatients(undefined, session?.accessToken),
-    enabled:
-      canManageOrganizations &&
-      organizationId.length > 0 &&
-      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
-  });
-
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
   }
@@ -129,13 +119,6 @@ function OrganizationWorkspacePage() {
         : usersQuery.isError
           ? "n/a"
           : usersQuery.data?.length ?? 0;
-
-  const patientsCount =
-    patientsQuery.isLoading
-      ? "..."
-      : patientsQuery.isError
-        ? "n/a"
-        : patientsQuery.data?.length ?? 0;
   const facilityName =
     organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
 
@@ -191,13 +174,6 @@ function OrganizationWorkspacePage() {
           actionTo={`/facilities/${organizationId}/users`}
         />
         <StatCard
-          title="Patients"
-          value={patientsCount}
-          description="Current patient records available in the patient service."
-          actionLabel="Open Patients"
-          actionTo={`/facilities/${organizationId}/patients`}
-        />
-        <StatCard
           title="Referrals"
           value="Manage"
           description="Open your facility referrals workspace."
@@ -213,14 +189,9 @@ function OrganizationWorkspacePage() {
       {usersQuery.isError ? (
         <p className="result-note error-note">Users stats failed: {formatError(usersQuery.error)}</p>
       ) : null}
-
-      {patientsQuery.isError ? (
-        <p className="result-note error-note">Patients stats failed: {formatError(patientsQuery.error)}</p>
-      ) : null}
     </section>
   );
 }
 
 export default OrganizationWorkspacePage;
-
 

@@ -1,4 +1,4 @@
-import axios from "axios";
+import { createApiClient } from "./httpClient";
 
 const AUTHENTICATION_BASE_URL =
   (import.meta.env.VITE_AUTHENTICATION_API_BASE_URL as string | undefined) ??
@@ -10,9 +10,7 @@ const FACILITY_USERS_PATH =
   (import.meta.env.VITE_AUTH_FACILITY_USERS_PATH as string | undefined) ??
   "/get-facility-users";
 
-const authAdminApi = axios.create({
-  baseURL: AUTHENTICATION_BASE_URL,
-});
+const authAdminApi = createApiClient(AUTHENTICATION_BASE_URL);
 
 function authHeaders(accessToken?: string) {
   if (!accessToken) {

@@ -1,17 +1,15 @@
-import axios from "axios";
 import type {
   InternalApiCreateServiceRequest,
   InternalApiUpdateServiceRequest,
   MsOrganizationsInternalDomainModelService as Service,
 } from "../types/api.generated";
+import { createApiClient } from "./httpClient";
 
 const ORGANIZATIONS_BASE_URL =
   (import.meta.env.VITE_ORGANIZATIONS_API_BASE_URL as string | undefined) ??
   "https://nrs-organizations-production.up.railway.app";
 
-const servicesApi = axios.create({
-  baseURL: ORGANIZATIONS_BASE_URL,
-});
+const servicesApi = createApiClient(ORGANIZATIONS_BASE_URL);
 
 function authHeaders(accessToken?: string) {
   if (!accessToken) {

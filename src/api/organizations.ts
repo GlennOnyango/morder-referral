@@ -4,14 +4,13 @@ import type {
   InternalApiUpdateOrganizationRequest,
   MsOrganizationsInternalDomainModelOrganization as Organization,
 } from "../types/api.generated";
+import { createApiClient } from "./httpClient";
 
 const ORGANIZATIONS_BASE_URL =
   (import.meta.env.VITE_ORGANIZATIONS_API_BASE_URL as string | undefined) ??
   "https://nrs-organizations-production.up.railway.app";
 
-const organizationsApi = axios.create({
-  baseURL: ORGANIZATIONS_BASE_URL,
-});
+const organizationsApi = createApiClient(ORGANIZATIONS_BASE_URL);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

@@ -8,6 +8,7 @@ import {
   logoutUser,
   type LoginUserResult,
 } from "../auth";
+import { AUTH_REFRESHED_EVENT, AUTH_REQUIRED_EVENT } from "../authEvents";
 
 export type AppRole = "SUPER_ADMIN" | "HOSPITAL_ADMIN" | "DOCTOR" | "NURSE";
 
@@ -264,6 +265,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refreshSession();
+  }, [refreshSession]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleAuthRefreshed = () => {
+      void refreshSession();
+    };
+
+    const handleAuthRequired = () => {
+      setSession(null);
+      persistSession(null);
+    };
+
+    window.addEventListener(AUTH_REFRESHED_EVENT, handleAuthRefreshed);
+    window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
+
+    return () => {
+      window.removeEventListener(AUTH_REFRESHED_EVENT, handleAuthRefreshed);
+      window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
+    };
   }, [refreshSession]);
 
   const value = useMemo<AuthContextValue>(

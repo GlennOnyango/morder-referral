@@ -105,7 +105,7 @@ function OrganizationsPage() {
         <div>
           <p className="eyebrow">Facilities</p>
           <h1>Manage facilities</h1>
-          <p>View and update facilities, then open each facility workspace for services, users, and patients.</p>
+          <p>View and update facilities, then open each facility workspace for services, users, and referrals.</p>
         </div>
         {canManageCatalog ? (
           <Link className="btn btn-primary" to="/facilities/new">
