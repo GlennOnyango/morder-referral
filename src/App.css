@@ -87,6 +87,124 @@
   gap: 10px;
 }
 
+.notifications-shell {
+  position: relative;
+}
+
+.notifications-toggle {
+  gap: 8px;
+}
+
+.notifications-badge {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  background: #0f5a78;
+  color: #f8fffd;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: min(92vw, 360px);
+  border-radius: 16px;
+  border: 1px solid rgba(10, 45, 55, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 34px rgba(12, 35, 40, 0.14);
+  backdrop-filter: blur(4px);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.notifications-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notifications-panel-header h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--color-ink);
+}
+
+.notifications-refresh-btn {
+  padding: 6px 11px;
+  font-size: 0.78rem;
+}
+
+.notifications-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(12, 66, 79, 0.16);
+  border-radius: 12px;
+  background: rgba(248, 253, 252, 0.95);
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.notification-item.unread {
+  border-color: rgba(15, 90, 120, 0.34);
+  background: rgba(233, 246, 255, 0.88);
+}
+
+.notification-item:hover {
+  background: #ffffff;
+  border-color: rgba(12, 66, 79, 0.3);
+}
+
+.notification-item:focus-visible {
+  outline: 2px solid rgba(17, 122, 101, 0.4);
+  outline-offset: 1px;
+}
+
+.notification-title {
+  color: #15394b;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.notification-message {
+  color: #26485b;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.notification-meta {
+  color: #4e6678;
+  font-size: 0.74rem;
+}
+
+.notifications-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

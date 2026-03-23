@@ -1,5 +1,6 @@
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
+import NotificationsMenu from "./components/NotificationsMenu";
 import { useAuthContext } from "./context/AuthContext";
 import DashboardPage from "./pages/DashboardPage";
 import ConfirmSignUpPage from "./pages/ConfirmSignUpPage";
@@ -39,6 +40,7 @@ function App() {
 
         {isAuthenticated ? (
           <div className="nav-actions">
+            <NotificationsMenu />
             <Link className="btn btn-ghost" to="/dashboard">
               Dashboard
             </Link>

@@ -217,20 +217,22 @@ function OrganizationCreateReferralPage() {
         <form className="org-form" onSubmit={handleSubmit}>
           <div className="org-grid">
             <label className="field">
-              <span>Service Type</span>
+              <span>Service Type *</span>
               <input
                 className="field-input"
                 value={formState.serviceType}
                 onChange={(event) => setFormState((previous) => ({ ...previous, serviceType: event.target.value }))}
+                placeholder="e.g. radiology"
                 required
               />
             </label>
             <label className="field">
-              <span>Priority</span>
+              <span>Priority *</span>
               <select
                 className="field-input"
                 value={formState.priority}
                 onChange={(event) => setFormState((previous) => ({ ...previous, priority: event.target.value }))}
+                required
               >
                 <option value="routine">routine</option>
                 <option value="urgent">urgent</option>
@@ -240,7 +242,7 @@ function OrganizationCreateReferralPage() {
           </div>
 
           <label className="field">
-            <span>Reason for Referral</span>
+            <span>Reason for Referral *</span>
             <textarea
               className="field-input service-notes"
               rows={3}
@@ -248,6 +250,7 @@ function OrganizationCreateReferralPage() {
               onChange={(event) =>
                 setFormState((previous) => ({ ...previous, reasonForReferral: event.target.value }))
               }
+              placeholder="Briefly explain why this referral is needed"
               required
             />
           </label>
@@ -262,6 +265,7 @@ function OrganizationCreateReferralPage() {
                 onChange={(event) =>
                   setFormState((previous) => ({ ...previous, clinicalSummary: event.target.value }))
                 }
+                placeholder="Current condition, key findings, and stabilization provided"
               />
             </label>
             <label className="field">
@@ -271,24 +275,26 @@ function OrganizationCreateReferralPage() {
                 rows={3}
                 value={formState.notes}
                 onChange={(event) => setFormState((previous) => ({ ...previous, notes: event.target.value }))}
+                placeholder="Any additional notes for receiving facility"
               />
             </label>
           </div>
 
           <div className="org-grid">
             <label className="field">
-              <span>Patient Full Name</span>
+              <span>Patient Full Name *</span>
               <input
                 className="field-input"
                 value={formState.patientFullName}
                 onChange={(event) =>
                   setFormState((previous) => ({ ...previous, patientFullName: event.target.value }))
                 }
+                placeholder="e.g. John Doe"
                 required
               />
             </label>
             <label className="field">
-              <span>Date of Birth</span>
+              <span>Date of Birth *</span>
               <input
                 className="field-input"
                 type="date"
@@ -303,7 +309,7 @@ function OrganizationCreateReferralPage() {
 
           <div className="org-grid">
             <label className="field">
-              <span>Gender</span>
+              <span>Gender *</span>
               <select
                 className="field-input"
                 value={formState.patientGender}
@@ -324,6 +330,7 @@ function OrganizationCreateReferralPage() {
                 className="field-input"
                 value={formState.patientPhone}
                 onChange={(event) => setFormState((previous) => ({ ...previous, patientPhone: event.target.value }))}
+                placeholder="e.g. +254700123456"
               />
             </label>
           </div>
@@ -334,6 +341,7 @@ function OrganizationCreateReferralPage() {
               className="field-input"
               value={formState.patientDiagnosis}
               onChange={(event) => setFormState((previous) => ({ ...previous, patientDiagnosis: event.target.value }))}
+              placeholder="e.g. Suspected appendicitis"
             />
           </label>
 
