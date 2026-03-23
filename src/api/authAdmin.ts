@@ -168,6 +168,7 @@ function parseGroups(raw: unknown): string[] {
 
 function extractUsersPayload(payload: unknown): unknown[] {
   if (Array.isArray(payload)) {
+
     return payload;
   }
 
@@ -259,7 +260,7 @@ function normalizeUser(input: unknown): AuthUser | null {
     input.UserGroups,
     attributes["cognito:groups"],
     attributes["custom:role"],
-    attributes.role,
+    attributes.groups,
   ]);
 
   return {
@@ -276,9 +277,11 @@ function normalizeUser(input: unknown): AuthUser | null {
 
 function normalizeUsers(payload: unknown): AuthUser[] {
   const rawUsers = extractUsersPayload(payload);
-  return rawUsers
+
+  const rwuser = rawUsers
     .map((rawUser) => normalizeUser(rawUser))
     .filter((user): user is AuthUser => Boolean(user));
+  return rwuser;
 }
 
 export async function listFacilityUsers(
@@ -295,6 +298,7 @@ export async function listFacilityUsers(
     params: { facility_code: trimmedFacilityCode, group },
     headers: authHeaders(accessToken),
   });
+
 
   return normalizeUsers(response.data);
 }
