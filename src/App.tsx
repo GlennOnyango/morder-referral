@@ -3,13 +3,16 @@ import "./App.css";
 import NotificationsMenu from "./components/NotificationsMenu";
 import { useAuthContext } from "./context/AuthContext";
 import DashboardPage from "./pages/DashboardPage";
+import AboutPage from "./pages/AboutPage";
 import ConfirmSignUpPage from "./pages/ConfirmSignUpPage";
 import HomePage from "./pages/HomePage";
+import HowItWorksPage from "./pages/HowItWorksPage";
 import OrganizationFormPage from "./pages/OrganizationFormPage";
 import OrganizationCreateReferralPage from "./pages/OrganizationCreateReferralPage";
 import OrganizationFacilityReferralsPage from "./pages/OrganizationFacilityReferralsPage";
 import OrganizationPoolReferralDetailPage from "./pages/OrganizationPoolReferralDetailPage";
 import OrganizationReferralsPage from "./pages/OrganizationReferralsPage";
+import OrganizationServiceFormPage from "./pages/OrganizationServiceFormPage";
 import OrganizationServicesPage from "./pages/OrganizationServicesPage";
 import OrganizationUsersPage from "./pages/OrganizationUsersPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
@@ -23,6 +26,10 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   const { logout, isAuthenticated } = useAuthContext();
+  const marketingLinks = [
+    { to: "/how-it-works", label: "How it works" },
+    { to: "/about", label: "About us" },
+  ];
 
   return (
     <div className="landing-page">
@@ -37,6 +44,14 @@ function App() {
             <small>Medical Referral Exchange</small>
           </span>
         </Link>
+
+        <nav className="marketing-nav" aria-label="Primary">
+          {marketingLinks.map((link) => (
+            <Link key={link.to} className="marketing-nav-link" to={link.to}>
+              {link.label}
+            </Link>
+          ))}
+        </nav>
 
         {isAuthenticated ? (
           <div className="nav-actions">
@@ -69,6 +84,8 @@ function App() {
       <main>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/confirm-signup" element={<ConfirmSignUpPage />} />
@@ -130,6 +147,22 @@ function App() {
             }
           />
           <Route
+            path="/facilities/:id/services/create"
+            element={
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+                <OrganizationServiceFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/facilities/:id/services/:serviceId/edit"
+            element={
+              <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+                <OrganizationServiceFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/facilities/:id/users"
             element={
               <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
@@ -177,5 +210,3 @@ function App() {
 }
 
 export default App;
-
-

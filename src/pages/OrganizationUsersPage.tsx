@@ -49,6 +49,28 @@ function inferDefaultGroup(user: AuthUser): AuthGroupName {
   return "NURSE";
 }
 
+function getDisplayGroups(user: AuthUser, sessionEmail?: string, sessionRole?: string | null): string[] {
+  const groups = new Set(
+    user.groups
+      .map((group) => group.trim())
+      .filter((group) => group.length > 0),
+  );
+
+  const normalizedSessionRole = sessionRole?.trim().toUpperCase();
+  const normalizedSessionEmail = sessionEmail?.trim().toLowerCase();
+  const normalizedUsername = user.username.trim().toLowerCase();
+  const normalizedUserEmail = user.email?.trim().toLowerCase();
+  const isSignedInUser =
+    normalizedSessionEmail !== undefined &&
+    (normalizedSessionEmail === normalizedUsername || normalizedSessionEmail === normalizedUserEmail);
+
+  if (isSignedInUser && normalizedSessionRole === "SUPER_ADMIN") {
+    groups.add("SUPER_ADMIN");
+  }
+
+  return Array.from(groups);
+}
+
 const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string> = {
   none: "none",
   all: "all",
@@ -236,12 +258,15 @@ function OrganizationUsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.map((user) => {
+                    const displayGroups = getDisplayGroups(user, session?.email, session?.role);
+
+                    return (
                     <tr key={user.username}>
                       <td>{user.username}</td>
                       <td>{user.email ?? "-"}</td>
                       <td>{user.status ?? (user.enabled === true ? "ENABLED" : "-")}</td>
-                      <td>{user.groups.length > 0 ? user.groups.join(", ") : "-"}</td>
+                      <td>{displayGroups.length > 0 ? displayGroups.join(", ") : "-"}</td>
                       {canAttachRoles ? (
                         <td>
                           <select
@@ -273,7 +298,8 @@ function OrganizationUsersPage() {
                         </td>
                       ) : null}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -291,5 +317,4 @@ function OrganizationUsersPage() {
 }
 
 export default OrganizationUsersPage;
-
 

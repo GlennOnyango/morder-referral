@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../api/organizations";
 import { createReferral, type ReferralCreateInput } from "../api/referrals";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -100,6 +100,7 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
 function OrganizationCreateReferralPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
+  const navigate = useNavigate();
   const { session, isAuthenticated } = useAuthContext();
   const role = session?.role;
   const canManageReferrals = isFacilityManager(role);
@@ -107,7 +108,6 @@ function OrganizationCreateReferralPage() {
 
   const [formState, setFormState] = useState<ReferralFormState>(defaultReferralFormState);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const organizationQuery = useQuery({
     queryKey: ["organizations", "detail", organizationId, session?.accessToken],
@@ -119,23 +119,17 @@ function OrganizationCreateReferralPage() {
 
   const createReferralMutation = useMutation({
     mutationFn: (payload: ReferralCreateInput) => createReferral(payload, session?.accessToken),
-    onSuccess: async (createdReferral) => {
-      setFormState(defaultReferralFormState);
+    onSuccess: async () => {
       setValidationError(null);
-      setSuccessMessage(
-        createdReferral.referralCode
-          ? `Referral ${createdReferral.referralCode} created successfully.`
-          : "Referral created successfully.",
-      );
       await queryClient.invalidateQueries({ queryKey: ["referral-pool", organizationId] });
       await queryClient.invalidateQueries({ queryKey: ["facility-referrals", organizationId] });
+      navigate(`/facilities/${organizationId}/referrals`, { replace: true });
     },
   });
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setValidationError(null);
-    setSuccessMessage(null);
 
     const payload = toPayload(formState, facilityCode);
     if (!payload) {
@@ -356,7 +350,6 @@ function OrganizationCreateReferralPage() {
               onClick={() => {
                 setFormState(defaultReferralFormState);
                 setValidationError(null);
-                setSuccessMessage(null);
               }}
             >
               Reset
@@ -369,7 +362,6 @@ function OrganizationCreateReferralPage() {
       {createReferralMutation.isError ? (
         <p className="result-note error-note">{formatError(createReferralMutation.error)}</p>
       ) : null}
-      {successMessage ? <p className="result-note success-note">{successMessage}</p> : null}
     </section>
   );
 }
