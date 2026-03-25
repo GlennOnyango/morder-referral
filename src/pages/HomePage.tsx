@@ -4,6 +4,13 @@ import {
   referralLevels,
 } from "../content/marketingContent";
 
+const referralTimeSeries = [
+  { time: "08:10", title: "Referral Raised", detail: "Clinical note and service request captured." },
+  { time: "08:24", title: "Matched Fast", detail: "Best-fit receiving facility identified." },
+  { time: "08:41", title: "Accepted", detail: "Receiving team confirms readiness and response." },
+  { time: "09:05", title: "Handover Complete", detail: "Transfer lands with full visibility." },
+];
+
 function HomePage() {
   return (
     <div className="home-page">
@@ -24,11 +31,35 @@ function HomePage() {
               How it works
             </Link>
           </div>
+
+          <div className="hero-series">
+            {referralTimeSeries.map((point) => (
+              <article key={point.time} className="hero-series-point">
+                <span>{point.time}</span>
+                <strong>{point.title}</strong>
+                <p>{point.detail}</p>
+              </article>
+            ))}
+          </div>
         </div>
 
         <div className="hero-showcase reveal delay-2" aria-hidden="true">
           <div className="pulse-orb pulse-orb-one" />
           <div className="pulse-orb pulse-orb-two" />
+          <div className="series-board">
+            <div className="series-line" />
+            {referralTimeSeries.map((point, index) => (
+              <article
+                key={point.time}
+                className={`series-node series-node-${index + 1}`}
+              >
+                <div className="series-dot" />
+                <span>{point.time}</span>
+                <strong>{point.title}</strong>
+              </article>
+            ))}
+          </div>
+
           <div className="signal-grid">
             {performanceHighlights.map((item, index) => (
               <article

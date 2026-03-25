@@ -375,6 +375,43 @@ main {
   margin-top: 24px;
 }
 
+.hero-series {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hero-series-point {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(12, 52, 61, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
+}
+
+.hero-series-point span {
+  display: inline-flex;
+  color: #0f5a78;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.hero-series-point strong {
+  display: block;
+  margin-top: 10px;
+  color: #123246;
+  font-size: 0.95rem;
+}
+
+.hero-series-point p {
+  margin: 8px 0 0;
+  color: #51667a;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .hero-showcase {
   position: relative;
   min-height: 100%;
@@ -388,6 +425,68 @@ main {
   display: grid;
   place-items: center;
   box-shadow: 0 24px 50px rgba(9, 34, 40, 0.16);
+}
+
+.series-board {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 180px;
+}
+
+.series-line {
+  position: absolute;
+  inset: 54% 7% auto 7%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(105, 235, 209, 0.18), rgba(105, 235, 209, 0.85), rgba(240, 139, 46, 0.8));
+}
+
+.series-node {
+  position: absolute;
+  width: 150px;
+  display: grid;
+  gap: 6px;
+}
+
+.series-node-1 {
+  left: 4%;
+  top: 42%;
+}
+
+.series-node-2 {
+  left: 28%;
+  top: 18%;
+}
+
+.series-node-3 {
+  left: 54%;
+  top: 32%;
+}
+
+.series-node-4 {
+  right: 2%;
+  top: 8%;
+}
+
+.series-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #69ebd1;
+  box-shadow: 0 0 0 8px rgba(105, 235, 209, 0.14);
+}
+
+.series-node span {
+  color: rgba(232, 243, 247, 0.72);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.series-node strong {
+  color: #f8fffd;
+  font-size: 0.94rem;
+  line-height: 1.3;
 }
 
 .pulse-orb {
@@ -421,6 +520,7 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  margin-top: 18px;
 }
 
 .signal-card {
@@ -1730,6 +1830,10 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .hero-series {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .chip-grid,
   .architecture-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1817,6 +1921,43 @@ main {
 
   .signal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero-series {
+    grid-template-columns: 1fr;
+  }
+
+  .series-board {
+    min-height: 300px;
+  }
+
+  .series-line {
+    inset: 20px auto 20px 12px;
+    width: 2px;
+    height: auto;
+    background: linear-gradient(180deg, rgba(105, 235, 209, 0.18), rgba(105, 235, 209, 0.85), rgba(240, 139, 46, 0.8));
+  }
+
+  .series-node {
+    width: auto;
+    left: 34px;
+    right: 0;
+  }
+
+  .series-node-1 {
+    top: 0;
+  }
+
+  .series-node-2 {
+    top: 72px;
+  }
+
+  .series-node-3 {
+    top: 144px;
+  }
+
+  .series-node-4 {
+    top: 216px;
   }
 
   .chip-grid,
