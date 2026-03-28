@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { fetchDashboardMetrics } from "../api/metrics";
 import { listOrganizations } from "../api/organizations";
-import { listFacilityReferrals, listReferralPool } from "../api/referrals";
+import { listReferralPool } from "../api/referrals";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
-import { isFacilityManager, isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
+import { isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
 
 function MetricCard({
   title,
@@ -45,7 +46,7 @@ function ActionCard({
 }: {
   title: string;
   description: string;
-  actions: { label: string; to: string }[];
+  actions: { label: string; to: string; icon: ReactNode; description: string }[];
 }) {
   return (
     <article className="metric-card facility-operations-card">
@@ -54,7 +55,13 @@ function ActionCard({
       <div className="facility-operations-actions">
         {actions.map((action) => (
           <Link key={action.to} className="btn btn-ghost org-btn facility-operations-btn" to={action.to}>
-            {action.label}
+            <span className="facility-operations-btn-icon" aria-hidden="true">
+              {action.icon}
+            </span>
+            <span className="facility-operations-btn-meta">
+              <strong>{action.label}</strong>
+              <small>{action.description}</small>
+            </span>
           </Link>
         ))}
       </div>
@@ -90,7 +97,7 @@ function DashboardPage() {
   const role = session?.role;
   const canManageFacilities = role === "HOSPITAL_ADMIN" || role === "SUPER_ADMIN";
   const canViewMetrics = role === "SUPER_ADMIN";
-  const canViewReferralMetrics = isFacilityManager(role);
+  const canViewReferralMetrics = role === "SUPER_ADMIN";
   const isHospitalAdmin = role === "HOSPITAL_ADMIN";
   const isRolePending = !role;
 
@@ -114,45 +121,12 @@ function DashboardPage() {
   });
 
   const hospitalFacilityId = hospitalFacilityQuery.data?.id ?? "";
-  const hospitalFacilityCode = hospitalFacilityQuery.data?.facility_code?.trim() ?? "";
   const hospitalFacilityName =
     hospitalFacilityQuery.data?.name ?? hospitalFacilityQuery.data?.facility_code ?? "Assigned facility";
 
   const referralMetricsQuery = useQuery({
-    queryKey: [
-      "dashboard-referral-metrics",
-      role,
-      hospitalFacilityId,
-      hospitalFacilityCode,
-      session?.accessToken,
-    ],
+    queryKey: ["dashboard-referral-metrics", session?.accessToken],
     queryFn: async () => {
-      if (role === "HOSPITAL_ADMIN") {
-        const facilityReferrals = await listFacilityReferrals(
-          hospitalFacilityCode,
-          { limit: 1000, offset: 0 },
-          session?.accessToken,
-        );
-        const statusCounts = countBy(facilityReferrals.map((referral) => referral.status ?? ""));
-        const serviceTypeCounts = countBy(facilityReferrals.map((referral) => referral.serviceType ?? ""));
-
-        return {
-          title: "Referral Metrics",
-          items: [
-            { label: "Facility Referrals", value: facilityReferrals.length },
-            { label: "Open Referrals", value: statusCounts.open ?? 0 },
-            { label: "Accepted Referrals", value: statusCounts.accepted ?? 0 },
-            { label: "Top Service Type", value: pickTopLabel(serviceTypeCounts, "n/a") },
-          ],
-          action: hospitalFacilityId
-            ? {
-                label: "View Facility Referrals",
-                to: `/facilities/${hospitalFacilityId}/referrals/facility`,
-              }
-            : undefined,
-        };
-      }
-
       const poolReferrals = await listReferralPool({ limit: 1000, offset: 0 }, session?.accessToken);
       const priorityCounts = countBy(poolReferrals.map((referral) => referral.priority ?? ""));
       const serviceTypeCounts = countBy(poolReferrals.map((referral) => referral.serviceType ?? ""));
@@ -166,10 +140,7 @@ function DashboardPage() {
         ],
       };
     },
-    enabled:
-      isAuthenticated &&
-      canViewReferralMetrics &&
-      (role !== "HOSPITAL_ADMIN" || Boolean(hospitalFacilityCode)),
+    enabled: isAuthenticated && canViewReferralMetrics,
   });
 
   if (!isAuthenticated) {
@@ -244,21 +215,34 @@ function DashboardPage() {
         <div className="metric-grid facility-operations-grid">
           <ActionCard
             title="Facility Operations"
-            description={`Manage services, users, referrals, and details for ${hospitalFacilityName}.`}
+            description={`Everything you need to run daily operations for ${hospitalFacilityName}.`}
             actions={[
-              { label: "View Facility", to: `/facilities/${hospitalFacilityId}` },
-              { label: "Manage Services", to: `/facilities/${hospitalFacilityId}/services` },
-              { label: "Manage Users", to: `/facilities/${hospitalFacilityId}/users` },
-              { label: "Manage Referrals", to: `/facilities/${hospitalFacilityId}/referrals` },
+              {
+                label: "View Facility",
+                to: `/facilities/${hospitalFacilityId}`,
+                icon: "🏥",
+                description: "Review profile, ownership, and current facility details.",
+              },
+              {
+                label: "Manage Services",
+                to: `/facilities/${hospitalFacilityId}/services`,
+                icon: "🩺",
+                description: "Update service catalog and availability.",
+              },
+              {
+                label: "Manage Users",
+                to: `/facilities/${hospitalFacilityId}/users`,
+                icon: "👥",
+                description: "Add users and maintain team access roles.",
+              },
+              {
+                label: "Manage Referrals",
+                to: `/facilities/${hospitalFacilityId}/referrals`,
+                icon: "📨",
+                description: "Track incoming referrals and take action quickly.",
+              },
             ]}
           />
-          {referralMetricsQuery.data ? (
-            <MetricCard
-              title={referralMetricsQuery.data.title}
-              items={referralMetricsQuery.data.items}
-              action={referralMetricsQuery.data.action}
-            />
-          ) : null}
         </div>
       ) : null}
 
@@ -306,11 +290,7 @@ function DashboardPage() {
           />
           <MetricCard title="Service Metrics" items={dashboardQuery.data.serviceMetrics} />
           {referralMetricsQuery.data ? (
-            <MetricCard
-              title={referralMetricsQuery.data.title}
-              items={referralMetricsQuery.data.items}
-              action={referralMetricsQuery.data.action}
-            />
+            <MetricCard title={referralMetricsQuery.data.title} items={referralMetricsQuery.data.items} />
           ) : null}
         </div>
       ) : null}

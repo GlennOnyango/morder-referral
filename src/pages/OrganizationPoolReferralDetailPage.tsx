@@ -46,6 +46,10 @@ function readOnlyValue(value?: string): string {
   return value ?? "";
 }
 
+function normalizeCode(value?: string): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
 function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
@@ -127,8 +131,13 @@ function OrganizationPoolReferralDetailPage() {
   const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
   const referral = referralDetailQuery.data;
   const patient = referral?.patient;
+  const isSameFacilityReferral =
+    normalizeCode(facilityCode).length > 0 &&
+    normalizeCode(facilityCode) === normalizeCode(referral?.originFacilityCode);
   const canAcceptReferral =
-    facilityCode.length > 0 && referral?.status === ModelsReferralStatus.ReferralStatusOpen;
+    !isSameFacilityReferral &&
+    facilityCode.length > 0 &&
+    referral?.status === ModelsReferralStatus.ReferralStatusOpen;
 
   return (
     <section className="org-shell reveal delay-1">
@@ -397,6 +406,12 @@ function OrganizationPoolReferralDetailPage() {
               Request More Information
             </button>
           </div>
+
+          {isSameFacilityReferral ? (
+            <p className="org-section-note">
+              Action unavailable because this referral belongs to the same facility.
+            </p>
+          ) : null}
 
           {referral.status !== ModelsReferralStatus.ReferralStatusOpen ? (
             <p className="org-section-note">
