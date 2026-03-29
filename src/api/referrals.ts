@@ -1,13 +1,16 @@
 import type {
+  HandlerAdditionalInformationRequestResponse,
   HandlerNotificationListResponse,
   HandlerNotificationResponse,
   HandlerReferralHistoryListResponse,
   HandlerReferralListResponse,
   HandlerReferralResponse,
+  ModelsAdditionalInformationRequest,
   ModelsNotification,
   ModelsReferral,
   ModelsReferralHistory,
   ModelsReferralStatus,
+  ServiceCreateAdditionalInformationRequestInput,
   ServiceAcceptReferralInput,
   ServiceCreateReferralInput,
 } from "../types/referrals.generated";
@@ -37,6 +40,7 @@ function normalizeReferral(referral: ModelsReferral | HandlerReferralResponse | 
     createdAt: referral?.createdAt,
     id: referral?.id,
     metadata: referral?.metadata,
+    modeOfPayment: referral?.modeOfPayment,
     notes: referral?.notes,
     originFacilityCode: referral?.originFacilityCode,
     patient: referral?.patient,
@@ -78,6 +82,7 @@ export type NotificationReadQuery = {
 };
 
 export type ReferralCreateInput = ServiceCreateReferralInput;
+export type CreateReferralInformationRequestInput = ServiceCreateAdditionalInformationRequestInput;
 
 export async function listFacilityReferrals(
   facilityCode: string,
@@ -164,6 +169,22 @@ export async function getReferralHistoryByCode(
   );
 
   return response.data.items ?? [];
+}
+
+export async function createReferralInformationRequest(
+  referralId: string,
+  payload: CreateReferralInformationRequestInput,
+  accessToken?: string,
+): Promise<ModelsAdditionalInformationRequest> {
+  const response = await referralsApi.post<HandlerAdditionalInformationRequestResponse>(
+    `/referrals/by-id/${encodeURIComponent(referralId)}/information-requests`,
+    payload,
+    {
+      headers: authHeaders(accessToken),
+    },
+  );
+
+  return response.data;
 }
 
 export async function listNotifications(

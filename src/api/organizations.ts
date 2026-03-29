@@ -67,7 +67,16 @@ function authHeaders(accessToken?: string) {
   };
 }
 
-export type OrganizationUpsertInput = InternalApiCreateOrganizationRequest;
+export type OrganizationCreateInput = InternalApiCreateOrganizationRequest & {
+  sub_county: string;
+  ward: string;
+  transport_available: boolean;
+};
+export type OrganizationUpdateInput = InternalApiUpdateOrganizationRequest & {
+  sub_county: string;
+  ward: string;
+  transport_available: boolean;
+};
 export type FacilityCodeValidationResult = {
   exists: boolean;
   facilityId?: string;
@@ -125,7 +134,7 @@ export async function getOrganizationById(
 }
 
 export async function createOrganization(
-  payload: OrganizationUpsertInput,
+  payload: OrganizationCreateInput,
   accessToken?: string,
 ): Promise<Organization> {
   const response = await organizationsApi.post<Organization>("/organizations", payload, {
@@ -137,7 +146,7 @@ export async function createOrganization(
 
 export async function updateOrganization(
   id: string,
-  payload: InternalApiUpdateOrganizationRequest,
+  payload: OrganizationUpdateInput,
   accessToken?: string,
 ): Promise<Organization> {
   const response = await organizationsApi.put<Organization>(`/organizations/${id}`, payload, {

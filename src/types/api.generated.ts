@@ -30,6 +30,22 @@ export interface InternalApiCreateOrganizationRequest {
   ownership_type: "public" | "private" | "faith_based";
 }
 
+export interface InternalApiCreatePatientAddress {
+  city?: string;
+  postal_code?: string;
+  status?: string;
+}
+
+export interface InternalApiCreatePatientRequest {
+  active?: boolean;
+  address: InternalApiCreatePatientAddress;
+  /** ISO8601 date */
+  date_of_birth: string;
+  full_name: string;
+  gender?: "male" | "female" | "other" | "unknown";
+  primary_phone: string;
+}
+
 export interface InternalApiCreateServiceRequest {
   availability: "available" | "limited" | "unavailable";
   notes?: string;
@@ -54,6 +70,21 @@ export interface InternalApiUpdateOrganizationRequest {
   ownership_type: "public" | "private" | "faith_based";
 }
 
+export interface InternalApiUpdatePatientAddress {
+  city?: string;
+  postal_code?: string;
+  status?: string;
+}
+
+export interface InternalApiUpdatePatientRequest {
+  active?: boolean;
+  address: InternalApiUpdatePatientAddress;
+  date_of_birth: string;
+  full_name: string;
+  gender?: "male" | "female" | "other" | "unknown";
+  primary_phone: string;
+}
+
 export interface InternalApiUpdateServiceRequest {
   availability: "available" | "limited" | "unavailable";
   notes?: string;
@@ -71,6 +102,24 @@ export interface MsOrganizationsInternalDomainModelOrganization {
   name?: string;
   ownership_type?: string;
   updated_at?: string;
+}
+
+export interface MsOrganizationsInternalDomainModelPatient {
+  active?: boolean;
+  address?: MsOrganizationsInternalDomainModelPatientAddress;
+  created_at?: string;
+  date_of_birth?: string;
+  full_name?: string;
+  gender?: string;
+  id?: string;
+  primary_phone?: string;
+  updated_at?: string;
+}
+
+export interface MsOrganizationsInternalDomainModelPatientAddress {
+  city?: string;
+  postal_code?: string;
+  status?: string;
 }
 
 export interface MsOrganizationsInternalDomainModelService {
@@ -343,7 +392,7 @@ export class HttpClient<SecurityDataType = unknown> {
  * @version 1.0
  * @contact
  *
- * Microservice for organizations and services.
+ * Microservice for organizations, services, and patients (FHIR-inspired).
  */
 export class Api<
   SecurityDataType extends unknown,
@@ -489,6 +538,106 @@ export class Api<
         body: body,
         type: ContentType.Json,
         format: "json",
+        ...params,
+      }),
+  };
+  patients = {
+    /**
+     * No description
+     *
+     * @tags patients
+     * @name PatientsList
+     * @summary Search patients
+     * @request GET:/patients
+     */
+    patientsList: (
+      query?: {
+        /** full name */
+        name?: string;
+        /** date of birth (YYYY-MM-DD) */
+        dob?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<MsOrganizationsInternalDomainModelPatient[], GinH>({
+        path: `/patients`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags patients
+     * @name PatientsCreate
+     * @summary Create a patient
+     * @request POST:/patients
+     */
+    patientsCreate: (
+      body: InternalApiCreatePatientRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<MsOrganizationsInternalDomainModelPatient, GinH>({
+        path: `/patients`,
+        method: "POST",
+        body: body,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags patients
+     * @name PatientsDetail
+     * @summary Get a patient
+     * @request GET:/patients/{id}
+     */
+    patientsDetail: (id: string, params: RequestParams = {}) =>
+      this.request<MsOrganizationsInternalDomainModelPatient, GinH>({
+        path: `/patients/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags patients
+     * @name PatientsUpdate
+     * @summary Update a patient
+     * @request PUT:/patients/{id}
+     */
+    patientsUpdate: (
+      id: string,
+      body: InternalApiUpdatePatientRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<MsOrganizationsInternalDomainModelPatient, GinH>({
+        path: `/patients/${id}`,
+        method: "PUT",
+        body: body,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags patients
+     * @name PatientsDelete
+     * @summary Delete a patient
+     * @request DELETE:/patients/{id}
+     */
+    patientsDelete: (id: string, params: RequestParams = {}) =>
+      this.request<void, GinH>({
+        path: `/patients/${id}`,
+        method: "DELETE",
         ...params,
       }),
   };

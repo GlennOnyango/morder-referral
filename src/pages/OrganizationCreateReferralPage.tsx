@@ -12,27 +12,27 @@ import { canAccessOrganization, isFacilityManager } from "../utils/facilityAcces
 type ReferralFormState = {
   serviceType: string;
   priority: string;
+  modeOfPayment: string;
+  patientFullName: string;
+  patientYearOfBirth: string;
+  patientGender: string;
+  patientDiagnosis: string;
   reasonForReferral: string;
   clinicalSummary: string;
   notes: string;
-  patientFullName: string;
-  patientDateOfBirth: string;
-  patientGender: string;
-  patientPhone: string;
-  patientDiagnosis: string;
 };
 
 const defaultReferralFormState: ReferralFormState = {
   serviceType: "",
   priority: "routine",
+  modeOfPayment: "cash",
+  patientFullName: "",
+  patientYearOfBirth: "",
+  patientGender: "male",
+  patientDiagnosis: "",
   reasonForReferral: "",
   clinicalSummary: "",
   notes: "",
-  patientFullName: "",
-  patientDateOfBirth: "",
-  patientGender: "unknown",
-  patientPhone: "",
-  patientDiagnosis: "",
 };
 
 function formatError(error: unknown): string {
@@ -63,19 +63,25 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
   const normalizedFacilityCode = facilityCode.trim();
   const serviceType = formState.serviceType.trim();
   const priority = formState.priority.trim();
-  const reasonForReferral = formState.reasonForReferral.trim();
+  const modeOfPayment = formState.modeOfPayment.trim();
   const patientFullName = formState.patientFullName.trim();
-  const patientDateOfBirth = formState.patientDateOfBirth.trim();
+  const patientYearOfBirth = Number(formState.patientYearOfBirth);
   const patientGender = formState.patientGender.trim();
+  const reasonForReferral = formState.reasonForReferral.trim();
+  const currentYear = new Date().getFullYear();
+  const isYearOfBirthValid =
+    Number.isInteger(patientYearOfBirth) && patientYearOfBirth >= 1900 && patientYearOfBirth <= currentYear;
+  const patientDateOfBirthValue = isYearOfBirthValid ? patientYearOfBirth : NaN;
 
   if (
     !normalizedFacilityCode ||
     !serviceType ||
     !priority ||
-    !reasonForReferral ||
+    !modeOfPayment ||
     !patientFullName ||
-    !patientDateOfBirth ||
-    !patientGender
+    !patientGender ||
+    Number.isNaN(patientDateOfBirthValue) ||
+    !reasonForReferral
   ) {
     return null;
   }
@@ -84,14 +90,14 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
     originFacilityCode: normalizedFacilityCode,
     serviceType,
     priority,
+    modeOfPayment,
     reasonForReferral,
     clinicalSummary: trimToOptional(formState.clinicalSummary),
     notes: trimToOptional(formState.notes),
     patient: {
       fullName: patientFullName,
-      dateOfBirth: patientDateOfBirth,
+      dateOfBirth: patientDateOfBirthValue,
       gender: patientGender,
-      phone: trimToOptional(formState.patientPhone),
       diagnosis: trimToOptional(formState.patientDiagnosis),
     },
   };
@@ -134,7 +140,7 @@ function OrganizationCreateReferralPage() {
     const payload = toPayload(formState, facilityCode);
     if (!payload) {
       setValidationError(
-        "Service type, priority, reason for referral, patient full name, date of birth, and gender are required.",
+        "Service type, priority, mode of payment, patient full name, valid year of birth, gender, and reason for referral are required.",
       );
       return;
     }
@@ -235,6 +241,79 @@ function OrganizationCreateReferralPage() {
             </label>
           </div>
 
+          <div className="org-grid">
+            <label className="field">
+              <span>Diagnosis</span>
+              <input
+                className="field-input"
+                value={formState.patientDiagnosis}
+                onChange={(event) => setFormState((previous) => ({ ...previous, patientDiagnosis: event.target.value }))}
+                placeholder="e.g. Suspected appendicitis"
+              />
+            </label>
+            <label className="field">
+              <span>Patient Full Name *</span>
+              <input
+                className="field-input"
+                value={formState.patientFullName}
+                onChange={(event) =>
+                  setFormState((previous) => ({ ...previous, patientFullName: event.target.value }))
+                }
+                placeholder="e.g. John Doe"
+                required
+              />
+            </label>
+          </div>
+
+          <div className="org-grid">
+            <label className="field">
+              <span>Year of Birth *</span>
+              <input
+                className="field-input"
+                type="number"
+                min={1900}
+                max={new Date().getFullYear()}
+                step={1}
+                value={formState.patientYearOfBirth}
+                onChange={(event) =>
+                  setFormState((previous) => ({ ...previous, patientYearOfBirth: event.target.value }))
+                }
+                placeholder="e.g. 1988"
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Gender *</span>
+            <select
+              className="field-input"
+              value={formState.patientGender}
+              onChange={(event) =>
+                setFormState((previous) => ({ ...previous, patientGender: event.target.value }))
+              }
+              required
+            >
+              <option value="male">male</option>
+              <option value="female">female</option>
+            </select>
+          </label>
+          </div>
+
+          <label className="field">
+            <span>Mode of Payment *</span>
+            <select
+              className="field-input"
+              value={formState.modeOfPayment}
+              onChange={(event) =>
+                setFormState((previous) => ({ ...previous, modeOfPayment: event.target.value }))
+              }
+              required
+            >
+              <option value="cash">cash</option>
+              <option value="mpesa">mpesa</option>
+              <option value="insurance">insurance</option>
+            </select>
+          </label>
+
           <label className="field">
             <span>Reason for Referral *</span>
             <textarea
@@ -273,71 +352,6 @@ function OrganizationCreateReferralPage() {
               />
             </label>
           </div>
-
-          <div className="org-grid">
-            <label className="field">
-              <span>Patient Full Name *</span>
-              <input
-                className="field-input"
-                value={formState.patientFullName}
-                onChange={(event) =>
-                  setFormState((previous) => ({ ...previous, patientFullName: event.target.value }))
-                }
-                placeholder="e.g. John Doe"
-                required
-              />
-            </label>
-            <label className="field">
-              <span>Date of Birth *</span>
-              <input
-                className="field-input"
-                type="date"
-                value={formState.patientDateOfBirth}
-                onChange={(event) =>
-                  setFormState((previous) => ({ ...previous, patientDateOfBirth: event.target.value }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="org-grid">
-            <label className="field">
-              <span>Gender *</span>
-              <select
-                className="field-input"
-                value={formState.patientGender}
-                onChange={(event) =>
-                  setFormState((previous) => ({ ...previous, patientGender: event.target.value }))
-                }
-                required
-              >
-                <option value="unknown">unknown</option>
-                <option value="female">female</option>
-                <option value="male">male</option>
-                <option value="other">other</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>Patient Phone</span>
-              <input
-                className="field-input"
-                value={formState.patientPhone}
-                onChange={(event) => setFormState((previous) => ({ ...previous, patientPhone: event.target.value }))}
-                placeholder="e.g. +254700123456"
-              />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>Diagnosis</span>
-            <input
-              className="field-input"
-              value={formState.patientDiagnosis}
-              onChange={(event) => setFormState((previous) => ({ ...previous, patientDiagnosis: event.target.value }))}
-              placeholder="e.g. Suspected appendicitis"
-            />
-          </label>
 
           <div className="service-form-actions">
             <button type="submit" className="btn btn-primary" disabled={createReferralMutation.isPending || !facilityCode}>

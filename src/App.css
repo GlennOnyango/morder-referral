@@ -803,6 +803,19 @@ main {
   font-size: 0.9rem;
 }
 
+.field-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #203649;
+  font-weight: 500;
+}
+
+.field-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
 .field-input-wrap {
   position: relative;
 }
@@ -1184,6 +1197,119 @@ main {
   overflow-x: auto;
 }
 
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.facility-card {
+  border-radius: 16px;
+  border: 1px solid rgba(10, 45, 55, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 10px 24px rgba(8, 35, 42, 0.09), 0 2px 8px rgba(8, 35, 42, 0.06);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.facility-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(15, 90, 120, 0.25);
+  box-shadow: 0 18px 34px rgba(8, 35, 42, 0.15), 0 6px 14px rgba(8, 35, 42, 0.1);
+}
+
+.facility-card:focus-within {
+  transform: translateY(-2px);
+  border-color: rgba(17, 122, 101, 0.35);
+  box-shadow: 0 14px 30px rgba(8, 35, 42, 0.13), 0 4px 10px rgba(8, 35, 42, 0.09);
+}
+
+.facility-card-header h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.03rem;
+}
+
+.facility-card-header p {
+  margin: 6px 0 0;
+  color: #4b6576;
+  font-size: 0.86rem;
+}
+
+.facility-card-meta {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.facility-card-meta div {
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  align-items: start;
+  gap: 8px;
+}
+
+.facility-card-meta dt {
+  color: #4b6576;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.facility-card-meta dd {
+  margin: 0;
+  color: #163447;
+  font-size: 0.92rem;
+}
+
+.facility-transport-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 90, 120, 0.22);
+  background: rgba(15, 90, 120, 0.08);
+  color: #0f5a78;
+  padding: 4px 10px;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.facility-transport-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.facilities-pagination {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.facilities-page-indicator {
+  margin: 0;
+  color: #355367;
+}
+
+.facilities-pagination-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.facilities-pagination-btn {
+  min-width: 96px;
+}
+
 .org-table-tools {
   display: flex;
   justify-content: flex-end;
@@ -1318,8 +1444,116 @@ main {
   min-width: 260px;
 }
 
+.referrals-search-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: stretch;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .referrals-search-input {
   min-width: 320px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.referrals-clear-icon-btn {
+  min-width: 44px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.referrals-page-size-indicator {
+  cursor: default;
+}
+
+.referral-pool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.referral-pool-card {
+  border-radius: 16px;
+  border: 1px solid rgba(10, 45, 55, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 10px 24px rgba(8, 35, 42, 0.08);
+}
+
+.referral-pool-card.urgent,
+.referral-pool-card.emergency {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(8, 35, 42, 0.12);
+}
+
+.referral-pool-card.emergency {
+  border-color: rgba(176, 24, 24, 0.46);
+  background: linear-gradient(180deg, rgba(255, 225, 225, 0.98), rgba(255, 242, 242, 0.94));
+  animation: emergencyPulse 1.7s ease-in-out infinite;
+}
+
+.referral-pool-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.referral-pool-card-header strong {
+  font-family: var(--font-heading);
+  color: #143548;
+  font-size: 1rem;
+}
+
+.referral-pool-card-header span {
+  color: #476173;
+  font-size: 0.86rem;
+}
+
+.referral-pool-card-meta {
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.referral-pool-card-meta div {
+  display: grid;
+  grid-template-columns: 116px 1fr;
+  gap: 8px;
+}
+
+.referral-pool-card-meta dt {
+  color: #4b6576;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.referral-pool-card-meta dd {
+  margin: 0;
+  color: #163447;
+  font-size: 0.92rem;
+}
+
+.referral-pool-card-actions {
+  margin-top: 2px;
+}
+
+@keyframes emergencyPulse {
+  0%,
+  100% {
+    box-shadow: 0 12px 30px rgba(8, 35, 42, 0.12), 0 0 0 0 rgba(193, 41, 41, 0.28);
+  }
+  50% {
+    box-shadow: 0 15px 33px rgba(8, 35, 42, 0.15), 0 0 0 7px rgba(193, 41, 41, 0);
+  }
 }
 
 .referrals-filter-select {
@@ -1480,6 +1714,14 @@ main {
   font-size: 0.9rem;
 }
 
+.referrals-pool-title {
+  margin: 0;
+}
+
+.referrals-pool-subtext {
+  margin: 0 0 12px;
+}
+
 .dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -1516,6 +1758,10 @@ main {
   margin-top: 16px;
   display: inline-flex;
   gap: 10px;
+}
+
+.referral-request-dialog {
+  width: min(100%, 560px);
 }
 
 .hero-panel {
@@ -1889,6 +2135,14 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .facilities-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referral-pool-grid {
+    grid-template-columns: 1fr;
+  }
+
   .facility-operations-actions {
     grid-template-columns: 1fr;
   }
@@ -2029,6 +2283,10 @@ main {
     min-width: 0;
   }
 
+  .referrals-search-bar {
+    width: 100%;
+  }
+
   .referrals-clear-search-btn {
     width: 100%;
   }
@@ -2048,6 +2306,26 @@ main {
 
   .referrals-pagination-btn {
     flex: 1;
+  }
+
+  .facilities-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .facilities-pagination {
+    align-items: stretch;
+  }
+
+  .facilities-pagination-actions {
+    width: 100%;
+  }
+
+  .facilities-pagination-btn {
+    flex: 1;
+  }
+
+  .referral-pool-card-meta div {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { getOrganizationById } from "../api/organizations";
-import { acceptReferralByCode, getReferralByCode } from "../api/referrals";
+import { getOrganizationById, validateOrganizationFacilityCode } from "../api/organizations";
+import { acceptReferralByCode, createReferralInformationRequest, getReferralByCode } from "../api/referrals";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { ModelsReferralStatus } from "../types/referrals.generated";
@@ -42,8 +43,31 @@ function formatDateTime(value?: string): string {
   return parsed.toLocaleString();
 }
 
-function readOnlyValue(value?: string): string {
+function readOnlyValue(value?: string | number): string {
+  if (typeof value === "number") {
+    return value.toString();
+  }
+
   return value ?? "";
+}
+
+function formatDateOfBirthEpoch(value?: number): string {
+  if (typeof value !== "number" || Number.isNaN(value) || value <= 0) {
+    return "-";
+  }
+
+  // The API may return year-of-birth (e.g. 1988) or unix time.
+  if (value >= 1900 && value <= 2100) {
+    return value.toString();
+  }
+
+  const milliseconds = value < 1_000_000_000_000 ? value * 1000 : value;
+  const parsed = new Date(milliseconds);
+  if (Number.isNaN(parsed.getTime())) {
+    return value.toString();
+  }
+
+  return parsed.toLocaleDateString();
 }
 
 function normalizeCode(value?: string): string {
@@ -67,6 +91,11 @@ function OrganizationPoolReferralDetailPage() {
   const canManageReferrals = isFacilityManager(role);
   const queryClient = useQueryClient();
   const [acceptSuccessMessage, setAcceptSuccessMessage] = useState<string | null>(null);
+  const [isRequestInfoDialogOpen, setIsRequestInfoDialogOpen] = useState(false);
+  const [requestInfoTitle, setRequestInfoTitle] = useState("");
+  const [requestInfoDescription, setRequestInfoDescription] = useState("");
+  const [requestInfoSuccessMessage, setRequestInfoSuccessMessage] = useState<string | null>(null);
+  const [aiActionMessage, setAiActionMessage] = useState<string | null>(null);
 
   const organizationQuery = useQuery({
     queryKey: ["organizations", "detail", organizationId, session?.accessToken],
@@ -100,6 +129,42 @@ function OrganizationPoolReferralDetailPage() {
       );
       await queryClient.invalidateQueries({ queryKey: ["referral-pool", organizationId] });
       await queryClient.invalidateQueries({ queryKey: ["facility-referrals", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["referral-detail", organizationId, referralCode] });
+    },
+  });
+
+  const requestInfoMutation = useMutation({
+    mutationFn: async () => {
+      const referralId = referralDetailQuery.data?.id?.trim() ?? "";
+      if (!referralId) {
+        throw new Error("Missing referral id for this referral.");
+      }
+
+      const originFacilityCode = referralDetailQuery.data?.originFacilityCode?.trim() ?? "";
+      if (!originFacilityCode) {
+        throw new Error("Missing origin facility code for this referral.");
+      }
+
+      const originFacilityValidation = await validateOrganizationFacilityCode(originFacilityCode);
+      const originFacilityId = originFacilityValidation.facilityId?.trim() ?? "";
+      if (!originFacilityValidation.exists || !originFacilityId) {
+        throw new Error(`Could not resolve facility id for origin facility code ${originFacilityCode}.`);
+      }
+
+      return createReferralInformationRequest(
+        referralId,
+        {
+          facilityId: originFacilityId,
+          title: requestInfoTitle.trim(),
+          additionalInformation: requestInfoDescription.trim(),
+        },
+        session?.accessToken,
+      );
+    },
+    onSuccess: async () => {
+      setIsRequestInfoDialogOpen(false);
+      setRequestInfoSuccessMessage(`Additional information request sent for referral ${referralCode}.`);
+      await queryClient.invalidateQueries({ queryKey: ["referral-notifications"] });
       await queryClient.invalidateQueries({ queryKey: ["referral-detail", organizationId, referralCode] });
     },
   });
@@ -138,6 +203,27 @@ function OrganizationPoolReferralDetailPage() {
     !isSameFacilityReferral &&
     facilityCode.length > 0 &&
     referral?.status === ModelsReferralStatus.ReferralStatusOpen;
+  const canRequestInformation = canAcceptReferral && Boolean(referral?.id?.trim());
+
+  const handleOpenRequestInfoDialog = () => {
+    setRequestInfoTitle("");
+    setRequestInfoDescription("");
+    setRequestInfoSuccessMessage(null);
+    setIsRequestInfoDialogOpen(true);
+  };
+
+  const handleCloseRequestInfoDialog = () => {
+    setIsRequestInfoDialogOpen(false);
+  };
+
+  const handleRequestInfoSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!requestInfoTitle.trim() || !requestInfoDescription.trim()) {
+      return;
+    }
+
+    requestInfoMutation.mutate();
+  };
 
   return (
     <section className="org-shell reveal delay-1">
@@ -297,35 +383,18 @@ function OrganizationPoolReferralDetailPage() {
               </label>
               <label className="field">
                 <span>Date of Birth</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.dateOfBirth)} readOnly />
-              </label>
-            </div>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Gender</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.gender)} readOnly />
-              </label>
-              <label className="field">
-                <span>Phone</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.phone)} readOnly />
-              </label>
-            </div>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>National ID</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.nationalId)} readOnly />
-              </label>
-              <label className="field">
-                <span>Medical Record Number</span>
                 <input
                   className="field-input referral-readonly-input"
-                  value={readOnlyValue(patient?.medicalRecordNumber)}
+                  value={formatDateOfBirthEpoch(patient?.dateOfBirth)}
                   readOnly
                 />
               </label>
             </div>
+
+            <label className="field">
+              <span>Gender</span>
+              <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.gender)} readOnly />
+            </label>
 
             <label className="field">
               <span>Diagnosis</span>
@@ -333,16 +402,6 @@ function OrganizationPoolReferralDetailPage() {
                 className="field-input service-notes referral-readonly-input"
                 rows={2}
                 value={readOnlyValue(patient?.diagnosis)}
-                readOnly
-              />
-            </label>
-
-            <label className="field">
-              <span>Address</span>
-              <textarea
-                className="field-input service-notes referral-readonly-input"
-                rows={2}
-                value={readOnlyValue(patient?.address)}
                 readOnly
               />
             </label>
@@ -368,17 +427,6 @@ function OrganizationPoolReferralDetailPage() {
               </label>
             </div>
 
-            <div className="org-grid">
-              <label className="field">
-                <span>Next of Kin Name</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.nextOfKinName)} readOnly />
-              </label>
-              <label className="field">
-                <span>Next of Kin Phone</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.nextOfKinPhone)} readOnly />
-              </label>
-            </div>
-
             <label className="field">
               <span>Additional Notes</span>
               <textarea
@@ -396,14 +444,47 @@ function OrganizationPoolReferralDetailPage() {
               className="btn btn-primary"
               onClick={() => {
                 setAcceptSuccessMessage(null);
+                setAiActionMessage(null);
+                setRequestInfoSuccessMessage(null);
                 acceptReferralMutation.mutate();
               }}
               disabled={!canAcceptReferral || acceptReferralMutation.isPending}
             >
               {acceptReferralMutation.isPending ? "Accepting..." : "Accept Referral"}
             </button>
-            <button type="button" className="btn btn-ghost" disabled>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setAcceptSuccessMessage(null);
+                setAiActionMessage(null);
+                handleOpenRequestInfoDialog();
+              }}
+              disabled={!canRequestInformation}
+            >
               Request More Information
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setAcceptSuccessMessage(null);
+                setRequestInfoSuccessMessage(null);
+                setAiActionMessage("AI case summary preview is not connected yet. API integration will be added next.");
+              }}
+            >
+              Summarise Case with AI
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setAcceptSuccessMessage(null);
+                setRequestInfoSuccessMessage(null);
+                setAiActionMessage("AI case review preview is not connected yet. API integration will be added next.");
+              }}
+            >
+              Review Case with AI
             </button>
           </div>
 
@@ -424,7 +505,62 @@ function OrganizationPoolReferralDetailPage() {
       {acceptReferralMutation.isError ? (
         <p className="result-note error-note">{formatError(acceptReferralMutation.error)}</p>
       ) : null}
+      {requestInfoMutation.isError ? (
+        <p className="result-note error-note">{formatError(requestInfoMutation.error)}</p>
+      ) : null}
       {acceptSuccessMessage ? <p className="result-note success-note">{acceptSuccessMessage}</p> : null}
+      {requestInfoSuccessMessage ? <p className="result-note success-note">{requestInfoSuccessMessage}</p> : null}
+      {aiActionMessage ? <p className="org-section-note">{aiActionMessage}</p> : null}
+
+      {isRequestInfoDialogOpen ? (
+        <div className="dialog-backdrop" role="presentation">
+          <article
+            className="dialog-card referral-request-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="request-info-title"
+          >
+            <h2 id="request-info-title">Request More Information</h2>
+            <p>Add a title and description for the information you need from the originating facility.</p>
+
+            <form className="org-form" onSubmit={handleRequestInfoSubmit}>
+              <label className="field" htmlFor="request-info-dialog-title">
+                <span>Title</span>
+                <input
+                  id="request-info-dialog-title"
+                  className="field-input"
+                  value={requestInfoTitle}
+                  onChange={(event) => setRequestInfoTitle(event.target.value)}
+                  placeholder="e.g. Missing lab results"
+                  required
+                />
+              </label>
+
+              <label className="field" htmlFor="request-info-dialog-description">
+                <span>Description</span>
+                <textarea
+                  id="request-info-dialog-description"
+                  className="field-input service-notes"
+                  rows={4}
+                  value={requestInfoDescription}
+                  onChange={(event) => setRequestInfoDescription(event.target.value)}
+                  placeholder="Describe the additional details or documents required."
+                  required
+                />
+              </label>
+
+              <div className="dialog-actions">
+                <button type="button" className="btn btn-ghost" onClick={handleCloseRequestInfoDialog}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={requestInfoMutation.isPending}>
+                  {requestInfoMutation.isPending ? "Sending..." : "Send Request"}
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
     </section>
   );
 }

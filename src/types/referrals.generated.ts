@@ -17,6 +17,22 @@ export enum ModelsReferralStatus {
   ReferralStatusClosed = "closed",
 }
 
+export interface HandlerAdditionalInformationRequestListResponse {
+  items?: ModelsAdditionalInformationRequest[];
+}
+
+export interface HandlerAdditionalInformationRequestResponse {
+  additionalInformation?: string;
+  createdAt?: string;
+  facilityId?: string;
+  id?: string;
+  referralId?: string;
+  requestedBySub?: string;
+  requestedByUsername?: string;
+  title?: string;
+  updatedAt?: string;
+}
+
 export interface HandlerErrorResponse {
   error?: string;
   message?: string;
@@ -53,6 +69,7 @@ export interface HandlerReferralResponse {
   createdAt?: string;
   id?: string;
   metadata?: object;
+  modeOfPayment?: string;
   notes?: string;
   originFacilityCode?: string;
   patient?: ModelsPatient;
@@ -70,6 +87,18 @@ export interface HandlerStatusResponse {
   status?: string;
 }
 
+export interface ModelsAdditionalInformationRequest {
+  additionalInformation?: string;
+  createdAt?: string;
+  facilityId?: string;
+  id?: string;
+  referralId?: string;
+  requestedBySub?: string;
+  requestedByUsername?: string;
+  title?: string;
+  updatedAt?: string;
+}
+
 export interface ModelsNotification {
   createdAt?: string;
   eventType?: string;
@@ -84,19 +113,13 @@ export interface ModelsNotification {
 
 export interface ModelsPatient {
   additionalNotes?: string;
-  address?: string;
   allergies?: string;
   createdAt?: string;
-  dateOfBirth?: string;
+  dateOfBirth?: number;
   diagnosis?: string;
   fullName?: string;
   gender?: string;
   id?: string;
-  medicalRecordNumber?: string;
-  nationalId?: string;
-  nextOfKinName?: string;
-  nextOfKinPhone?: string;
-  phone?: string;
   referralId?: string;
   updatedAt?: string;
   vitalSummary?: string;
@@ -109,6 +132,7 @@ export interface ModelsReferral {
   createdAt?: string;
   id?: string;
   metadata?: object;
+  modeOfPayment?: string;
   notes?: string;
   originFacilityCode?: string;
   patient?: ModelsPatient;
@@ -139,9 +163,16 @@ export interface ServiceAcceptReferralInput {
   notes?: string;
 }
 
+export interface ServiceCreateAdditionalInformationRequestInput {
+  additionalInformation: string;
+  facilityId: string;
+  title: string;
+}
+
 export interface ServiceCreateReferralInput {
   clinicalSummary?: string;
   metadata?: Record<string, any>;
+  modeOfPayment: string;
   notes?: string;
   originFacilityCode?: string;
   patient: ServicePatientInput;
@@ -152,17 +183,11 @@ export interface ServiceCreateReferralInput {
 
 export interface ServicePatientInput {
   additionalNotes?: string;
-  address?: string;
   allergies?: string;
-  dateOfBirth: string;
+  dateOfBirth: number;
   diagnosis?: string;
   fullName: string;
   gender: string;
-  medicalRecordNumber?: string;
-  nationalId?: string;
-  nextOfKinName?: string;
-  nextOfKinPhone?: string;
-  phone?: string;
   vitalSummary?: string;
 }
 
@@ -539,6 +564,23 @@ export class Api<
       }),
 
     /**
+     * @description Opens a Server-Sent Events stream for a facility using the facility code path parameter.
+     *
+     * @tags notifications
+     * @name StreamDetail
+     * @summary Stream notifications by facility
+     * @request GET:/notifications/stream/{facilityCode}
+     * @secure
+     */
+    streamDetail: (facilityCode: string, params: RequestParams = {}) =>
+      this.request<string, HandlerErrorResponse>({
+        path: `/notifications/stream/${facilityCode}`,
+        method: "GET",
+        secure: true,
+        ...params,
+      }),
+
+    /**
      * @description Marks a facility notification as read.
      *
      * @tags notifications
@@ -597,6 +639,57 @@ export class Api<
     ) =>
       this.request<HandlerReferralResponse, HandlerErrorResponse>({
         path: `/referrals`,
+        method: "POST",
+        body: request,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns additional information requests for a referral.
+     *
+     * @tags referrals
+     * @name ByIdInformationRequestsList
+     * @summary List additional information requests
+     * @request GET:/referrals/by-id/{referralId}/information-requests
+     * @secure
+     */
+    byIdInformationRequestsList: (
+      referralId: string,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        HandlerAdditionalInformationRequestListResponse,
+        HandlerErrorResponse
+      >({
+        path: `/referrals/by-id/${referralId}/information-requests`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Creates an additional information request for a referral and notifies the target facility.
+     *
+     * @tags referrals
+     * @name ByIdInformationRequestsCreate
+     * @summary Request additional referral information
+     * @request POST:/referrals/by-id/{referralId}/information-requests
+     * @secure
+     */
+    byIdInformationRequestsCreate: (
+      referralId: string,
+      request: ServiceCreateAdditionalInformationRequestInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        HandlerAdditionalInformationRequestResponse,
+        HandlerErrorResponse
+      >({
+        path: `/referrals/by-id/${referralId}/information-requests`,
         method: "POST",
         body: request,
         secure: true,
