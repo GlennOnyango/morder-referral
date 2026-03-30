@@ -786,5 +786,22 @@ export class Api<
         format: "json",
         ...params,
       }),
+
+    /**
+     * @description Opens a Server-Sent Events stream that emits an OpenAI-generated referral summary incrementally.
+     *
+     * @tags referrals
+     * @name SummaryStreamList
+     * @summary Stream referral summary
+     * @request GET:/referrals/{referralCode}/summary/stream
+     * @secure
+     */
+    summaryStreamList: (referralCode: string, params: RequestParams = {}) =>
+      this.request<string, HandlerErrorResponse>({
+        path: `/referrals/${referralCode}/summary/stream`,
+        method: "GET",
+        secure: true,
+        ...params,
+      }),
   };
 }

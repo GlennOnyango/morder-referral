@@ -4,7 +4,12 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { getOrganizationById, validateOrganizationFacilityCode } from "../api/organizations";
-import { acceptReferralByCode, createReferralInformationRequest, getReferralByCode } from "../api/referrals";
+import {
+  acceptReferralByCode,
+  createReferralInformationRequest,
+  getReferralByCode,
+  streamReferralSummaryByCode,
+} from "../api/referrals";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useAuthContext } from "../context/AuthContext";
 import { ModelsReferralStatus } from "../types/referrals.generated";
@@ -95,7 +100,8 @@ function OrganizationPoolReferralDetailPage() {
   const [requestInfoTitle, setRequestInfoTitle] = useState("");
   const [requestInfoDescription, setRequestInfoDescription] = useState("");
   const [requestInfoSuccessMessage, setRequestInfoSuccessMessage] = useState<string | null>(null);
-  const [aiActionMessage, setAiActionMessage] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiSummaryRequested, setAiSummaryRequested] = useState(false);
 
   const organizationQuery = useQuery({
     queryKey: ["organizations", "detail", organizationId, session?.accessToken],
@@ -166,6 +172,21 @@ function OrganizationPoolReferralDetailPage() {
       setRequestInfoSuccessMessage(`Additional information request sent for referral ${referralCode}.`);
       await queryClient.invalidateQueries({ queryKey: ["referral-notifications"] });
       await queryClient.invalidateQueries({ queryKey: ["referral-detail", organizationId, referralCode] });
+    },
+  });
+
+  const summarizeCaseMutation = useMutation({
+    mutationFn: () =>
+      streamReferralSummaryByCode(
+        referralCode,
+        (chunk) => {
+          setAiSummary((currentSummary) => `${currentSummary}${chunk}`);
+        },
+        session?.accessToken,
+      ),
+    onMutate: () => {
+      setAiSummaryRequested(true);
+      setAiSummary("");
     },
   });
 
@@ -275,7 +296,56 @@ function OrganizationPoolReferralDetailPage() {
 
       {referral ? (
         <article className="org-form-card">
-          <h2>Referral Details</h2>
+          <div className="referral-detail-card-header">
+            <h2>Referral Details</h2>
+            <button
+              type="button"
+              className="btn btn-ghost org-btn referral-ai-action-btn"
+              onClick={() => {
+                setAcceptSuccessMessage(null);
+                setRequestInfoSuccessMessage(null);
+                summarizeCaseMutation.mutate();
+              }}
+              disabled={summarizeCaseMutation.isPending}
+            >
+              <span className="referral-ai-action-content">
+                <span className="referral-ai-action-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                    <path
+                      d="M12 2.5l1.9 5.2 5.6 1.9-5.6 1.9L12 16.7l-1.9-5.2-5.6-1.9 5.6-1.9L12 2.5Zm7.2 11.8.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4ZM6 15.6l.8 2.1 2.1.8-2.1.8L6 21.4l-.8-2.1-2.1-.8 2.1-.8.8-2.1Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </span>
+                <span className="referral-ai-action-copy">
+                  <span className="referral-ai-action-label">
+                    {summarizeCaseMutation.isPending ? "Summarising with AI..." : "Generate Summary with AI"}
+                  </span>
+                  <span className="referral-ai-action-subtitle">Clinical highlights and risks</span>
+                </span>
+              </span>
+            </button>
+          </div>
+
+          {aiSummaryRequested ? (
+            <section className="referral-ai-summary-card" aria-live="polite">
+              <div className="referral-ai-summary-head">
+                <p>AI Summary</p>
+                {summarizeCaseMutation.isPending ? <span className="referral-ai-summary-chip">Generating</span> : null}
+              </div>
+              {summarizeCaseMutation.isError ? (
+                <p className="result-note error-note referral-ai-summary-note">{formatError(summarizeCaseMutation.error)}</p>
+              ) : null}
+              {aiSummary ? (
+                <p className="referral-ai-summary-content">{aiSummary}</p>
+              ) : summarizeCaseMutation.isPending ? (
+                <p className="referral-ai-summary-placeholder">Preparing a concise clinical summary from this referral...</p>
+              ) : (
+                <p className="referral-ai-summary-placeholder">No summary was returned. Try again in a moment.</p>
+              )}
+            </section>
+          ) : null}
+
           <div className="org-form">
             <div className="org-grid">
               <label className="field">
@@ -444,7 +514,6 @@ function OrganizationPoolReferralDetailPage() {
               className="btn btn-primary"
               onClick={() => {
                 setAcceptSuccessMessage(null);
-                setAiActionMessage(null);
                 setRequestInfoSuccessMessage(null);
                 acceptReferralMutation.mutate();
               }}
@@ -457,34 +526,11 @@ function OrganizationPoolReferralDetailPage() {
               className="btn btn-ghost"
               onClick={() => {
                 setAcceptSuccessMessage(null);
-                setAiActionMessage(null);
                 handleOpenRequestInfoDialog();
               }}
               disabled={!canRequestInformation}
             >
               Request More Information
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setAcceptSuccessMessage(null);
-                setRequestInfoSuccessMessage(null);
-                setAiActionMessage("AI case summary preview is not connected yet. API integration will be added next.");
-              }}
-            >
-              Summarise Case with AI
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setAcceptSuccessMessage(null);
-                setRequestInfoSuccessMessage(null);
-                setAiActionMessage("AI case review preview is not connected yet. API integration will be added next.");
-              }}
-            >
-              Review Case with AI
             </button>
           </div>
 
@@ -510,7 +556,6 @@ function OrganizationPoolReferralDetailPage() {
       ) : null}
       {acceptSuccessMessage ? <p className="result-note success-note">{acceptSuccessMessage}</p> : null}
       {requestInfoSuccessMessage ? <p className="result-note success-note">{requestInfoSuccessMessage}</p> : null}
-      {aiActionMessage ? <p className="org-section-note">{aiActionMessage}</p> : null}
 
       {isRequestInfoDialogOpen ? (
         <div className="dialog-backdrop" role="presentation">

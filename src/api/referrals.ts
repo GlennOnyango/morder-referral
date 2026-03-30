@@ -81,8 +81,59 @@ export type NotificationReadQuery = {
   facilityCode?: string;
 };
 
+export type ReferralSummaryChunkHandler = (chunk: string) => void;
+
 export type ReferralCreateInput = ServiceCreateReferralInput;
 export type CreateReferralInformationRequestInput = ServiceCreateAdditionalInformationRequestInput;
+
+function parseSummaryStreamEventData(rawData: string): string {
+  const trimmed = rawData.trim();
+  if (!trimmed || trimmed === "[DONE]") {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (typeof parsed === "string") {
+      return parsed;
+    }
+
+    if (parsed && typeof parsed === "object") {
+      const candidate = parsed as {
+        text?: unknown;
+        summary?: unknown;
+        delta?: unknown;
+        content?: unknown;
+        choices?: Array<{ delta?: { content?: unknown } }>;
+      };
+
+      if (typeof candidate.text === "string") {
+        return candidate.text;
+      }
+
+      if (typeof candidate.summary === "string") {
+        return candidate.summary;
+      }
+
+      if (typeof candidate.delta === "string") {
+        return candidate.delta;
+      }
+
+      if (typeof candidate.content === "string") {
+        return candidate.content;
+      }
+
+      const firstChoice = candidate.choices?.[0];
+      if (typeof firstChoice?.delta?.content === "string") {
+        return firstChoice.delta.content;
+      }
+    }
+  } catch {
+    return trimmed;
+  }
+
+  return "";
+}
 
 export async function listFacilityReferrals(
   facilityCode: string,
@@ -169,6 +220,82 @@ export async function getReferralHistoryByCode(
   );
 
   return response.data.items ?? [];
+}
+
+export async function streamReferralSummaryByCode(
+  referralCode: string,
+  onChunk: ReferralSummaryChunkHandler,
+  accessToken?: string,
+): Promise<string> {
+  const response = await fetch(`${REFERRALS_BASE_URL}/referrals/${encodeURIComponent(referralCode)}/summary/stream`, {
+    method: "GET",
+    headers: {
+      Accept: "text/event-stream",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    let message = `Summary request failed with status ${response.status}.`;
+    try {
+      const payload = (await response.json()) as { message?: unknown };
+      if (typeof payload.message === "string" && payload.message.trim()) {
+        message = payload.message;
+      }
+    } catch {
+      // Fall back to status-based message when response is not JSON.
+    }
+    throw new Error(message);
+  }
+
+  if (!response.body) {
+    throw new Error("Summary stream is unavailable.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let eventData: string[] = [];
+  let summary = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.trim()) {
+        if (eventData.length > 0) {
+          const chunk = parseSummaryStreamEventData(eventData.join("\n"));
+          if (chunk) {
+            summary += chunk;
+            onChunk(chunk);
+          }
+          eventData = [];
+        }
+        continue;
+      }
+
+      if (line.startsWith("data:")) {
+        eventData.push(line.slice(5).trimStart());
+      }
+    }
+  }
+
+  if (eventData.length > 0) {
+    const chunk = parseSummaryStreamEventData(eventData.join("\n"));
+    if (chunk) {
+      summary += chunk;
+      onChunk(chunk);
+    }
+  }
+
+  return summary.trim();
 }
 
 export async function createReferralInformationRequest(

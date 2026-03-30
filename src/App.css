@@ -1642,6 +1642,127 @@ main {
   margin-top: 14px;
 }
 
+.referral-detail-card-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.referral-detail-card-header h2 {
+  margin: 0;
+}
+
+.referral-ai-action-btn {
+  min-width: 238px;
+  border-color: rgba(15, 90, 120, 0.38);
+  background: linear-gradient(160deg, rgba(226, 246, 252, 0.95), rgba(238, 250, 245, 0.95));
+  color: #0e4f69;
+  box-shadow: 0 8px 18px rgba(10, 70, 90, 0.14);
+}
+
+.referral-ai-action-btn:hover:not(:disabled) {
+  border-color: rgba(15, 90, 120, 0.54);
+  background: linear-gradient(160deg, rgba(235, 250, 255, 1), rgba(245, 255, 251, 1));
+  box-shadow: 0 12px 22px rgba(10, 70, 90, 0.2);
+}
+
+.referral-ai-action-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.referral-ai-action-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 90, 120, 0.13);
+  color: #0e5b78;
+  flex-shrink: 0;
+}
+
+.referral-ai-action-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.referral-ai-action-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.referral-ai-action-label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.referral-ai-action-subtitle {
+  font-size: 0.73rem;
+  color: #486879;
+  line-height: 1.2;
+}
+
+.referral-ai-summary-card {
+  margin-bottom: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 90, 120, 0.22);
+  background: linear-gradient(145deg, rgba(230, 247, 250, 0.78), rgba(246, 252, 255, 0.95));
+  padding: 13px 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.referral-ai-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.referral-ai-summary-head p {
+  margin: 0;
+  color: #0e4f69;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+}
+
+.referral-ai-summary-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(17, 122, 101, 0.3);
+  background: rgba(17, 122, 101, 0.14);
+  color: #0c684f;
+  padding: 3px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.referral-ai-summary-content,
+.referral-ai-summary-placeholder {
+  margin: 0;
+  color: #163447;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.referral-ai-summary-placeholder {
+  color: #4c6778;
+  font-style: italic;
+}
+
+.referral-ai-summary-note {
+  margin: 0;
+}
+
 .org-action-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2259,6 +2380,17 @@ main {
 
   .referrals-page-actions {
     width: 100%;
+  }
+
+  .referral-detail-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .referral-ai-action-btn {
+    width: 100%;
+    justify-content: flex-start;
+    min-width: 0;
   }
 
   .referrals-page-btn {
