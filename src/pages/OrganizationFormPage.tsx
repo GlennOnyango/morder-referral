@@ -12,6 +12,7 @@ import {
   type OrganizationUpdateInput,
 } from "../api/organizations";
 import Breadcrumbs from "../components/Breadcrumbs";
+import DialogPortal from "../components/DialogPortal";
 import { useAuthContext } from "../context/AuthContext";
 import { canManageFacilityCatalog } from "../utils/facilityAccess";
 
@@ -538,33 +539,35 @@ function OrganizationFormPage() {
       ) : null}
 
       {isDeleteDialogOpen ? (
-        <div className="dialog-backdrop" role="presentation">
-          <article className="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="delete-org-title">
-            <h2 id="delete-org-title">Delete facility?</h2>
-            <p>
-              Are you sure you wish to delete{" "}
-              <strong>{organizationQuery.data?.name ?? "this facility"}</strong>? This action cannot be undone.
-            </p>
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                disabled={deleteMutation.isPending}
-                onClick={() => setIsDeleteDialogOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={deleteMutation.isPending}
-                onClick={handleConfirmDelete}
-              >
-                {deleteMutation.isPending ? "Deleting..." : "Yes, Delete"}
-              </button>
-            </div>
-          </article>
-        </div>
+        <DialogPortal>
+          <div className="dialog-backdrop" role="presentation">
+            <article className="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="delete-org-title">
+              <h2 id="delete-org-title">Delete facility?</h2>
+              <p>
+                Are you sure you wish to delete{" "}
+                <strong>{organizationQuery.data?.name ?? "this facility"}</strong>? This action cannot be undone.
+              </p>
+              <div className="dialog-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={deleteMutation.isPending}
+                  onClick={handleConfirmDelete}
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Yes, Delete"}
+                </button>
+              </div>
+            </article>
+          </div>
+        </DialogPortal>
       ) : null}
     </section>
   );

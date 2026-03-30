@@ -1544,6 +1544,46 @@ main {
 
 .referral-pool-card-actions {
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.referral-pool-ai-btn {
+  border-color: rgba(15, 90, 120, 0.38);
+  background: linear-gradient(150deg, rgba(224, 244, 255, 0.95), rgba(237, 251, 245, 0.96));
+  color: #0f5774;
+  box-shadow: 0 8px 18px rgba(10, 70, 90, 0.12);
+}
+
+.referral-pool-ai-btn:hover:not(:disabled) {
+  border-color: rgba(15, 90, 120, 0.54);
+  background: linear-gradient(150deg, rgba(233, 248, 255, 1), rgba(245, 255, 251, 1));
+  box-shadow: 0 12px 22px rgba(10, 70, 90, 0.16);
+}
+
+.referral-pool-ai-btn-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.referral-pool-ai-btn-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: rgba(15, 90, 120, 0.15);
+  color: #0f5a78;
+}
+
+.referral-pool-ai-btn-icon svg {
+  width: 13px;
+  height: 13px;
+  display: block;
 }
 
 @keyframes emergencyPulse {
@@ -1846,15 +1886,20 @@ main {
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(8, 27, 34, 0.46);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(8, 27, 34, 0.54);
+  backdrop-filter: blur(2px);
   display: grid;
   place-items: center;
-  padding: 16px;
-  z-index: 40;
+  padding: clamp(14px, 3vw, 22px);
+  z-index: 1200;
 }
 
 .dialog-card {
   width: min(100%, 460px);
+  max-height: min(90vh, 760px);
+  overflow: auto;
   border-radius: 18px;
   border: 1px solid rgba(10, 45, 55, 0.18);
   background: #f7fcfb;
@@ -1883,6 +1928,99 @@ main {
 
 .referral-request-dialog {
   width: min(100%, 560px);
+}
+
+.referral-summary-dialog {
+  width: min(100%, 760px);
+  border-color: rgba(15, 90, 120, 0.36);
+  background:
+    radial-gradient(circle at top right, rgba(116, 228, 202, 0.22), transparent 42%),
+    radial-gradient(circle at top left, rgba(92, 181, 235, 0.2), transparent 44%),
+    linear-gradient(160deg, rgba(239, 251, 255, 0.98), rgba(243, 252, 247, 0.98));
+}
+
+.referral-summary-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.referral-summary-dialog-header h2 {
+  margin-top: 4px;
+}
+
+.referral-summary-dialog-controls {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.referral-summary-dialog-body {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.referral-summary-snapshot {
+  margin: 0;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 90, 120, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.referral-summary-snapshot div {
+  display: grid;
+  gap: 2px;
+}
+
+.referral-summary-snapshot dt {
+  color: #476375;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.referral-summary-snapshot dd {
+  margin: 0;
+  color: #143447;
+  font-size: 0.9rem;
+}
+
+.referral-summary-output {
+  border-radius: 14px;
+  border: 1px solid rgba(15, 90, 120, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 252, 255, 0.93));
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.referral-summary-output-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.referral-summary-output-head p {
+  margin: 0;
+  color: #0e4f69;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+}
+
+.referral-summary-collapsed-note {
+  margin: 14px 0 0;
+  color: #3f5d70;
 }
 
 .hero-panel {
@@ -2264,6 +2402,10 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .referral-summary-snapshot {
+    grid-template-columns: 1fr;
+  }
+
   .facility-operations-actions {
     grid-template-columns: 1fr;
   }
@@ -2391,6 +2533,18 @@ main {
     width: 100%;
     justify-content: flex-start;
     min-width: 0;
+  }
+
+  .referral-summary-dialog-header {
+    flex-direction: column;
+  }
+
+  .referral-summary-dialog-controls {
+    width: 100%;
+  }
+
+  .referral-summary-dialog-controls .btn {
+    flex: 1;
   }
 
   .referrals-page-btn {

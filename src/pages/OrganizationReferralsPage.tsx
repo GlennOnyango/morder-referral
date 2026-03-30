@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../api/organizations";
-import { listReferralPool } from "../api/referrals";
+import { listReferralPool, streamReferralSummaryByCode } from "../api/referrals";
 import Breadcrumbs from "../components/Breadcrumbs";
+import DialogPortal from "../components/DialogPortal";
 import { useAuthContext } from "../context/AuthContext";
+import type { ModelsReferral } from "../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../utils/facilityAccess";
 
 const DEFAULT_POOL_PAGE_SIZE = 10;
@@ -54,6 +56,9 @@ function OrganizationReferralsPage() {
   const [poolSearchTerm, setPoolSearchTerm] = useState("");
   const [debouncedPoolSearchTerm, setDebouncedPoolSearchTerm] = useState("");
   const [poolPage, setPoolPage] = useState(0);
+  const [summaryDialogReferral, setSummaryDialogReferral] = useState<ModelsReferral | null>(null);
+  const [summaryDialogCollapsed, setSummaryDialogCollapsed] = useState(false);
+  const [poolSummary, setPoolSummary] = useState("");
   const poolPageSize = DEFAULT_POOL_PAGE_SIZE;
 
   const organizationQuery = useQuery({
@@ -99,6 +104,38 @@ function OrganizationReferralsPage() {
   const poolReferrals = poolReferralsQuery.data ?? [];
   const hasNextPoolPage = poolReferrals.length === poolPageSize;
   const isSearchSettling = poolSearchTerm.trim() !== debouncedPoolSearchTerm;
+
+  const summarizeReferralMutation = useMutation({
+    mutationFn: (code: string) =>
+      streamReferralSummaryByCode(
+        code,
+        (chunk) => {
+          setPoolSummary((currentSummary) => `${currentSummary}${chunk}`);
+        },
+        session?.accessToken,
+      ),
+    onMutate: () => {
+      setPoolSummary("");
+    },
+  });
+
+  const openSummaryDialog = (referral: ModelsReferral) => {
+    const code = referral.referralCode?.trim() ?? "";
+    if (!code) {
+      return;
+    }
+
+    setSummaryDialogCollapsed(false);
+    setSummaryDialogReferral(referral);
+    summarizeReferralMutation.mutate(code);
+  };
+
+  const closeSummaryDialog = () => {
+    setSummaryDialogReferral(null);
+    setSummaryDialogCollapsed(false);
+    setPoolSummary("");
+  };
+
   const openReferralDetail = (referralCode: string) => {
     navigate(`/facilities/${organizationId}/referrals/pool/${encodeURIComponent(referralCode)}`);
   };
@@ -264,6 +301,24 @@ function OrganizationReferralsPage() {
                     <div className="referral-pool-card-actions">
                       <button
                         type="button"
+                        className="btn btn-ghost org-btn referral-pool-ai-btn"
+                        onClick={() => openSummaryDialog(referral)}
+                        disabled={!referralCode || summarizeReferralMutation.isPending}
+                      >
+                        <span className="referral-pool-ai-btn-content">
+                          <span className="referral-pool-ai-btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                              <path
+                                d="M12 2.5l1.9 5.2 5.6 1.9-5.6 1.9L12 16.7l-1.9-5.2-5.6-1.9 5.6-1.9L12 2.5Zm7.2 11.8.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4ZM6 15.6l.8 2.1 2.1.8-2.1.8L6 21.4l-.8-2.1-2.1-.8 2.1-.8.8-2.1Z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          </span>
+                          <span>{summarizeReferralMutation.isPending ? "Summarizing..." : "Summarize with AI"}</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
                         className="btn btn-ghost org-btn"
                         onClick={() => {
                           if (referralCode) {
@@ -306,6 +361,125 @@ function OrganizationReferralsPage() {
           </div>
         </div>
       </article>
+
+      {summaryDialogReferral ? (
+        <DialogPortal>
+          <div className="dialog-backdrop" role="presentation" onClick={closeSummaryDialog}>
+            <article
+              className="dialog-card referral-summary-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="referral-summary-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="referral-summary-dialog-header">
+                <div>
+                  <p className="eyebrow">AI Assistant</p>
+                  <h2 id="referral-summary-title">Referral Summary</h2>
+                </div>
+                <div className="referral-summary-dialog-controls">
+                  <button
+                    type="button"
+                    className="btn btn-ghost org-btn"
+                    onClick={() => setSummaryDialogCollapsed((current) => !current)}
+                  >
+                    {summaryDialogCollapsed ? "Expand" : "Collapse"}
+                  </button>
+                  <button type="button" className="btn btn-ghost org-btn" onClick={closeSummaryDialog}>
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {!summaryDialogCollapsed ? (
+                <div className="referral-summary-dialog-body">
+                  <dl className="referral-summary-snapshot">
+                    <div>
+                      <dt>Referral</dt>
+                      <dd>{summaryDialogReferral.referralCode ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{summaryDialogReferral.status ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Service</dt>
+                      <dd>{summaryDialogReferral.serviceType ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Priority</dt>
+                      <dd>{summaryDialogReferral.priority ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Origin</dt>
+                      <dd>{summaryDialogReferral.originFacilityCode ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Patient</dt>
+                      <dd>{summaryDialogReferral.patient?.fullName ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Updated</dt>
+                      <dd>{formatDateTime(summaryDialogReferral.updatedAt)}</dd>
+                    </div>
+                  </dl>
+
+                  <section className="referral-summary-output" aria-live="polite">
+                    <div className="referral-summary-output-head">
+                      <p>AI Narrative</p>
+                      {summarizeReferralMutation.isPending ? <span className="referral-ai-summary-chip">Generating</span> : null}
+                    </div>
+                    {summarizeReferralMutation.isError ? (
+                      <p className="result-note error-note referral-ai-summary-note">{formatError(summarizeReferralMutation.error)}</p>
+                    ) : null}
+                    {poolSummary ? (
+                      <p className="referral-ai-summary-content">{poolSummary}</p>
+                    ) : summarizeReferralMutation.isPending ? (
+                      <p className="referral-ai-summary-placeholder">Generating a concise review from the referral details...</p>
+                    ) : (
+                      <p className="referral-ai-summary-placeholder">No summary was returned. Try again in a moment.</p>
+                    )}
+                  </section>
+
+                  <div className="dialog-actions">
+                    <button
+                      type="button"
+                      className="btn btn-ghost org-btn"
+                      onClick={() => {
+                        const code = summaryDialogReferral.referralCode?.trim() ?? "";
+                        if (code) {
+                          summarizeReferralMutation.mutate(code);
+                        }
+                      }}
+                      disabled={summarizeReferralMutation.isPending || !summaryDialogReferral.referralCode}
+                    >
+                      {summarizeReferralMutation.isPending ? "Regenerating..." : "Regenerate"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary org-btn"
+                      onClick={() => {
+                        const code = summaryDialogReferral.referralCode?.trim() ?? "";
+                        if (code) {
+                          closeSummaryDialog();
+                          openReferralDetail(code);
+                        }
+                      }}
+                      disabled={!summaryDialogReferral.referralCode}
+                    >
+                      Open Full Referral
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="referral-summary-collapsed-note">
+                  Summary collapsed. Select <strong>Expand</strong> to continue reviewing this referral.
+                </p>
+              )}
+            </article>
+          </div>
+        </DialogPortal>
+      ) : null}
     </section>
   );
 }
