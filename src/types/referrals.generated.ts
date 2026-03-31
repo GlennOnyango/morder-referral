@@ -60,6 +60,7 @@ export interface HandlerReferralHistoryListResponse {
 
 export interface HandlerReferralListResponse {
   items?: ModelsReferral[];
+  message?: string;
 }
 
 export interface HandlerReferralResponse {
@@ -709,8 +710,16 @@ export class Api<
      */
     poolList: (
       query?: {
-        /** Service type filter */
+        /** Service type filter (legacy alias) */
         service_type?: string;
+        /** Partial service type filter */
+        service?: string;
+        /** Partial patient name filter */
+        patient_name?: string;
+        /** Partial origin facility filter */
+        origin_facility?: string;
+        /** Hybrid search query */
+        q?: string;
         /** Page size */
         limit?: number;
         /** Page offset */

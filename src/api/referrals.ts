@@ -66,6 +66,10 @@ export type FacilityReferralListQuery = {
 
 export type ReferralPoolListQuery = {
   serviceType?: string;
+  service?: string;
+  patientName?: string;
+  originFacility?: string;
+  query?: string;
   limit?: number;
   offset?: number;
 };
@@ -158,6 +162,10 @@ export async function listReferralPool(
   const response = await referralsApi.get<HandlerReferralListResponse>("/referrals/pool", {
     params: {
       service_type: query?.serviceType,
+      service: query?.service,
+      patient_name: query?.patientName,
+      origin_facility: query?.originFacility,
+      q: query?.query,
       limit: query?.limit,
       offset: query?.offset,
     },

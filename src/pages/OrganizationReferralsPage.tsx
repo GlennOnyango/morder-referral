@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
@@ -49,12 +49,16 @@ function OrganizationReferralsPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session, isAuthenticated } = useAuthContext();
   const role = session?.role;
   const canManageReferrals = isFacilityManager(role);
 
   const [poolSearchTerm, setPoolSearchTerm] = useState("");
   const [debouncedPoolSearchTerm, setDebouncedPoolSearchTerm] = useState("");
+  const [isAiSearchDialogOpen, setIsAiSearchDialogOpen] = useState(false);
+  const [aiSearchPrompt, setAiSearchPrompt] = useState("");
+  const [isAiSearchSubmitting, setIsAiSearchSubmitting] = useState(false);
   const [poolPage, setPoolPage] = useState(0);
   const [summaryDialogReferral, setSummaryDialogReferral] = useState<ModelsReferral | null>(null);
   const [summaryDialogCollapsed, setSummaryDialogCollapsed] = useState(false);
@@ -92,7 +96,7 @@ function OrganizationReferralsPage() {
     queryFn: () =>
       listReferralPool(
         {
-          serviceType: debouncedPoolSearchTerm || undefined,
+          query: debouncedPoolSearchTerm || undefined,
           limit: poolPageSize,
           offset: poolOffset,
         },
@@ -138,6 +142,33 @@ function OrganizationReferralsPage() {
 
   const openReferralDetail = (referralCode: string) => {
     navigate(`/facilities/${organizationId}/referrals/pool/${encodeURIComponent(referralCode)}`);
+  };
+
+  const openAiSearchDialog = () => {
+    setAiSearchPrompt(poolSearchTerm);
+    setIsAiSearchDialogOpen(true);
+  };
+
+  const closeAiSearchDialog = () => {
+    setIsAiSearchDialogOpen(false);
+  };
+
+  const submitAiSearch = async () => {
+    const normalizedQuery = aiSearchPrompt.trim();
+    setPoolPage(0);
+    setPoolSearchTerm(normalizedQuery);
+    setDebouncedPoolSearchTerm(normalizedQuery);
+    closeAiSearchDialog();
+
+    setIsAiSearchSubmitting(true);
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["referral-pool", organizationId],
+        refetchType: "active",
+      });
+    } finally {
+      setIsAiSearchSubmitting(false);
+    }
   };
 
   if (!isAuthenticated) {
@@ -217,13 +248,13 @@ function OrganizationReferralsPage() {
               <input
                 id="pool-search-input"
                 className="field-input org-filter-select referrals-search-input"
-                aria-label="Search by service type"
+                aria-label="Search referrals"
                 value={poolSearchTerm}
                 onChange={(event) => {
                   setPoolPage(0);
                   setPoolSearchTerm(event.target.value);
                 }}
-                placeholder="Search by service type e.g radiology"
+                placeholder="Search referrals by service, patient, or origin facility"
               />
               <button
                 type="button"
@@ -244,6 +275,7 @@ function OrganizationReferralsPage() {
         </div>
 
         {poolReferralsQuery.isLoading ? <p className="org-empty">Loading referral pool...</p> : null}
+        {isAiSearchSubmitting ? <p className="org-section-note referrals-search-summary">Searching with AI...</p> : null}
         {isSearchSettling ? <p className="org-section-note referrals-search-summary">Updating search...</p> : null}
 
         {poolReferralsQuery.isError ? (
@@ -254,7 +286,7 @@ function OrganizationReferralsPage() {
           poolReferrals.length === 0 ? (
             <p className="org-empty">
               {debouncedPoolSearchTerm
-                ? `No open referrals found for service type "${debouncedPoolSearchTerm}".`
+                ? `No open referrals found for "${debouncedPoolSearchTerm}".`
                 : "No open referrals found in the pool."}
             </p>
           ) : (
@@ -476,6 +508,85 @@ function OrganizationReferralsPage() {
                   Summary collapsed. Select <strong>Expand</strong> to continue reviewing this referral.
                 </p>
               )}
+            </article>
+          </div>
+        </DialogPortal>
+      ) : null}
+
+      <button
+        type="button"
+        className="btn referral-ai-search-fab"
+        aria-label="Open AI search"
+        aria-haspopup="dialog"
+        onClick={openAiSearchDialog}
+      >
+        <span className="referral-ai-search-fab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+            <path
+              d="M12 2.5l1.9 5.2 5.6 1.9-5.6 1.9L12 16.7l-1.9-5.2-5.6-1.9 5.6-1.9L12 2.5Zm7.2 11.8.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4ZM6 15.6l.8 2.1 2.1.8-2.1.8L6 21.4l-.8-2.1-2.1-.8 2.1-.8.8-2.1Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <span className="referral-ai-search-fab-copy">
+          <span>Search with AI</span>
+          <small>Natural language</small>
+        </span>
+      </button>
+
+      {isAiSearchDialogOpen ? (
+        <DialogPortal>
+          <div className="dialog-backdrop" role="presentation" onClick={closeAiSearchDialog}>
+            <article
+              className="dialog-card referral-ai-search-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="referral-ai-search-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="eyebrow">AI Search</p>
+              <h2 id="referral-ai-search-title">Search Referrals with Natural Language</h2>
+              <p>Describe what you are looking for. We will pass your exact prompt to semantic search (`q`).</p>
+
+              <form
+                className="referral-ai-search-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void submitAiSearch();
+                }}
+              >
+                <label className="field" htmlFor="referral-ai-search-input">
+                  <span>Your search prompt</span>
+                  <textarea
+                    id="referral-ai-search-input"
+                    className="field-input referral-ai-search-input"
+                    value={aiSearchPrompt}
+                    onChange={(event) => setAiSearchPrompt(event.target.value)}
+                    rows={4}
+                    placeholder="Example: urgent cardiology referrals for elderly patients from county referral hospitals"
+                    autoFocus
+                  />
+                </label>
+
+                <div className="dialog-actions referral-ai-search-actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost org-btn"
+                    onClick={() => {
+                      setAiSearchPrompt("");
+                    }}
+                    disabled={aiSearchPrompt.length === 0 || isAiSearchSubmitting}
+                  >
+                    Clear
+                  </button>
+                  <button type="button" className="btn btn-ghost org-btn" onClick={closeAiSearchDialog} disabled={isAiSearchSubmitting}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary org-btn" disabled={isAiSearchSubmitting}>
+                    {isAiSearchSubmitting ? "Searching..." : "Search"}
+                  </button>
+                </div>
+              </form>
             </article>
           </div>
         </DialogPortal>
