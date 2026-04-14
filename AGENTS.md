@@ -1,0 +1,152 @@
+# Agents
+
+General instructions for AI coding agents working in this repository.
+
+## Project Overview
+
+React + Vite single-page application written in TypeScript. The app focuses on healthcare referral workflows, with AWS Cognito authentication and API integrations for organizations, referrals, and auth administration.
+
+## Stack
+
+| Concern         | Tool / Library |
+| --------------- | -------------- |
+| Framework       | React 19 + Vite 8 |
+| Routing         | React Router DOM v7 |
+| Language        | TypeScript + TSX |
+| Data Fetching   | TanStack React Query |
+| HTTP Client     | Axios |
+| Authentication  | AWS Amplify (Cognito) + custom auth helpers |
+| Styling         | Tailwind CSS + shadcn/ui |
+| Linting         | ESLint 9 (flat config via `eslint.config.js`) |
+| Package Manager | pnpm |
+
+## Commands
+
+```bash
+pnpm dev                    # start dev server
+pnpm build                  # type-check + production build
+pnpm lint                   # run ESLint
+pnpm preview                # preview production build
+pnpm start                  # serve built app from dist
+pnpm generate:types         # generate src/types/api.generated.ts from local swagger-doc.json
+pnpm generate:referral:types # generate src/types/referrals.generated.ts from remote referrals swagger
+```
+
+> Always run `pnpm build` after non-trivial changes to confirm the project still compiles.
+
+## Environment Variables
+
+The app reads several `VITE_` variables from environment files/runtime:
+
+- `VITE_COGNITO_USER_POOL_ID`
+- `VITE_COGNITO_CLIENT_ID`
+- `VITE_COGNITO_AUTH_URL`
+- `VITE_COGNITO_AuthFlow`
+- `VITE_COGNITO_SESSION`
+- `VITE_ORGANIZATIONS_API_BASE_URL`
+- `VITE_REFERRALS_API_BASE_URL`
+- `VITE_AUTHENTICATION_API_BASE_URL`
+- `VITE_AUTH_ATTACH_ROLE_PATH`
+- `VITE_AUTH_FACILITY_USERS_PATH`
+
+## App Roles
+
+The app recognizes these roles (`AppRole` in `src/context/AuthContext.tsx`):
+
+- `SUPER_ADMIN` - platform-level access; can manage facilities and user-role administration views.
+- `HOSPITAL_ADMIN` - facility manager access; can manage and operate within their assigned facility.
+- `DOCTOR` - clinical role; currently has limited direct management access in protected routes.
+- `NURSE` - clinical role; currently has limited direct management access in protected routes.
+
+Role normalization currently maps:
+
+- `ADMIN` -> `HOSPITAL_ADMIN`
+- `USER` -> `NURSE`
+
+## Conventions
+
+### File Naming
+
+- Use **PascalCase** for page/route/component files in `src/pages/`, `src/components/`, and `src/routes/`.
+- Use **camelCase** or lowercase for non-component files (`src/api/httpClient.ts`, `src/authEvents.ts`, `src/utils/facilityAccess.ts`).
+- Keep new files consistent with neighboring files in the same folder.
+
+### Components and Exports
+
+- Keep one component/page per file.
+- Component/page modules generally use **default exports**.
+- Shared helpers, API functions, and types use **named exports**.
+
+### UI Components
+
+- Prefer using **shadcn/ui** components for UI work (for example `Button`, `Input`, `Select`, `Dialog`, `DropdownMenu`, `Tabs`, `Card`) instead of building raw HTML controls from scratch.
+- When adding new actions/CTAs, default to shadcn `Button` variants before introducing custom button markup.
+- Prefer Tailwind utility classes in JSX for layout/spacing/visual styling; avoid adding new plain CSS rules unless strictly necessary.
+
+### TypeScript
+
+- Prefer explicit types on public helpers and API boundaries.
+- Avoid `any` unless unavoidable; prefer `unknown` with narrowing.
+- Do not edit generated types manually.
+
+### Functions
+
+•⁠  ⁠Use *arrow functions* for all components, hooks, handlers, and utilities.
+•⁠  ⁠Component files use the ⁠ .tsx ⁠ extension; non-JSX TypeScript files use ⁠ .ts ⁠.
+
+
+### Styling
+
+•⁠  ⁠Use Tailwind utility classes directly in JSX.
+•⁠  ⁠Use Radix UI / shared components from ⁠ src/general/components/ui/ ⁠ as the baseline for UI primitives — do not reinvent buttons, dialogs, inputs, etc.
+
+
+## Forms
+
+•⁠  ⁠Use *react-hook-form* for any form with validation logic, multiple fields, or submission handling.
+•⁠  ⁠Keep form state inside react-hook-form — do not mirror it into component state or a context.
+
+
+### Routing and Access Control
+
+- Add or update routes in `src/App.tsx`.
+- Protected pages should use `src/routes/ProtectedRoute.tsx`.
+- Role-gated views should pass `allowedRoles` instead of ad hoc role checks in multiple places.
+
+### API Layer
+
+- Keep network calls inside `src/api/`.
+- Reuse `createApiClient` from `src/api/httpClient.ts` for authenticated API clients and token refresh behavior.
+- Keep request/response typing aligned with generated types in `src/types/`.
+
+### Auth and Session
+
+- Use `AuthProvider` and `useAuthContext()` for authentication/session state.
+- Do not duplicate auth/session state in unrelated contexts.
+
+### Generated Files
+
+- `src/types/api.generated.ts` and `src/types/referrals.generated.ts` are generated by `swagger-typescript-api`.
+- Regenerate via pnpm scripts when schema changes; do not hand-edit generated files.
+
+### Config Files
+
+- Do **not** modify `vite.config.ts`, `tsconfig*.json`, or `eslint.config.js` without explicit user approval.
+- If a task appears to require config edits, pause and ask first.
+
+
+## Core Principle — Accuracy over Agreement
+
+Do not default to agreeing with the user. Prioritize accuracy over agreement.
+If the user's statement is incorrect, misleading, or incomplete, challenge it and explain why using data, research, and logical reasoning.
+Always verify claims, provide evidence-based responses, and correct the user when necessary.
+The goal is to arrive at the most accurate conclusion, not to validate opinions.
+
+
+## What to Avoid
+
+- Do not use `npm` or `yarn`; use `pnpm` only.
+- Do not bypass TypeScript errors with `@ts-ignore`/`@ts-expect-error` without a clear reason.
+- Do not hardcode API shape assumptions when generated types already cover the contract.
+- Do not edit generated files under `src/types/*.generated.ts`.
+- Do not introduce large architectural changes (state management, routing style, auth flow) without user confirmation.

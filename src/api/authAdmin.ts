@@ -9,6 +9,15 @@ const ATTACH_ROLE_PATH =
 const FACILITY_USERS_PATH =
   (import.meta.env.VITE_AUTH_FACILITY_USERS_PATH as string | undefined) ??
   "/get-facility-users";
+const ENABLE_USER_PATH =
+  (import.meta.env.VITE_AUTH_ENABLE_USER_PATH as string | undefined) ??
+  "/enable-user";
+const DISABLE_USER_PATH =
+  (import.meta.env.VITE_AUTH_DISABLE_USER_PATH as string | undefined) ??
+  "/disable-user";
+const DELETE_USER_PATH =
+  (import.meta.env.VITE_AUTH_DELETE_USER_PATH as string | undefined) ??
+  "/delete-user";
 
 const authAdminApi = createApiClient(AUTHENTICATION_BASE_URL);
 
@@ -306,6 +315,29 @@ export async function attachRoleToUser(
   accessToken?: string,
 ) {
   const response = await authAdminApi.post(ATTACH_ROLE_PATH, input, {
+    headers: authHeaders(accessToken),
+  });
+
+  return response.data;
+}
+
+export async function setUserEnabledStatus(
+  input: { username: string; enabled: boolean; facility_code?: string },
+  accessToken?: string,
+) {
+  const path = input.enabled ? ENABLE_USER_PATH : DISABLE_USER_PATH;
+  const response = await authAdminApi.post(path, input, {
+    headers: authHeaders(accessToken),
+  });
+
+  return response.data;
+}
+
+export async function deleteUser(
+  input: { username: string; facility_code?: string },
+  accessToken?: string,
+) {
+  const response = await authAdminApi.post(DELETE_USER_PATH, input, {
     headers: authHeaders(accessToken),
   });
 

@@ -1,141 +1,95 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Bell01Icon } from "@untitledui/icons-react/outline";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { listOrganizations } from "../api/organizations";
 import { listNotifications, markNotificationAsRead } from "../api/referrals";
 import { useAuthContext } from "../context/AuthContext";
 import type { ModelsNotification } from "../types/referrals.generated";
 import { isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Popover, PopoverClose, PopoverContent, PopoverTitle, PopoverTrigger } from "./ui/popover";
 
 type NotificationFacilityContext = {
   facilityId: string;
   facilityCode: string;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
-function formatDateTime(value?: string): string {
-  if (!value) {
-    return "-";
-  }
-
+const formatDateTime = (value?: string): string => {
+  if (!value) return "—";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+};
 
-  return parsed.toLocaleString();
-}
-
-function formatEventType(value?: string): string {
-  if (!value) {
-    return "Notification";
-  }
-
+const formatEventType = (value?: string): string => {
+  if (!value) return "Notification";
   return value
     .split(/[._-]+/)
-    .filter((part) => part.length > 0)
-    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1).toLowerCase()}`)
+    .filter((p) => p.length > 0)
+    .map((p) => `${p[0]?.toUpperCase() ?? ""}${p.slice(1).toLowerCase()}`)
     .join(" ");
-}
+};
 
-function extractPayloadMessage(payload: unknown): string | null {
-  if (!isRecord(payload)) {
-    return null;
+const extractPayloadMessage = (payload: unknown): string | null => {
+  if (!isRecord(payload)) return null;
+  for (const key of ["message", "description", "reason", "detail"] as const) {
+    const v = payload[key];
+    if (typeof v === "string" && v.trim().length > 0) return v.trim();
   }
-
-  const candidates = ["message", "description", "reason", "detail"] as const;
-  for (const key of candidates) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-
   return null;
-}
+};
 
-function getNotificationSummary(notification: ModelsNotification): string {
-  const payloadMessage = extractPayloadMessage(notification.payload);
-  if (payloadMessage) {
-    return payloadMessage;
-  }
+const getNotificationSummary = (n: ModelsNotification): string =>
+  extractPayloadMessage(n.payload) ??
+  (n.referralCode ? `Referral ${n.referralCode}` : null) ??
+  (n.targetFacilityCode ? `Facility ${n.targetFacilityCode}` : null) ??
+  "Referral workflow update";
 
-  if (notification.referralCode) {
-    return `Referral ${notification.referralCode}`;
-  }
-
-  if (notification.targetFacilityCode) {
-    return `Facility ${notification.targetFacilityCode}`;
-  }
-
-  return "Referral workflow update";
-}
-
-function NotificationsMenu() {
+const NotificationsMenu = () => {
   const { isAuthenticated, session } = useAuthContext();
   const role = session?.role;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const shellRef = useRef<HTMLDivElement | null>(null);
   const isHospitalAdmin = role === "HOSPITAL_ADMIN";
 
   const facilityContextQuery = useQuery({
     queryKey: ["notifications", "facility-context", session?.accessToken, session?.facilityId],
     queryFn: async (): Promise<NotificationFacilityContext | null> => {
-      const organizations = await listOrganizations(session?.accessToken);
-      const assignedFacility =
-        organizations.find((organization) =>
-          isOrganizationOwnedBySessionFacility(organization, session?.facilityId),
-        ) ?? null;
-
-      const facilityId = assignedFacility?.id?.trim() ?? "";
-      const facilityCode = assignedFacility?.facility_code?.trim() ?? "";
-      if (!facilityId || !facilityCode) {
-        return null;
-      }
-
-      return {
-        facilityId,
-        facilityCode,
-      };
+      const orgs = await listOrganizations(session?.accessToken);
+      const facility = orgs.find((o) => isOrganizationOwnedBySessionFacility(o, session?.facilityId)) ?? null;
+      const facilityId = facility?.id?.trim() ?? "";
+      const facilityCode = facility?.facility_code?.trim() ?? "";
+      return facilityId && facilityCode ? { facilityId, facilityCode } : null;
     },
     enabled: isAuthenticated && isHospitalAdmin && Boolean(session?.facilityId),
     staleTime: 2 * 60 * 1000,
   });
 
-  const notificationFacilityCode = facilityContextQuery.data?.facilityCode;
-  const notificationFacilityId = facilityContextQuery.data?.facilityId;
-  const notificationQueryKey = ["referral-notifications", notificationFacilityCode, session?.accessToken];
+  const facilityCode = facilityContextQuery.data?.facilityCode;
+  const facilityId = facilityContextQuery.data?.facilityId;
+  const notificationQueryKey = ["referral-notifications", facilityCode, session?.accessToken];
 
   const notificationsQuery = useQuery({
     queryKey: notificationQueryKey,
     queryFn: () =>
       listNotifications(
-        {
-          facilityCode: notificationFacilityCode,
-          limit: 20,
-          offset: 0,
-        },
+        { facilityCode, unreadOnly: true, limit: 20, offset: 0 },
         session?.accessToken,
       ),
     enabled:
       isAuthenticated &&
       Boolean(session?.accessToken) &&
-      (!isHospitalAdmin || Boolean(notificationFacilityCode)),
+      (!isHospitalAdmin || Boolean(facilityCode)),
     refetchInterval: 20 * 1000,
   });
 
   const markAsReadMutation = useMutation({
-    mutationFn: (notificationId: string) =>
-      markNotificationAsRead(
-        notificationId,
-        { facilityCode: notificationFacilityCode },
-        session?.accessToken,
-      ),
+    mutationFn: (id: string) =>
+      markNotificationAsRead(id, { facilityCode }, session?.accessToken),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: notificationQueryKey });
     },
@@ -143,140 +97,119 @@ function NotificationsMenu() {
 
   const notifications = useMemo(
     () =>
-      [...(notificationsQuery.data ?? [])].sort((a, b) => {
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return timeB - timeA;
-      }),
+      [...(notificationsQuery.data ?? [])]
+        .filter((n) => !n.isRead)
+        .sort((a, b) => {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tB - tA;
+        }),
     [notificationsQuery.data],
   );
 
-  const unreadCount = notifications.reduce((count, notification) => {
-    if (notification.isRead) {
-      return count;
-    }
-    return count + 1;
-  }, 0);
+  const unreadCount = notifications.length;
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+  if (!isAuthenticated) return null;
 
-    const handleDocumentClick = (event: MouseEvent) => {
-      if (!shellRef.current) {
-        return;
-      }
-
-      const targetNode = event.target;
-      if (targetNode instanceof Node && !shellRef.current.contains(targetNode)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", handleDocumentClick);
-    window.addEventListener("keydown", handleEscapeKey);
-    return () => {
-      window.removeEventListener("mousedown", handleDocumentClick);
-      window.removeEventListener("keydown", handleEscapeKey);
-    };
-  }, [isOpen]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  const openNotification = (notification: ModelsNotification) => {
-    if (notification.id && !notification.isRead) {
-      markAsReadMutation.mutate(notification.id);
-    }
-
-    const referralCode = notification.referralCode?.trim() ?? "";
-    if (referralCode && notificationFacilityId) {
-      navigate(`/facilities/${notificationFacilityId}/referrals/pool/${encodeURIComponent(referralCode)}`);
-    } else if (notificationFacilityId) {
-      navigate(`/facilities/${notificationFacilityId}/referrals`);
+  const openNotification = (n: ModelsNotification) => {
+    if (n.id && !n.isRead) markAsReadMutation.mutate(n.id);
+    const code = n.referralCode?.trim() ?? "";
+    if (code && facilityId) {
+      navigate(`/facilities/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
+    } else if (facilityId) {
+      navigate(`/facilities/${facilityId}/referrals`);
     } else {
       navigate("/dashboard");
     }
-
-    setIsOpen(false);
   };
 
-  const hasNotifications = notifications.length > 0;
-
   return (
-    <div className="notifications-shell" ref={shellRef}>
-      <button
-        type="button"
-        className="btn btn-ghost notifications-toggle"
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <span aria-hidden="true">Notifications</span>
-        {unreadCount > 0 ? <span className="notifications-badge">{unreadCount}</span> : null}
-      </button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+          aria-haspopup="dialog"
+          className="relative size-10 rounded-full border border-slate-700/20 bg-white/80"
+        >
+          <Bell01Icon aria-hidden="true" className="size-5 text-slate-900" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 inline-grid h-5 min-w-5 place-items-center rounded-full bg-sky-700 px-1 text-[11px] font-bold text-white">
+              {unreadCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
 
-      {isOpen ? (
-        <section className="notifications-panel" role="dialog" aria-label="Notifications">
-          <div className="notifications-panel-header">
-            <h2>Notifications</h2>
-            <button
-              type="button"
-              className="btn btn-ghost notifications-refresh-btn"
-              onClick={() => {
-                void notificationsQuery.refetch();
-              }}
-              disabled={notificationsQuery.isFetching}
-            >
-              {notificationsQuery.isFetching ? "Refreshing..." : "Refresh"}
-            </button>
-          </div>
+      <PopoverContent align="center" className="w-100">
+        <div className="flex items-center justify-between gap-3">
+          <PopoverTitle>Notifications</PopoverTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={notificationsQuery.isFetching}
+            onClick={() => void notificationsQuery.refetch()}
+          >
+            {notificationsQuery.isFetching ? "Refreshing…" : "Refresh"}
+          </Button>
+        </div>
 
-          {isHospitalAdmin && !notificationFacilityCode && !facilityContextQuery.isLoading ? (
-            <p className="notifications-empty">
-              Could not resolve your facility code for notifications.
-            </p>
-          ) : null}
+        {isHospitalAdmin && !facilityCode && !facilityContextQuery.isLoading && (
+          <p className="text-sm text-slate-500">
+            Could not resolve your facility code for notifications.
+          </p>
+        )}
 
-          {notificationsQuery.isLoading ? <p className="notifications-empty">Loading notifications...</p> : null}
-          {notificationsQuery.isError ? (
-            <p className="result-note error-note">Could not load notifications.</p>
-          ) : null}
+        {notificationsQuery.isLoading && (
+          <p className="text-sm text-slate-500">Loading notifications…</p>
+        )}
 
-          {!notificationsQuery.isLoading && !notificationsQuery.isError ? (
-            hasNotifications ? (
-              <ul className="notifications-list">
-                {notifications.map((notification) => (
-                  <li key={notification.id ?? `${notification.eventType ?? "event"}-${notification.createdAt ?? ""}`}>
-                    <button
-                      type="button"
-                      className={`notification-item${notification.isRead ? "" : " unread"}`}
-                      onClick={() => openNotification(notification)}
-                    >
-                      <span className="notification-title">{formatEventType(notification.eventType)}</span>
-                      <span className="notification-message">{getNotificationSummary(notification)}</span>
-                      <span className="notification-meta">{formatDateTime(notification.createdAt)}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="notifications-empty">No notifications yet.</p>
-            )
-          ) : null}
-        </section>
-      ) : null}
-    </div>
+        {notificationsQuery.isError && (
+          <p className="text-[0.85rem] font-semibold text-[#b43b33]">
+            Could not load notifications.
+          </p>
+        )}
+
+        {!notificationsQuery.isLoading && !notificationsQuery.isError && (
+          notifications.length > 0 ? (
+            <ul className="grid max-h-80 list-none gap-2 overflow-y-auto p-0">
+              {notifications.map((n) => (
+                <li key={n.id ?? `${n.eventType ?? "event"}-${n.createdAt ?? ""}`}>
+                  <Card className="overflow-hidden border-2 border-sky-700/35">
+                    <PopoverClose asChild>
+                      <button
+                        type="button"
+                        className="grid w-full cursor-pointer gap-2 bg-linear-to-b from-white to-sky-50/70 p-3 text-left transition-colors hover:bg-white/70 focus-visible:outline-2 focus-visible:outline-sky-700/50"
+                        onClick={() => openNotification(n)}
+                      >
+                        <span className="flex w-full items-center justify-between gap-2">
+                          <span className="text-sm font-extrabold text-slate-800">
+                            {formatEventType(n.eventType)}
+                          </span>
+                          <span className="rounded-full border border-sky-700/25 bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
+                            Unread
+                          </span>
+                        </span>
+                        <span className="text-sm leading-5 text-slate-700">
+                          {getNotificationSummary(n)}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {formatDateTime(n.createdAt)}
+                        </span>
+                      </button>
+                    </PopoverClose>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">No unread notifications.</p>
+          )
+        )}
+      </PopoverContent>
+    </Popover>
   );
-}
+};
 
 export default NotificationsMenu;
