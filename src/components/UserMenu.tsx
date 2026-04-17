@@ -6,6 +6,7 @@ import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "./ui/popo
 
 const ITEM_CLS = "inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold";
 
+
 const UserMenu = () => {
   const { logout } = useAuthContext();
 
