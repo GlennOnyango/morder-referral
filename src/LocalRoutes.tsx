@@ -19,6 +19,7 @@ import OrganizationCreateReferralPage from "./pages/referrals/OrganizationCreate
 import OrganizationFacilityReferralsPage from "./pages/referrals/OrganizationFacilityReferralsPage";
 import OrganizationPoolReferralDetailPage from "./pages/referrals/OrganizationPoolReferralDetailPage";
 import OrganizationReferralsPage from "./pages/referrals/OrganizationReferralsPage";
+import NotificationsPage from "./pages/notifications/NotificationsPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function LocalRoutes() {
@@ -44,6 +45,14 @@ export default function LocalRoutes() {
         element={
           <ProtectedRoute fallbackPath="/signin">
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+            <NotificationsPage />
           </ProtectedRoute>
         }
       />

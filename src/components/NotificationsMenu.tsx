@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell01Icon } from "@untitledui/icons-react/outline";
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { listOrganizations } from "../api/organizations";
 import { listNotifications, markNotificationAsRead } from "../api/referrals";
 import { useAuthContext } from "../context/AuthContext";
@@ -73,11 +73,13 @@ const NotificationsMenu = () => {
   const facilityId = facilityContextQuery.data?.facilityId;
   const notificationQueryKey = ["referral-notifications", facilityCode, session?.accessToken];
 
+  const POPUP_LIMIT = 5;
+
   const notificationsQuery = useQuery({
     queryKey: notificationQueryKey,
     queryFn: () =>
       listNotifications(
-        { facilityCode, unreadOnly: true, limit: 20, offset: 0 },
+        { facilityCode, unreadOnly: true, limit: POPUP_LIMIT, offset: 0 },
         session?.accessToken,
       ),
     enabled:
@@ -103,7 +105,8 @@ const NotificationsMenu = () => {
           const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return tB - tA;
-        }),
+        })
+        .slice(0, POPUP_LIMIT),
     [notificationsQuery.data],
   );
 
@@ -207,6 +210,17 @@ const NotificationsMenu = () => {
             <p className="text-sm text-slate-500">No unread notifications.</p>
           )
         )}
+
+        <div className="mt-2 border-t border-slate-200 pt-2">
+          <PopoverClose asChild>
+            <Link
+              to="/notifications"
+              className="block w-full rounded-md px-2 py-1.5 text-center text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+            >
+              View all notifications
+            </Link>
+          </PopoverClose>
+        </div>
       </PopoverContent>
     </Popover>
   );
