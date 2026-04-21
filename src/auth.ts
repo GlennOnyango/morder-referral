@@ -130,6 +130,8 @@ export async function loginUser(email: string, password: string): Promise<LoginU
         password,
     });
 
+    console.log(nextStep)
+
     return {
         isSignedIn,
         nextStep,
