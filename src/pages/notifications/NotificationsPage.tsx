@@ -6,7 +6,7 @@ import { listNotifications, markNotificationAsRead } from "../../api/referrals";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import type { ModelsNotification } from "../../types/referrals.generated";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
 

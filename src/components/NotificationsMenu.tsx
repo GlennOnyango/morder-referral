@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { listOrganizations } from "../api/organizations";
 import { listNotifications, markNotificationAsRead } from "../api/referrals";
-import { useAuthContext } from "../context/AuthContext";
+import { useAuthContext } from "../context/useAuthContext";
 import type { ModelsNotification } from "../types/referrals.generated";
 import { isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
 import { Button } from "./ui/button";

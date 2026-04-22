@@ -12,7 +12,7 @@ import {
   type FacilityUserGroupFilter,
 } from "../../api/authAdmin";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {

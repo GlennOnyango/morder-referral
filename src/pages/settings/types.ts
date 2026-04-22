@@ -1,4 +1,4 @@
-import type { AppRole } from "../../context/AuthContext";
+import type { AppRole } from "../../context/authTypes";
 
 export type PermissionKey =
   | "createReferrals"

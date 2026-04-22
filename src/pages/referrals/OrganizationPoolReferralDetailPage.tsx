@@ -12,8 +12,8 @@ import {
   streamReferralSummaryByCode,
 } from "../../api/referrals";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import DialogPortal from "../../components/DialogPortal";
-import { useAuthContext } from "../../context/AuthContext";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
@@ -559,57 +559,51 @@ function OrganizationPoolReferralDetailPage() {
       {acceptSuccessMessage ? <p className="result-note success-note">{acceptSuccessMessage}</p> : null}
       {requestInfoSuccessMessage ? <p className="result-note success-note">{requestInfoSuccessMessage}</p> : null}
 
-      {isRequestInfoDialogOpen ? (
-        <DialogPortal>
-          <div className="dialog-backdrop" role="presentation">
-            <article
-              className="dialog-card referral-request-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="request-info-title"
-            >
-              <h2 id="request-info-title">Request More Information</h2>
-              <p>Add a title and description for the information you need from the originating facility.</p>
+      <Dialog open={isRequestInfoDialogOpen} onOpenChange={(open) => { if (!open) handleCloseRequestInfoDialog(); }}>
+        <DialogContent className="sm:max-w-140">
+          <DialogHeader>
+            <DialogTitle>Request More Information</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Add a title and description for the information you need from the originating facility.
+          </p>
+          <form className="org-form" onSubmit={handleRequestInfoSubmit}>
+            <label className="field" htmlFor="request-info-dialog-title">
+              <span>Title</span>
+              <input
+                id="request-info-dialog-title"
+                className="field-input"
+                value={requestInfoTitle}
+                onChange={(event) => setRequestInfoTitle(event.target.value)}
+                placeholder="e.g. Missing lab results"
+                required
+              />
+            </label>
 
-              <form className="org-form" onSubmit={handleRequestInfoSubmit}>
-                <label className="field" htmlFor="request-info-dialog-title">
-                  <span>Title</span>
-                  <input
-                    id="request-info-dialog-title"
-                    className="field-input"
-                    value={requestInfoTitle}
-                    onChange={(event) => setRequestInfoTitle(event.target.value)}
-                    placeholder="e.g. Missing lab results"
-                    required
-                  />
-                </label>
+            <label className="field" htmlFor="request-info-dialog-description">
+              <span>Description</span>
+              <textarea
+                id="request-info-dialog-description"
+                className="field-input service-notes"
+                rows={4}
+                value={requestInfoDescription}
+                onChange={(event) => setRequestInfoDescription(event.target.value)}
+                placeholder="Describe the additional details or documents required."
+                required
+              />
+            </label>
 
-                <label className="field" htmlFor="request-info-dialog-description">
-                  <span>Description</span>
-                  <textarea
-                    id="request-info-dialog-description"
-                    className="field-input service-notes"
-                    rows={4}
-                    value={requestInfoDescription}
-                    onChange={(event) => setRequestInfoDescription(event.target.value)}
-                    placeholder="Describe the additional details or documents required."
-                    required
-                  />
-                </label>
-
-                <div className="dialog-actions">
-                  <Button type="button" className="btn btn-ghost" onClick={handleCloseRequestInfoDialog}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="btn btn-primary" disabled={requestInfoMutation.isPending}>
-                    {requestInfoMutation.isPending ? "Sending..." : "Send Request"}
-                  </Button>
-                </div>
-              </form>
-            </article>
-          </div>
-        </DialogPortal>
-      ) : null}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseRequestInfoDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={requestInfoMutation.isPending}>
+                {requestInfoMutation.isPending ? "Sending..." : "Send Request"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -5,7 +5,7 @@ import { EyeIcon, EyeOffIcon } from "@untitledui/icons-react/outline";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import { resendSignUpCode } from "../../auth";
 import { getUser } from "../../api/authAdmin";
 import { signInSchema, type SignInFormValues } from "../../schemas/auth";

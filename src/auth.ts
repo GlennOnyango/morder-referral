@@ -61,25 +61,30 @@ export async function registerUser(input: {
     phone_number: string;
     password: string;
     birthdate: string;
-    facility_code: string;
-    facility_id: string;
+    facility_code?: string;
+    facility_id?: string;
 }) {
     const username = makeUsername(input.email);
+
+    const userAttributes: Record<string, string> = {
+        email: input.email,
+        birthdate: input.birthdate,
+        name: input.name,
+        phone_number: input.phone_number,
+        updated_at: Math.floor(Date.now() / 1000).toString(),
+    };
+
+    if (input.facility_code?.trim()) {
+        userAttributes["custom:facility_code"] = input.facility_code.trim();
+    }
+    if (input.facility_id?.trim()) {
+        userAttributes["custom:facility_id"] = input.facility_id.trim();
+    }
 
     const { isSignUpComplete, nextStep, userId } = await signUp({
         username,
         password: input.password,
-        options: {
-            userAttributes: {
-                email: input.email,
-                birthdate: input.birthdate,
-                name: input.name,
-                phone_number: input.phone_number,
-                updated_at: Math.floor(Date.now() / 1000).toString(),
-                "custom:facility_code": input.facility_code.trim(),
-                "custom:facility_id": input.facility_id.trim(),
-            },
-        },
+        options: { userAttributes },
     });
 
     return {

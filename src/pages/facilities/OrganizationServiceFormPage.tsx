@@ -1,8 +1,8 @@
 import { Button } from "../../components/ui/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { useEffect, useMemo, useState } from "react";
-import type { SubmitEvent } from "react";
+import { useMemo, useState } from "react";
+import type { SetStateAction, SubmitEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../../api/organizations";
 import {
@@ -12,7 +12,7 @@ import {
   type ServiceUpsertInput,
 } from "../../api/services";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import type { MsOrganizationsInternalDomainModelService as Service } from "../../types/api.generated";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
@@ -20,6 +20,11 @@ type ServiceFormState = {
   service_name: string;
   availability: "available" | "limited" | "unavailable";
   notes: string;
+};
+
+type ServiceFormSnapshot = {
+  sourceServiceId: string | null;
+  values: ServiceFormState;
 };
 
 const defaultServiceFormState: ServiceFormState = {
@@ -81,7 +86,10 @@ function OrganizationServiceFormPage() {
   const role = session?.role;
   const canManageOrganizations = isFacilityManager(role);
 
-  const [formState, setFormState] = useState<ServiceFormState>(defaultServiceFormState);
+  const [formSnapshot, setFormSnapshot] = useState<ServiceFormSnapshot>({
+    sourceServiceId: null,
+    values: defaultServiceFormState,
+  });
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const organizationQuery = useQuery({
@@ -105,13 +113,22 @@ function OrganizationServiceFormPage() {
     [serviceId, servicesQuery.data],
   );
 
-  useEffect(() => {
-    if (!isEdit || !selectedService) {
-      return;
-    }
+  const selectedServiceStateId = selectedService?.id ?? serviceId ?? null;
+  if (isEdit && selectedService && formSnapshot.sourceServiceId !== selectedServiceStateId) {
+    setFormSnapshot({
+      sourceServiceId: selectedServiceStateId,
+      values: serviceToFormState(selectedService),
+    });
+  }
 
-    setFormState(serviceToFormState(selectedService));
-  }, [isEdit, selectedService]);
+  const formState = formSnapshot.values;
+
+  const setFormState = (updater: SetStateAction<ServiceFormState>) => {
+    setFormSnapshot((previous) => ({
+      ...previous,
+      values: typeof updater === "function" ? updater(previous.values) : updater,
+    }));
+  };
 
   const navigateToServicesTable = () => {
     navigate(`/facilities/${organizationId}/services`, { replace: true });

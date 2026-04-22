@@ -5,7 +5,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../../api/organizations";
 import { deleteServiceById, listOrganizationServices } from "../../api/services";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
 function formatError(error: unknown): string {

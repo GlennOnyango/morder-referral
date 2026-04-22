@@ -1,6 +1,6 @@
 import { isAxiosError } from "axios";
 import type { AuthGroupName, AuthUser } from "../../api/authAdmin";
-import type { AppRole } from "../../context/AuthContext";
+import type { AppRole } from "../../context/authTypes";
 import { PERMISSION_ROWS, SETTINGS_STORAGE_KEY, type PermissionKey, type SettingsState } from "./types";
 
 export const defaultSettings = (): SettingsState => ({

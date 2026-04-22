@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { listOrganizations } from "../../api/organizations";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import {
   canManageFacilityCatalog,
   isFacilityManager,

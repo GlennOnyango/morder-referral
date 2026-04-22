@@ -5,7 +5,7 @@ import { listFacilityUsers } from "../../api/authAdmin";
 import { getOrganizationById } from "../../api/organizations";
 import { listOrganizationServices } from "../../api/services";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, canManageFacilityCatalog, isFacilityManager } from "../../utils/facilityAccess";
 
 function formatError(error: unknown): string {
