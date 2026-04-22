@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { LogOut01Icon, Settings01Icon, Settings02Icon } from "@untitledui/icons-react/outline";
-import { useAuthContext } from "../context/AuthContext";
+import { useAuthContext } from "../context/useAuthContext";
 import { Button } from "./ui/button";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "./ui/popover";
 

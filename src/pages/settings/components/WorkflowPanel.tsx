@@ -1,4 +1,4 @@
-import type { AppRole } from "../../../context/AuthContext";
+import type { AppRole } from "../../../context/authTypes";
 import { ROLE_ORDER, type PermissionKey, type SettingsState } from "../types";
 
 type WorkflowPanelProps = {

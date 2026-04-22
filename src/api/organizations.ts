@@ -71,11 +71,13 @@ export type OrganizationCreateInput = InternalApiCreateOrganizationRequest & {
   sub_county: string;
   ward: string;
   transport_available: boolean;
+  organization_type?: "facility" | "service";
 };
 export type OrganizationUpdateInput = InternalApiUpdateOrganizationRequest & {
   sub_county: string;
   ward: string;
   transport_available: boolean;
+  organization_type?: "facility" | "service";
 };
 export type FacilityCodeValidationResult = {
   exists: boolean;

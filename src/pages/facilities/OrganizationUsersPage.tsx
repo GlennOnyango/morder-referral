@@ -13,7 +13,7 @@ import {
 } from "../../api/authAdmin";
 import { getOrganizationById } from "../../api/organizations";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
 function formatError(error: unknown): string {

@@ -6,7 +6,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../../api/organizations";
 import { getReferralByCode, getReferralHistoryByCode, listFacilityReferrals } from "../../api/referrals";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/AuthContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 

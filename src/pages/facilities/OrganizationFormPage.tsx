@@ -1,7 +1,7 @@
 import { Button } from "../../components/ui/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
@@ -13,8 +13,8 @@ import {
   type OrganizationUpdateInput,
 } from "../../api/organizations";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import DialogPortal from "../../components/DialogPortal";
-import { useAuthContext } from "../../context/AuthContext";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { useAuthContext } from "../../context/useAuthContext";
 import { canManageFacilityCatalog } from "../../utils/facilityAccess";
 
 type OrganizationFormState = {
@@ -109,6 +109,24 @@ function readOptionalBoolean(source: unknown, keys: string[]): boolean {
   return false;
 }
 
+function mapOrgToForm(org: Record<string, unknown>): OrganizationFormState {
+  return {
+    name: typeof org.name === "string" ? org.name : "",
+    facility_code: typeof org.facility_code === "string" ? org.facility_code : "",
+    county: typeof org.county === "number" ? org.county.toString().padStart(3, "0") : "",
+    subcounty: readOptionalString(org, ["sub_county", "subCounty"]),
+    ward: readOptionalString(org, ["ward"]),
+    transport_available: readOptionalBoolean(org, ["transport_available", "transportAvailable"]),
+    level: typeof org.level === "number" ? org.level.toString() : "",
+    lat: typeof org.lat === "number" ? org.lat.toString() : "",
+    lng: typeof org.lng === "number" ? org.lng.toString() : "",
+    ownership_type:
+      org.ownership_type === "private" || org.ownership_type === "faith_based"
+        ? org.ownership_type
+        : "public",
+  };
+}
+
 function mapFormToCreatePayload(form: OrganizationFormState): OrganizationCreateInput | null {
   const county = Number(form.county);
   const level = Number(form.level);
@@ -153,7 +171,7 @@ function OrganizationFormPage() {
   const role = session?.role;
   const canManageOrganizations = canManageFacilityCatalog(role);
 
-  const [formState, setFormState] = useState<OrganizationFormState>(defaultFormState);
+  const [formOverrides, setFormOverrides] = useState<OrganizationFormState | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -176,34 +194,17 @@ function OrganizationFormPage() {
     staleTime: Infinity,
   });
 
-  useEffect(() => {
-    if (!organizationQuery.data) {
-      return;
-    }
+  const formState: OrganizationFormState =
+    formOverrides ??
+    (organizationQuery.data
+      ? mapOrgToForm(organizationQuery.data as Record<string, unknown>)
+      : defaultFormState);
 
-    setFormState({
-      name: organizationQuery.data.name ?? "",
-      facility_code: organizationQuery.data.facility_code ?? "",
-      county:
-        typeof organizationQuery.data.county === "number"
-          ? organizationQuery.data.county.toString().padStart(3, "0")
-          : "",
-      subcounty: readOptionalString(organizationQuery.data, ["sub_county", "subCounty"]),
-      ward: readOptionalString(organizationQuery.data, ["ward"]),
-      transport_available: readOptionalBoolean(organizationQuery.data, [
-        "transport_available",
-        "transportAvailable",
-      ]),
-      level: organizationQuery.data.level?.toString() ?? "",
-      lat: organizationQuery.data.lat?.toString() ?? "",
-      lng: organizationQuery.data.lng?.toString() ?? "",
-      ownership_type:
-        organizationQuery.data.ownership_type === "private" ||
-        organizationQuery.data.ownership_type === "faith_based"
-          ? organizationQuery.data.ownership_type
-          : "public",
-    });
-  }, [organizationQuery.data]);
+  const setFormState = (
+    updater: OrganizationFormState | ((prev: OrganizationFormState) => OrganizationFormState),
+  ) => {
+    setFormOverrides(typeof updater === "function" ? updater(formState) : updater);
+  };
 
   const createMutation = useMutation({
     mutationFn: (payload: OrganizationCreateInput) =>
@@ -539,37 +540,36 @@ function OrganizationFormPage() {
         <p className="result-note error-note">{formatError(deleteMutation.error)}</p>
       ) : null}
 
-      {isDeleteDialogOpen ? (
-        <DialogPortal>
-          <div className="dialog-backdrop" role="presentation">
-            <article className="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="delete-org-title">
-              <h2 id="delete-org-title">Delete facility?</h2>
-              <p>
-                Are you sure you wish to delete{" "}
-                <strong>{organizationQuery.data?.name ?? "this facility"}</strong>? This action cannot be undone.
-              </p>
-              <div className="dialog-actions">
-                <Button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={deleteMutation.isPending}
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="btn btn-outline"
-                  disabled={deleteMutation.isPending}
-                  onClick={handleConfirmDelete}
-                >
-                  {deleteMutation.isPending ? "Deleting..." : "Yes, Delete"}
-                </Button>
-              </div>
-            </article>
-          </div>
-        </DialogPortal>
-      ) : null}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => { if (!open) setIsDeleteDialogOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete facility?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you wish to delete{" "}
+            <strong>{organizationQuery.data?.name ?? "this facility"}</strong>? This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-red-300 text-red-600 hover:bg-red-50"
+              disabled={deleteMutation.isPending}
+              onClick={handleConfirmDelete}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -6,8 +6,8 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { getOrganizationById } from "../../api/organizations";
 import { listReferralPool, streamReferralSummaryByCode } from "../../api/referrals";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import DialogPortal from "../../components/DialogPortal";
-import { useAuthContext } from "../../context/AuthContext";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { useAuthContext } from "../../context/useAuthContext";
 import type { ModelsReferral } from "../../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
@@ -395,124 +395,87 @@ function OrganizationReferralsPage() {
         </div>
       </article>
 
-      {summaryDialogReferral ? (
-        <DialogPortal>
-          <div className="dialog-backdrop" role="presentation" onClick={closeSummaryDialog}>
-            <article
-              className="dialog-card referral-summary-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="referral-summary-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="referral-summary-dialog-header">
-                <div>
-                  <p className="eyebrow">AI Assistant</p>
-                  <h2 id="referral-summary-title">Referral Summary</h2>
-                </div>
-                <div className="referral-summary-dialog-controls">
-                  <Button
-                    type="button"
-                    className="btn btn-ghost org-btn"
-                    onClick={() => setSummaryDialogCollapsed((current) => !current)}
-                  >
-                    {summaryDialogCollapsed ? "Expand" : "Collapse"}
-                  </Button>
-                  <Button type="button" className="btn btn-ghost org-btn" onClick={closeSummaryDialog}>
-                    Close
-                  </Button>
-                </div>
-              </div>
-
-              {!summaryDialogCollapsed ? (
-                <div className="referral-summary-dialog-body">
-                  <dl className="referral-summary-snapshot">
-                    <div>
-                      <dt>Referral</dt>
-                      <dd>{summaryDialogReferral.referralCode ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Status</dt>
-                      <dd>{summaryDialogReferral.status ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Service</dt>
-                      <dd>{summaryDialogReferral.serviceType ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Priority</dt>
-                      <dd>{summaryDialogReferral.priority ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Origin</dt>
-                      <dd>{summaryDialogReferral.originFacilityCode ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Patient</dt>
-                      <dd>{summaryDialogReferral.patient?.fullName ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Updated</dt>
-                      <dd>{formatDateTime(summaryDialogReferral.updatedAt)}</dd>
-                    </div>
-                  </dl>
-
-                  <section className="referral-summary-output" aria-live="polite">
-                    <div className="referral-summary-output-head">
-                      <p>AI Narrative</p>
-                      {summarizeReferralMutation.isPending ? <span className="referral-ai-summary-chip">Generating</span> : null}
-                    </div>
-                    {summarizeReferralMutation.isError ? (
-                      <p className="result-note error-note referral-ai-summary-note">{formatError(summarizeReferralMutation.error)}</p>
-                    ) : null}
-                    {poolSummary ? (
-                      <p className="referral-ai-summary-content">{poolSummary}</p>
-                    ) : summarizeReferralMutation.isPending ? (
-                      <p className="referral-ai-summary-placeholder">Generating a concise review from the referral details...</p>
-                    ) : (
-                      <p className="referral-ai-summary-placeholder">No summary was returned. Try again in a moment.</p>
-                    )}
-                  </section>
-
-                  <div className="dialog-actions">
-                    <Button
-                      type="button"
-                      className="btn btn-ghost org-btn"
-                      onClick={() => {
-                        const code = summaryDialogReferral.referralCode?.trim() ?? "";
-                        if (code) {
-                          summarizeReferralMutation.mutate(code);
-                        }
-                      }}
-                      disabled={summarizeReferralMutation.isPending || !summaryDialogReferral.referralCode}
-                    >
-                      {summarizeReferralMutation.isPending ? "Regenerating..." : "Regenerate"}
-                    </Button>
-                    <Button
-                      type="button"
-                      className="btn btn-primary org-btn"
-                      onClick={() => {
-                        const code = summaryDialogReferral.referralCode?.trim() ?? "";
-                        if (code) {
-                          closeSummaryDialog();
-                          openReferralDetail(code);
-                        }
-                      }}
-                      disabled={!summaryDialogReferral.referralCode}
-                    >
-                      Open Full Referral
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className="referral-summary-collapsed-note">
-                  Summary collapsed. Select <strong>Expand</strong> to continue reviewing this referral.
-                </p>
-              )}
-            </article>
+      <Dialog open={!!summaryDialogReferral} onOpenChange={(open) => { if (!open) closeSummaryDialog(); }}>
+        <DialogContent className="referral-summary-dialog sm:max-w-190" showCloseButton={false}>
+          <div className="referral-summary-dialog-header">
+            <div>
+              <p className="eyebrow">AI Assistant</p>
+              <DialogTitle>Referral Summary</DialogTitle>
+            </div>
+            <div className="referral-summary-dialog-controls">
+              <Button
+                type="button"
+                className="btn btn-ghost org-btn"
+                onClick={() => setSummaryDialogCollapsed((current) => !current)}
+              >
+                {summaryDialogCollapsed ? "Expand" : "Collapse"}
+              </Button>
+              <Button type="button" className="btn btn-ghost org-btn" onClick={closeSummaryDialog}>
+                Close
+              </Button>
+            </div>
           </div>
-        </DialogPortal>
-      ) : null}
+
+          {!summaryDialogCollapsed ? (
+            <div className="referral-summary-dialog-body">
+              <dl className="referral-summary-snapshot">
+                <div><dt>Referral</dt><dd>{summaryDialogReferral?.referralCode ?? "-"}</dd></div>
+                <div><dt>Status</dt><dd>{summaryDialogReferral?.status ?? "-"}</dd></div>
+                <div><dt>Service</dt><dd>{summaryDialogReferral?.serviceType ?? "-"}</dd></div>
+                <div><dt>Priority</dt><dd>{summaryDialogReferral?.priority ?? "-"}</dd></div>
+                <div><dt>Origin</dt><dd>{summaryDialogReferral?.originFacilityCode ?? "-"}</dd></div>
+                <div><dt>Patient</dt><dd>{summaryDialogReferral?.patient?.fullName ?? "-"}</dd></div>
+                <div><dt>Updated</dt><dd>{formatDateTime(summaryDialogReferral?.updatedAt)}</dd></div>
+              </dl>
+
+              <section className="referral-summary-output" aria-live="polite">
+                <div className="referral-summary-output-head">
+                  <p>AI Narrative</p>
+                  {summarizeReferralMutation.isPending ? <span className="referral-ai-summary-chip">Generating</span> : null}
+                </div>
+                {summarizeReferralMutation.isError ? (
+                  <p className="result-note error-note referral-ai-summary-note">{formatError(summarizeReferralMutation.error)}</p>
+                ) : null}
+                {poolSummary ? (
+                  <p className="referral-ai-summary-content">{poolSummary}</p>
+                ) : summarizeReferralMutation.isPending ? (
+                  <p className="referral-ai-summary-placeholder">Generating a concise review from the referral details...</p>
+                ) : (
+                  <p className="referral-ai-summary-placeholder">No summary was returned. Try again in a moment.</p>
+                )}
+              </section>
+
+              <DialogFooter className="mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    const code = summaryDialogReferral?.referralCode?.trim() ?? "";
+                    if (code) summarizeReferralMutation.mutate(code);
+                  }}
+                  disabled={summarizeReferralMutation.isPending || !summaryDialogReferral?.referralCode}
+                >
+                  {summarizeReferralMutation.isPending ? "Regenerating..." : "Regenerate"}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const code = summaryDialogReferral?.referralCode?.trim() ?? "";
+                    if (code) { closeSummaryDialog(); openReferralDetail(code); }
+                  }}
+                  disabled={!summaryDialogReferral?.referralCode}
+                >
+                  Open Full Referral
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <p className="referral-summary-collapsed-note">
+              Summary collapsed. Select <strong>Expand</strong> to continue reviewing this referral.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Button
         type="button"
@@ -535,63 +498,53 @@ function OrganizationReferralsPage() {
         </span>
       </Button>
 
-      {isAiSearchDialogOpen ? (
-        <DialogPortal>
-          <div className="dialog-backdrop" role="presentation" onClick={closeAiSearchDialog}>
-            <article
-              className="dialog-card referral-ai-search-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="referral-ai-search-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <p className="eyebrow">AI Search</p>
-              <h2 id="referral-ai-search-title">Search Referrals with Natural Language</h2>
-              <p>Describe what you are looking for. We will pass your exact prompt to semantic search (`q`).</p>
-
-              <form
-                className="referral-ai-search-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void submitAiSearch();
-                }}
+      <Dialog open={isAiSearchDialogOpen} onOpenChange={(open) => { if (!open) closeAiSearchDialog(); }}>
+        <DialogContent className="referral-ai-search-dialog sm:max-w-160">
+          <DialogHeader>
+            <p className="eyebrow">AI Search</p>
+            <DialogTitle>Search Referrals with Natural Language</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Describe what you are looking for. We will pass your exact prompt to semantic search.
+          </p>
+          <form
+            className="referral-ai-search-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitAiSearch();
+            }}
+          >
+            <label className="field" htmlFor="referral-ai-search-input">
+              <span>Your search prompt</span>
+              <textarea
+                id="referral-ai-search-input"
+                className="field-input referral-ai-search-input"
+                value={aiSearchPrompt}
+                onChange={(event) => setAiSearchPrompt(event.target.value)}
+                rows={4}
+                placeholder="Example: urgent cardiology referrals for elderly patients from county referral hospitals"
+                autoFocus
+              />
+            </label>
+            <DialogFooter className="referral-ai-search-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setAiSearchPrompt("")}
+                disabled={aiSearchPrompt.length === 0 || isAiSearchSubmitting}
               >
-                <label className="field" htmlFor="referral-ai-search-input">
-                  <span>Your search prompt</span>
-                  <textarea
-                    id="referral-ai-search-input"
-                    className="field-input referral-ai-search-input"
-                    value={aiSearchPrompt}
-                    onChange={(event) => setAiSearchPrompt(event.target.value)}
-                    rows={4}
-                    placeholder="Example: urgent cardiology referrals for elderly patients from county referral hospitals"
-                    autoFocus
-                  />
-                </label>
-
-                <div className="dialog-actions referral-ai-search-actions">
-                  <Button
-                    type="button"
-                    className="btn btn-ghost org-btn"
-                    onClick={() => {
-                      setAiSearchPrompt("");
-                    }}
-                    disabled={aiSearchPrompt.length === 0 || isAiSearchSubmitting}
-                  >
-                    Clear
-                  </Button>
-                  <Button type="button" className="btn btn-ghost org-btn" onClick={closeAiSearchDialog} disabled={isAiSearchSubmitting}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="btn btn-primary org-btn" disabled={isAiSearchSubmitting}>
-                    {isAiSearchSubmitting ? "Searching..." : "Search"}
-                  </Button>
-                </div>
-              </form>
-            </article>
-          </div>
-        </DialogPortal>
-      ) : null}
+                Clear
+              </Button>
+              <Button type="button" variant="ghost" onClick={closeAiSearchDialog} disabled={isAiSearchSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isAiSearchSubmitting}>
+                {isAiSearchSubmitting ? "Searching..." : "Search"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

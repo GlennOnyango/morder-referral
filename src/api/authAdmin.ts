@@ -1,4 +1,5 @@
 import { createApiClient } from "./httpClient";
+import type { NrsAuthenticationInternalDtoListUsersOutputSwagger, NrsAuthenticationInternalDtoUserTypeSwagger } from "../types/auth.generated";
 
 const AUTHENTICATION_BASE_URL =
   (import.meta.env.VITE_AUTHENTICATION_API_BASE_URL as string | undefined) ??
@@ -18,6 +19,9 @@ const DISABLE_USER_PATH =
 const DELETE_USER_PATH =
   (import.meta.env.VITE_AUTH_DELETE_USER_PATH as string | undefined) ??
   "/delete-user";
+const GET_USER_PATH =
+  (import.meta.env.VITE_AUTH_GET_USER_PATH as string | undefined) ??
+  "/get-user";
 
 const authAdminApi = createApiClient(AUTHENTICATION_BASE_URL);
 
@@ -342,4 +346,12 @@ export async function deleteUser(
   });
 
   return response.data;
+}
+
+export async function getUser(email: string): Promise<NrsAuthenticationInternalDtoUserTypeSwagger | null> {
+  const response = await authAdminApi.get<NrsAuthenticationInternalDtoListUsersOutputSwagger>(GET_USER_PATH, {
+    params: { email },
+  });
+
+  return response.data.Users?.[0] ?? null;
 }

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useAuthContext } from "../context/AuthContext";
+import { useAuthContext } from "../context/useAuthContext";
 import { Button } from "./ui/button";
 import NotificationsMenu from "./NotificationsMenu";
 import UserMenu from "./UserMenu";
