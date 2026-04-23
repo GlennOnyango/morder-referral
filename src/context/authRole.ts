@@ -20,52 +20,47 @@ export const normalizeRole = (input?: string | null): AppRole | null => {
   return ROLE_ALIASES[normalizeRoleKey(input)] ?? null;
 };
 
-export const resolveRoleFromClaimValue = (value: unknown): AppRole | null => {
+export const resolveRolesFromClaimValue = (value: unknown): AppRole[] => {
+  const results: AppRole[] = [];
+
   if (typeof value === "string") {
-    return normalizeRole(value);
+    const role = normalizeRole(value);
+    if (role) results.push(role);
+    return results;
   }
 
   if (!Array.isArray(value)) {
-    return null;
+    return results;
   }
 
-  for (const roleCandidate of value) {
-    if (typeof roleCandidate !== "string") {
-      continue;
-    }
-
-    const role = normalizeRole(roleCandidate);
-    if (role) {
-      return role;
-    }
+  for (const candidate of value) {
+    if (typeof candidate !== "string") continue;
+    const role = normalizeRole(candidate);
+    if (role) results.push(role);
   }
 
-  return null;
+  return results;
 };
 
-export const resolveRoleFromClaims = (claims?: Record<string, unknown>): AppRole | null => {
-  if (!claims) {
-    return null;
-  }
+export const resolveRolesFromClaims = (claims?: Record<string, unknown>): AppRole[] => {
+  if (!claims) return [];
 
+  const seen = new Set<AppRole>();
   const roleClaims = ["custom:role", "role", "roles", "cognito:groups"] as const;
   for (const claim of roleClaims) {
-    const role = resolveRoleFromClaimValue(claims[claim]);
-    if (role) {
-      return role;
+    for (const role of resolveRolesFromClaimValue(claims[claim])) {
+      seen.add(role);
     }
   }
 
-  return null;
+  return Array.from(seen);
 };
 
-export const resolveRoleFromGroups = (groups: string[]): AppRole | null => {
+export const resolveRolesFromGroups = (groups: string[]): AppRole[] => {
+  const seen = new Set<AppRole>();
   for (const group of groups) {
     const role = normalizeRole(group);
-    if (role) {
-      return role;
-    }
+    if (role) seen.add(role);
   }
-
-  return null;
+  return Array.from(seen);
 };

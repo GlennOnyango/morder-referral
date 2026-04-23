@@ -51,10 +51,10 @@ const getNotificationSummary = (n: ModelsNotification): string =>
 
 const NotificationsMenu = () => {
   const { isAuthenticated, session } = useAuthContext();
-  const role = session?.role;
+  const roles = session?.roles ?? [];
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isHospitalAdmin = role === "HOSPITAL_ADMIN";
+  const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");
 
   const facilityContextQuery = useQuery({
     queryKey: ["notifications", "facility-context", session?.accessToken, session?.facilityId],

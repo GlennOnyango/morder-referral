@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { fetchDashboardMetrics } from "../../api/metrics";
 import { listOrganizations } from "../../api/organizations";
 import { listFacilityReferrals, listReferralPool } from "../../api/referrals";
+import { listOrganizationServices } from "../../api/services";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
@@ -10,18 +11,20 @@ import SetupActionCards from "@/components/SetUpActionCards";
 import StatCard from "@/components/StatCard";
 import ReferralStats from "@/components/ReferralStats";
 import SuperAdminStats from "@/components/SuperAdminStats";
+import ServiceAdminStats from "@/components/ServiceAdminStats";
 
 function DashboardPage() {
   const { isAuthenticated, session } = useAuthContext();
-  const role = session?.role;
-  const isSuperAdmin = role === "SUPER_ADMIN";
-  const isHospitalAdmin = role === "HOSPITAL_ADMIN";
+  const roles = session?.roles ?? [];
+  const isSuperAdmin = roles.includes("SUPER_ADMIN");
+  const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");
+  const isServiceAdmin = roles.includes("SERVICE_ADMIN");
   const hasFacility = Boolean(session?.facilityId);
 
   // Three states for access control
-  const showSetupOnly = !hasFacility && !role;
-  const showRolePending = hasFacility && !role;
-  const showDashboard = Boolean(role) || isSuperAdmin;
+  const showSetupOnly = !hasFacility && roles.length === 0;
+  const showRolePending = hasFacility && roles.length === 0;
+  const showDashboard = roles.length > 0;
 
   // ── facility context (hospital admin) ──
   const hospitalFacilityQuery = useQuery({
@@ -82,6 +85,13 @@ function DashboardPage() {
     queryFn: () =>
       listReferralPool({ limit: 1000, offset: 0 }, session?.accessToken),
     enabled: isAuthenticated && isSuperAdmin,
+  });
+
+  // ── services (service admin) ──
+  const serviceAdminServicesQuery = useQuery({
+    queryKey: ["dashboard-service-admin-services", session?.facilityId, session?.accessToken],
+    queryFn: () => listOrganizationServices(session!.facilityId!, session?.accessToken),
+    enabled: isAuthenticated && isServiceAdmin && Boolean(session?.facilityId),
   });
 
   // ── org/service metrics (super admin) ──
@@ -173,6 +183,38 @@ function DashboardPage() {
                 facilityId={facilityId}
               />
             )}
+
+          {/* Service admin – missing facility warning */}
+          {isServiceAdmin && !session?.facilityId && (
+            <article className="access-note error-block">
+              <h2>Missing facility assignment</h2>
+              <p>
+                Could not resolve your organisation from token claims. Sign in
+                again or contact support.
+              </p>
+            </article>
+          )}
+
+          {/* Service admin – loading */}
+          {isServiceAdmin && serviceAdminServicesQuery.isLoading && (
+            <article className="access-note">
+              <h2>Loading dashboard</h2>
+              <p>Fetching your organisation's service data…</p>
+            </article>
+          )}
+
+          {/* Service admin – error */}
+          {isServiceAdmin && serviceAdminServicesQuery.isError && (
+            <article className="access-note error-block">
+              <h2>Could not load service data</h2>
+              <p>Check your connection or sign in again.</p>
+            </article>
+          )}
+
+          {/* Service admin – stats */}
+          {isServiceAdmin && serviceAdminServicesQuery.data && (
+            <ServiceAdminStats services={serviceAdminServicesQuery.data} />
+          )}
 
           {/* Super admin – headline numbers */}
           {isSuperAdmin && dashboardQuery.data && (

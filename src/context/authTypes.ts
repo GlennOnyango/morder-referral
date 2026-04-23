@@ -5,7 +5,7 @@ export type AppRole = "SUPER_ADMIN" | "HOSPITAL_ADMIN" | "DOCTOR" | "NURSE" | "S
 export type AuthSession = {
   accessToken: string;
   idToken: string;
-  role: AppRole | null;
+  roles: AppRole[];
   email?: string;
   facilityId?: string;
 };

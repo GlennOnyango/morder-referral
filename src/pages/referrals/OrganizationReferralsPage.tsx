@@ -52,8 +52,8 @@ function OrganizationReferralsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageReferrals = isFacilityManager(role);
+  const roles = session?.roles ?? [];
+  const canManageReferrals = isFacilityManager(roles);
 
   const [poolSearchTerm, setPoolSearchTerm] = useState("");
   const [debouncedPoolSearchTerm, setDebouncedPoolSearchTerm] = useState("");

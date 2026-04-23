@@ -1,7 +1,7 @@
 import { getAuthenticatedUser, getAuthTokens, getUserRoles } from "../auth";
 import { getEmailFromClaims, getFacilityIdFromClaims } from "./authClaims";
-import { resolveRoleFromClaims, resolveRoleFromGroups } from "./authRole";
-import type { AuthSession } from "./authTypes";
+import { resolveRolesFromClaims, resolveRolesFromGroups } from "./authRole";
+import type { AppRole, AuthSession } from "./authTypes";
 
 export const buildAuthSession = async (): Promise<AuthSession | null> => {
   try {
@@ -16,13 +16,16 @@ export const buildAuthSession = async (): Promise<AuthSession | null> => {
       return null;
     }
 
+    const seen = new Set<AppRole>([
+      ...resolveRolesFromGroups(userRoles),
+      ...resolveRolesFromClaims(accessTokenPayload),
+      ...resolveRolesFromClaims(idTokenPayload),
+    ]);
+
     return {
       accessToken,
       idToken,
-      role:
-        resolveRoleFromGroups(userRoles) ??
-        resolveRoleFromClaims(accessTokenPayload) ??
-        resolveRoleFromClaims(idTokenPayload),
+      roles: Array.from(seen),
       email: getEmailFromClaims(idTokenPayload) ?? getEmailFromClaims(accessTokenPayload),
       facilityId: getFacilityIdFromClaims(idTokenPayload) ?? getFacilityIdFromClaims(accessTokenPayload),
     };

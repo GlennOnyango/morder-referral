@@ -124,7 +124,7 @@ export default function CreateServiceAccountDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Create Facility"}
+              {createMutation.isPending ? "Creating..." : "Create Service Provider"}
             </Button>
           </DialogFooter>
         </form>

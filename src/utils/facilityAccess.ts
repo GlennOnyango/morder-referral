@@ -5,12 +5,12 @@ function normalizeFacilityIdentifier(value?: string | null): string {
   return (value ?? "").trim().toLowerCase();
 }
 
-export function isFacilityManager(role?: AppRole | null): boolean {
-  return role === "HOSPITAL_ADMIN" || role === "SUPER_ADMIN";
+export function isFacilityManager(roles?: AppRole[] | null): boolean {
+  return Boolean(roles?.includes("HOSPITAL_ADMIN") || roles?.includes("SUPER_ADMIN"));
 }
 
-export function canManageFacilityCatalog(role?: AppRole | null): boolean {
-  return role === "SUPER_ADMIN";
+export function canManageFacilityCatalog(roles?: AppRole[] | null): boolean {
+  return Boolean(roles?.includes("SUPER_ADMIN"));
 }
 
 export function isOrganizationOwnedBySessionFacility(
@@ -36,15 +36,15 @@ export function isOrganizationOwnedBySessionFacility(
 }
 
 export function canAccessOrganization(
-  role: AppRole | null | undefined,
+  roles: AppRole[] | null | undefined,
   sessionFacilityId: string | undefined,
   organization: Organization | undefined,
 ): boolean {
-  if (role === "SUPER_ADMIN") {
+  if (roles?.includes("SUPER_ADMIN")) {
     return true;
   }
 
-  if (role !== "HOSPITAL_ADMIN") {
+  if (!roles?.includes("HOSPITAL_ADMIN")) {
     return false;
   }
 

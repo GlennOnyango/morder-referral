@@ -2,15 +2,15 @@ import type { AppRole } from "../../../context/authTypes";
 
 type ProfilePanelProps = {
   email: string | undefined;
-  role: AppRole | undefined;
+  roles: AppRole[];
   facilityId: string | undefined;
   staffFacilityCode: string;
 };
 
-const ProfilePanel = ({ email, role, facilityId, staffFacilityCode }: ProfilePanelProps) => {
+const ProfilePanel = ({ email, roles, facilityId, staffFacilityCode }: ProfilePanelProps) => {
   const items = [
     { label: "Email", value: email ?? "Unknown user" },
-    { label: "Role", value: role ?? "UNASSIGNED" },
+    { label: "Roles", value: roles.length > 0 ? roles.join(", ") : "UNASSIGNED" },
     { label: "Session facility ID", value: facilityId ?? "Not assigned" },
     { label: "Resolved facility code", value: staffFacilityCode || "Not resolved" },
   ];
