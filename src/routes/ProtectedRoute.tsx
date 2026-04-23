@@ -16,7 +16,7 @@ function ProtectedRoute({ children, allowedRoles, fallbackPath = "/dashboard" }:
     return <Navigate to="/signin" replace />;
   }
 
-  if (allowedRoles && (!session?.role || !allowedRoles.includes(session.role))) {
+  if (allowedRoles && !session?.roles.some((r) => allowedRoles.includes(r))) {
     return <Navigate to={fallbackPath} replace />;
   }
 

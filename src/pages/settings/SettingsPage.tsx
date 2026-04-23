@@ -32,10 +32,10 @@ import { inferDefaultGroup, isUserEnabled, readStoredSettings } from "./utils";
 
 const SettingsPage = () => {
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canAccessSettings = role === "SUPER_ADMIN" || role === "HOSPITAL_ADMIN";
-  const isSuperAdmin = role === "SUPER_ADMIN";
-  const isHospitalAdmin = role === "HOSPITAL_ADMIN";
+  const roles = session?.roles ?? [];
+  const canAccessSettings = roles.includes("SUPER_ADMIN") || roles.includes("HOSPITAL_ADMIN");
+  const isSuperAdmin = roles.includes("SUPER_ADMIN");
+  const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");
   const queryClient = useQueryClient();
 
   const [settings, setSettings] = useState<SettingsState>(() => readStoredSettings());
@@ -234,7 +234,7 @@ const SettingsPage = () => {
           {activePanel === "profile" && (
             <ProfilePanel
               email={session?.email}
-              role={role}
+              roles={roles}
               facilityId={session?.facilityId}
               staffFacilityCode={staffFacilityCode}
             />

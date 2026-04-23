@@ -1,10 +1,25 @@
-import type { AuthSession } from "./authTypes";
+import type { AppRole, AuthSession } from "./authTypes";
 import { normalizeRole } from "./authRole";
 
 const AUTH_STORAGE_KEY = "refconnect.auth.session";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const parseStoredRoles = (value: unknown): AppRole[] => {
+  // Support old format where role was stored as a single string
+  if (typeof value === "string") {
+    const role = normalizeRole(value);
+    return role ? [role] : [];
+  }
+  if (!Array.isArray(value)) return [];
+  const roles: AppRole[] = [];
+  for (const item of value) {
+    const role = typeof item === "string" ? normalizeRole(item) : null;
+    if (role) roles.push(role);
+  }
+  return roles;
+};
 
 const parseStoredSession = (value: unknown): AuthSession | null => {
   if (!isRecord(value)) {
@@ -20,7 +35,7 @@ const parseStoredSession = (value: unknown): AuthSession | null => {
   return {
     accessToken,
     idToken,
-    role: typeof value.role === "string" ? normalizeRole(value.role) : null,
+    roles: parseStoredRoles(value.roles ?? value.role),
     email: typeof value.email === "string" ? value.email : undefined,
     facilityId: typeof value.facilityId === "string" ? value.facilityId : undefined,
   };

@@ -49,8 +49,8 @@ function OrganizationFacilityReferralsPage() {
   const { id } = useParams<{ id: string }>();
   const organizationId = id ?? "";
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageReferrals = isFacilityManager(role);
+  const roles = session?.roles ?? [];
+  const canManageReferrals = isFacilityManager(roles);
 
   const [facilityStatusFilter, setFacilityStatusFilter] = useState<FacilityStatusFilter>("all");
   // const [facilityRoleFilter, setFacilityRoleFilter] = useState<FacilityRoleFilter>("all");
@@ -62,7 +62,7 @@ function OrganizationFacilityReferralsPage() {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
-  const hasFacilityAccess = canAccessOrganization(role, session?.facilityId, organizationQuery.data);
+  const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
   const facilityReferralsQuery = useQuery({
@@ -110,11 +110,11 @@ function OrganizationFacilityReferralsPage() {
     return <Navigate to="/facilities" replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
     return <Navigate to="/dashboard" replace />;
   }
 
