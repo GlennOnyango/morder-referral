@@ -89,7 +89,6 @@ const ResetPasswordPage = () => {
         <Breadcrumbs
           className="mt-3.5"
           items={[
-            { label: "Home", to: "/" },
             { label: "Sign in", to: "/signin" },
             { label: "Reset password" },
           ]}

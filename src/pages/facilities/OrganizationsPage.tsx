@@ -108,10 +108,10 @@ function TransportIcon({ level }: { level?: number }) {
 }
 
 function OrganizationsPage() {
-  const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageOrganizations = isFacilityManager(role);
-  const canManageCatalog = canManageFacilityCatalog(role);
+  const { session, isAuthenticated, activeWorkspaceId } = useAuthContext();
+  const roles = session?.roles ?? [];
+  const canManageOrganizations = isFacilityManager(roles);
+  const canManageCatalog = canManageFacilityCatalog(roles);
   const [currentPage, setCurrentPage] = useState(1);
   const facilitiesPerPage = 9;
 
@@ -132,7 +132,7 @@ function OrganizationsPage() {
     staleTime: Infinity,
   });
   const scopedOrganization =
-    role === "HOSPITAL_ADMIN" && organizationsQuery.data
+    roles.includes("HOSPITAL_ADMIN") && organizationsQuery.data
       ? organizationsQuery.data.find((organization) =>
           isOrganizationOwnedBySessionFacility(organization, session?.facilityId),
         )
@@ -163,7 +163,7 @@ function OrganizationsPage() {
     return <Navigate to="/signin" replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN") {
+  if (roles.includes("HOSPITAL_ADMIN")) {
     if (!session?.facilityId) {
       return (
         <section className="org-shell reveal delay-1">
@@ -198,7 +198,7 @@ function OrganizationsPage() {
     }
 
     if (scopedOrganization?.id) {
-      return <Navigate to={`/facilities/${scopedOrganization.id}`} replace />;
+      return <Navigate to={`/${scopedOrganization.id}/organization`} replace />;
     }
 
     return (
@@ -220,19 +220,13 @@ function OrganizationsPage() {
           <p>View and update facilities, then open each facility workspace for services, users, and referrals.</p>
         </div>
         {canManageCatalog ? (
-          <Link className="btn btn-primary" to="/facilities/new">
+          <Link className="btn btn-primary" to={`/${activeWorkspaceId}/organization/new`}>
             Create Facility
           </Link>
         ) : null}
       </div>
 
-      <Breadcrumbs
-        items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities" },
-        ]}
-      />
+      <Breadcrumbs items={[{ label: "Organizations" }]} />
 
       {!canManageOrganizations ? (
         <article className="access-note">
@@ -282,7 +276,7 @@ function OrganizationsPage() {
                     <div className="facility-card-header">
                       <h2>
                         {organizationId ? (
-                          <Link className="org-link" to={`/facilities/${organizationId}`}>
+                          <Link className="org-link" to={`/${organizationId}/organization`}>
                             {organizationName}
                           </Link>
                         ) : (
@@ -330,7 +324,7 @@ function OrganizationsPage() {
 
                     <div className="org-actions">
                       {organizationId ? (
-                        <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/edit`}>
+                        <Link className="btn btn-ghost org-btn" to={`/${organizationId}/organization/edit`}>
                           Edit
                         </Link>
                       ) : null}

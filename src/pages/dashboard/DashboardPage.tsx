@@ -128,7 +128,7 @@ function DashboardPage() {
       </div>
 
       <Breadcrumbs
-        items={[{ label: "Home", to: "/" }, { label: "Dashboard" }]}
+        items={[{ label: "Dashboard" }]}
       />
 
       {/* ── State 1: no facility, no role → setup cards ── */}
@@ -251,8 +251,6 @@ function DashboardPage() {
             <SuperAdminStats referrals={poolReferralsQuery.data} />
           )}
 
-          {/* Setup action cards available to all users with a role */}
-          <SetupActionCards />
         </>
       )}
     </section>

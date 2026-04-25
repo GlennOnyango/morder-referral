@@ -1,9 +1,11 @@
 import { Button } from "../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
 import {
   createOrganization,
   deleteOrganization,
@@ -163,22 +165,22 @@ function mapFormToUpdatePayload(form: OrganizationFormState): OrganizationUpdate
 }
 
 function OrganizationFormPage() {
-  const { id } = useParams<{ id: string }>();
-  const isEdit = Boolean(id);
+  const { workspaceId: organizationId } = useWorkspace();
+  const isEdit = Boolean(organizationId);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageOrganizations = canManageFacilityCatalog(role);
+  const roles = session?.roles ?? [];
+  const canManageOrganizations = canManageFacilityCatalog(roles);
 
   const [formOverrides, setFormOverrides] = useState<OrganizationFormState | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", id, session?.accessToken],
-    queryFn: () => getOrganizationById(id!, session?.accessToken),
-    enabled: isEdit && canManageOrganizations && Boolean(id),
+    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
+    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+    enabled: isEdit && canManageOrganizations && Boolean(organizationId),
   });
 
   const countyOptionsQuery = useQuery({
@@ -218,7 +220,7 @@ function OrganizationFormPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: OrganizationUpdateInput) =>
-      updateOrganization(id!, payload, session?.accessToken),
+      updateOrganization(organizationId, payload, session?.accessToken),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
@@ -227,7 +229,7 @@ function OrganizationFormPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteOrganization(id!, session?.accessToken),
+    mutationFn: () => deleteOrganization(organizationId, session?.accessToken),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
@@ -261,7 +263,7 @@ function OrganizationFormPage() {
   };
 
   const handleConfirmDelete = () => {
-    if (!isEdit || !id || deleteMutation.isPending) {
+    if (!isEdit || !organizationId || deleteMutation.isPending) {
       return;
     }
 
@@ -291,25 +293,20 @@ function OrganizationFormPage() {
           <h1>{isEdit ? "Update facility" : "Create facility"}</h1>
           <p>{isEdit ? "Edit facility details and save updates." : "Register a new facility."}</p>
         </div>
-        <Link className="btn btn-ghost" to={isEdit && id ? `/facilities/${id}` : "/facilities"}>
+        <Link className="btn btn-ghost" to={isEdit && organizationId ? `/${organizationId}/organization` : "../organizations"}>
           {isEdit ? "Back to Facility Workspace" : "Back to Facilities"}
         </Link>
       </div>
 
       <Breadcrumbs
         items={
-          isEdit && id
+          isEdit && organizationId
             ? [
-                { label: "Home", to: "/" },
-                { label: "Dashboard", to: "/dashboard" },
-                { label: "Facilities", to: "/facilities" },
-                { label: facilityNameForEdit, to: `/facilities/${id}` },
+                { label: facilityNameForEdit, to: `/${organizationId}/organization` },
                 { label: "Edit" },
               ]
             : [
-                { label: "Home", to: "/" },
-                { label: "Dashboard", to: "/dashboard" },
-                { label: "Facilities", to: "/facilities" },
+                { label: "Organizations", to: `/${organizationId}/organizations` },
                 { label: "Create" },
               ]
         }
@@ -364,29 +361,29 @@ function OrganizationFormPage() {
             <div className="org-grid">
               <label className="field">
                 <span>County</span>
-                <select
-                  className="field-input"
-                  value={formState.county}
-                  onChange={(event) =>
+                <Select
+                  value={formState.county || undefined}
+                  onValueChange={(v) =>
                     setFormState((prev) => ({
                       ...prev,
-                      county: event.target.value,
+                      county: v,
                       subcounty: "",
                       ward: "",
                     }))
                   }
-                  required
                 >
-                  <option value="">Select county</option>
-                  {formState.county && !selectedCounty ? (
-                    <option value={formState.county}>{`County Code ${formState.county}`}</option>
-                  ) : null}
-                  {countyOptions.map((county) => (
-                    <option key={county.code} value={county.code}>
-                      {county.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
+                  <SelectContent>
+                    {formState.county && !selectedCounty ? (
+                      <SelectItem value={formState.county}>{`County Code ${formState.county}`}</SelectItem>
+                    ) : null}
+                    {countyOptions.map((county) => (
+                      <SelectItem key={county.code} value={county.code}>
+                        {county.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="field">
@@ -406,44 +403,44 @@ function OrganizationFormPage() {
             <div className="org-grid">
               <label className="field">
                 <span>Sub-county</span>
-                <select
-                  className="field-input"
-                  value={formState.subcounty}
-                  onChange={(event) =>
+                <Select
+                  value={formState.subcounty || undefined}
+                  onValueChange={(v) =>
                     setFormState((prev) => ({
                       ...prev,
-                      subcounty: event.target.value,
+                      subcounty: v,
                       ward: "",
                     }))
                   }
                   disabled={!formState.county}
-                  required={subcountyOptions.length > 0}
                 >
-                  <option value="">Select sub-county</option>
-                  {subcountyOptions.map((subcounty) => (
-                    <option key={subcounty.name} value={subcounty.name}>
-                      {subcounty.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger><SelectValue placeholder="Select sub-county" /></SelectTrigger>
+                  <SelectContent>
+                    {subcountyOptions.map((subcounty) => (
+                      <SelectItem key={subcounty.name} value={subcounty.name}>
+                        {subcounty.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="field">
                 <span>Ward</span>
-                <select
-                  className="field-input"
-                  value={formState.ward}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, ward: event.target.value }))}
+                <Select
+                  value={formState.ward || undefined}
+                  onValueChange={(v) => setFormState((prev) => ({ ...prev, ward: v }))}
                   disabled={!formState.subcounty}
-                  required={wardOptions.length > 0}
                 >
-                  <option value="">Select ward</option>
-                  {wardOptions.map((ward) => (
-                    <option key={ward.name} value={ward.name}>
-                      {ward.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
+                  <SelectContent>
+                    {wardOptions.map((ward) => (
+                      <SelectItem key={ward.name} value={ward.name}>
+                        {ward.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
             </div>
 
@@ -475,20 +472,22 @@ function OrganizationFormPage() {
 
             <label className="field">
               <span>Ownership Type</span>
-              <select
-                className="field-input"
+              <Select
                 value={formState.ownership_type}
-                onChange={(event) =>
+                onValueChange={(v) =>
                   setFormState((prev) => ({
                     ...prev,
-                    ownership_type: event.target.value as OrganizationFormState["ownership_type"],
+                    ownership_type: v as OrganizationFormState["ownership_type"],
                   }))
                 }
               >
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-                <option value="faith_based">Faith Based</option>
-              </select>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="faith_based">Faith Based</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
 
             <div className="field">

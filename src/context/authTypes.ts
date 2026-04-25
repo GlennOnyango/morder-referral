@@ -13,6 +13,8 @@ export type AuthSession = {
 export type AuthContextValue = {
   session: AuthSession | null;
   isAuthenticated: boolean;
+  activeWorkspaceId: string | undefined;
+  setActiveWorkspace: (id: string) => void;
   signIn: (email: string, password: string) => Promise<LoginUserResult>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;

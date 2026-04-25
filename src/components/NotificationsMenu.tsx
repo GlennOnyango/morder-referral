@@ -3,9 +3,12 @@ import { Bell01Icon } from "@untitledui/icons-react/outline";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { listOrganizations } from "../api/organizations";
-import { listNotifications, markNotificationAsRead } from "../api/referrals";
+import {
+  listNotifications,
+  markNotificationAsRead,
+} from "../api/notifications";
 import { useAuthContext } from "../context/useAuthContext";
-import type { ModelsNotification } from "../types/referrals.generated";
+import type { Notification } from "../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -43,7 +46,7 @@ const extractPayloadMessage = (payload: unknown): string | null => {
   return null;
 };
 
-const getNotificationSummary = (n: ModelsNotification): string =>
+const getNotificationSummary = (n: Notification): string =>
   extractPayloadMessage(n.payload) ??
   (n.referralCode ? `Referral ${n.referralCode}` : null) ??
   (n.targetFacilityCode ? `Facility ${n.targetFacilityCode}` : null) ??
@@ -114,13 +117,13 @@ const NotificationsMenu = () => {
 
   if (!isAuthenticated) return null;
 
-  const openNotification = (n: ModelsNotification) => {
+  const openNotification = (n: Notification) => {
     if (n.id && !n.isRead) markAsReadMutation.mutate(n.id);
     const code = n.referralCode?.trim() ?? "";
     if (code && facilityId) {
-      navigate(`/facilities/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
+      navigate(`/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
     } else if (facilityId) {
-      navigate(`/facilities/${facilityId}/referrals`);
+      navigate(`/${facilityId}/referrals`);
     } else {
       navigate("/dashboard");
     }

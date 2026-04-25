@@ -94,7 +94,6 @@ const ConfirmSignUpPage = () => {
         <Breadcrumbs
           className="mt-3.5"
           items={[
-            { label: "Home", to: "/" },
             { label: "Sign up", to: "/signup" },
             { label: "Confirm" },
           ]}

@@ -1,9 +1,11 @@
 import { Button } from "../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
 import { getOrganizationById } from "../../api/organizations";
 import { createReferral, type ReferralCreateInput } from "../../api/referrals";
 import Breadcrumbs from "../../components/Breadcrumbs";
@@ -193,12 +195,11 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
 }
 
 function OrganizationCreateReferralPage() {
-  const { id } = useParams<{ id: string }>();
-  const organizationId = id ?? "";
+  const { workspaceId: organizationId } = useWorkspace();
   const navigate = useNavigate();
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageReferrals = isFacilityManager(role);
+  const roles = session?.roles ?? [];
+  const canManageReferrals = isFacilityManager(roles);
   const queryClient = useQueryClient();
 
   const [formState, setFormState] = useState<ReferralFormState>(defaultReferralFormState);
@@ -219,7 +220,7 @@ function OrganizationCreateReferralPage() {
       setValidationError(null);
       await queryClient.invalidateQueries({ queryKey: ["referral-pool", organizationId] });
       await queryClient.invalidateQueries({ queryKey: ["facility-referrals", organizationId] });
-      navigate(`/facilities/${organizationId}/referrals`, { replace: true });
+      navigate(`/${organizationId}/referrals`, { replace: true });
     },
   });
 
@@ -256,12 +257,12 @@ function OrganizationCreateReferralPage() {
     return <Navigate to="/facilities" replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
-    return <Navigate to="/dashboard" replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
-  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to="/dashboard" replace />;
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
   const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
@@ -303,10 +304,10 @@ function OrganizationCreateReferralPage() {
           <p>Raise a new referral for this facility.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
             Back to Referrals
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals/facility`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
             View Facility Referrals
           </Link>
         </div>
@@ -314,11 +315,8 @@ function OrganizationCreateReferralPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
-          { label: "Referrals", to: `/facilities/${organizationId}/referrals` },
+          { label: facilityName, to: `/${organizationId}/organization` },
+          { label: "Referrals", to: `/${organizationId}/referrals` },
           { label: "Create" },
         ]}
       />
@@ -400,17 +398,13 @@ function OrganizationCreateReferralPage() {
 
               <label className="field">
                 <span>Gender *</span>
-                <select
-                  className="field-input"
-                  value={formState.patientGender}
-                  onChange={(event) =>
-                    setFormState((previous) => ({ ...previous, patientGender: event.target.value }))
-                  }
-                  required
-                >
-                  <option value="male">male</option>
-                  <option value="female">female</option>
-                </select>
+                <Select value={formState.patientGender} onValueChange={(v) => setFormState((previous) => ({ ...previous, patientGender: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">male</SelectItem>
+                    <SelectItem value="female">female</SelectItem>
+                  </SelectContent>
+                </Select>
               </label>
             </div>
           ) : null}
@@ -419,35 +413,27 @@ function OrganizationCreateReferralPage() {
             <div className="org-grid">
               <label className="field">
                 <span>Mode of Payment *</span>
-                <select
-                  className="field-input"
-                  value={formState.modeOfPayment}
-                  onChange={(event) => handleModeOfPaymentChange(event.target.value)}
-                  required
-                >
-                  <option value="cash">cash</option>
-                  <option value="mpesa">mpesa</option>
-                  <option value="insurance">insurance</option>
-                </select>
+                <Select value={formState.modeOfPayment} onValueChange={(v) => handleModeOfPaymentChange(v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">cash</SelectItem>
+                    <SelectItem value="mpesa">mpesa</SelectItem>
+                    <SelectItem value="insurance">insurance</SelectItem>
+                  </SelectContent>
+                </Select>
               </label>
               <label className="field">
                 <span>Insurance Provider {formState.modeOfPayment === "insurance" ? "*" : ""}</span>
-                <select
-                  className="field-input"
-                  value={formState.insuranceProvider}
-                  onChange={(event) =>
-                    setFormState((previous) => ({ ...previous, insuranceProvider: event.target.value }))
-                  }
-                  disabled={formState.modeOfPayment !== "insurance"}
-                  required={formState.modeOfPayment === "insurance"}
-                >
-                  <option value="">Select insurance provider</option>
-                  {kenyaInsuranceFirms.map((insurer) => (
-                    <option key={insurer} value={insurer}>
-                      {insurer}
-                    </option>
-                  ))}
-                </select>
+                <Select value={formState.insuranceProvider || undefined} onValueChange={(v) => setFormState((previous) => ({ ...previous, insuranceProvider: v }))} disabled={formState.modeOfPayment !== "insurance"}>
+                  <SelectTrigger><SelectValue placeholder="Select insurance provider" /></SelectTrigger>
+                  <SelectContent>
+                    {kenyaInsuranceFirms.map((insurer) => (
+                      <SelectItem key={insurer} value={insurer}>
+                        {insurer}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
             </div>
           ) : null}
@@ -467,16 +453,14 @@ function OrganizationCreateReferralPage() {
                 </label>
                 <label className="field">
                   <span>Priority *</span>
-                  <select
-                    className="field-input"
-                    value={formState.priority}
-                    onChange={(event) => setFormState((previous) => ({ ...previous, priority: event.target.value }))}
-                    required
-                  >
-                    <option value="routine">routine</option>
-                    <option value="urgent">urgent</option>
-                    <option value="emergency">emergency</option>
-                  </select>
+                  <Select value={formState.priority} onValueChange={(v) => setFormState((previous) => ({ ...previous, priority: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="routine">routine</SelectItem>
+                      <SelectItem value="urgent">urgent</SelectItem>
+                      <SelectItem value="emergency">emergency</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </label>
               </div>
 

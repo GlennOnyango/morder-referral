@@ -14,6 +14,13 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "../ui/select";
 import { useAuthContext } from "../../context/useAuthContext";
 
 type WardOption = { name: string };
@@ -197,26 +204,26 @@ export default function CreateFacilityDialog({
                 County{" "}
                 <span aria-hidden="true" className="text-red-500">*</span>
               </span>
-              <select
-                className="field-input"
-                value={orgForm.county}
-                onChange={(e) =>
+              <Select
+                value={orgForm.county || undefined}
+                onValueChange={(v) =>
                   setOrgForm((p) => ({
                     ...p,
-                    county: e.target.value,
+                    county: v,
                     subcounty: "",
                     ward: "",
                   }))
                 }
-                required
               >
-                <option value="">Select county</option>
-                {countyOptions.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
+                <SelectContent>
+                  {countyOptions.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="field">
               <span>
@@ -243,48 +250,48 @@ export default function CreateFacilityDialog({
                 Sub-county{" "}
                 <span aria-hidden="true" className="text-red-500">*</span>
               </span>
-              <select
-                className="field-input"
-                value={orgForm.subcounty}
-                onChange={(e) =>
+              <Select
+                value={orgForm.subcounty || undefined}
+                onValueChange={(v) =>
                   setOrgForm((p) => ({
                     ...p,
-                    subcounty: e.target.value,
+                    subcounty: v,
                     ward: "",
                   }))
                 }
                 disabled={!orgForm.county}
-                required={subcountyOptions.length > 0}
               >
-                <option value="">Select sub-county</option>
-                {subcountyOptions.map((s) => (
-                  <option key={s.name} value={s.name}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger><SelectValue placeholder="Select sub-county" /></SelectTrigger>
+                <SelectContent>
+                  {subcountyOptions.map((s) => (
+                    <SelectItem key={s.name} value={s.name}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="field">
               <span>
                 Ward{" "}
                 <span aria-hidden="true" className="text-red-500">*</span>
               </span>
-              <select
-                className="field-input"
-                value={orgForm.ward}
-                onChange={(e) =>
-                  setOrgForm((p) => ({ ...p, ward: e.target.value }))
+              <Select
+                value={orgForm.ward || undefined}
+                onValueChange={(v) =>
+                  setOrgForm((p) => ({ ...p, ward: v }))
                 }
                 disabled={!orgForm.subcounty}
-                required={wardOptions.length > 0}
               >
-                <option value="">Select ward</option>
-                {wardOptions.map((w) => (
-                  <option key={w.name} value={w.name}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
+                <SelectContent>
+                  {wardOptions.map((w) => (
+                    <SelectItem key={w.name} value={w.name}>
+                      {w.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           </div>
 
@@ -318,27 +325,32 @@ export default function CreateFacilityDialog({
           <div className="org-grid">
             <label className="field">
               <span>Ownership Type</span>
-              <select
-                className="field-input"
+              <Select
                 value={orgForm.ownership_type}
-                onChange={(e) =>
+                onValueChange={(v) =>
                   setOrgForm((p) => ({
                     ...p,
-                    ownership_type: e.target.value as OrgFormState["ownership_type"],
+                    ownership_type: v as OrgFormState["ownership_type"],
                   }))
                 }
               >
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-                <option value="faith_based">Faith Based</option>
-              </select>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="faith_based">Faith Based</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
 
             <label className="field">
               <span>Organization Type</span>
-              <select className="field-input" value="facility" disabled>
-                <option value="facility">Facility</option>
-              </select>
+              <Select value="facility" disabled>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="facility">Facility</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
           </div>
 

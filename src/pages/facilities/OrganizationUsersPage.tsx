@@ -1,8 +1,10 @@
 import { Button } from "../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
 import {
   attachRoleToUser,
   FACILITY_USER_GROUP_FILTERS,
@@ -50,14 +52,13 @@ function inferDefaultGroup(user: AuthUser): AuthGroupName {
   return "NURSE";
 }
 
-function getDisplayGroups(user: AuthUser, sessionEmail?: string, sessionRole?: string | null): string[] {
+function getDisplayGroups(user: AuthUser, sessionEmail?: string, sessionRoles?: string[] | null): string[] {
   const groups = new Set(
     user.groups
       .map((group) => group.trim())
       .filter((group) => group.length > 0),
   );
 
-  const normalizedSessionRole = sessionRole?.trim().toUpperCase();
   const normalizedSessionEmail = sessionEmail?.trim().toLowerCase();
   const normalizedUsername = user.username.trim().toLowerCase();
   const normalizedUserEmail = user.email?.trim().toLowerCase();
@@ -65,7 +66,7 @@ function getDisplayGroups(user: AuthUser, sessionEmail?: string, sessionRole?: s
     normalizedSessionEmail !== undefined &&
     (normalizedSessionEmail === normalizedUsername || normalizedSessionEmail === normalizedUserEmail);
 
-  if (isSignedInUser && normalizedSessionRole === "SUPER_ADMIN") {
+  if (isSignedInUser && sessionRoles?.includes("SUPER_ADMIN")) {
     groups.add("SUPER_ADMIN");
   }
 
@@ -81,12 +82,11 @@ const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string>
 };
 
 function OrganizationUsersPage() {
-  const { id } = useParams<{ id: string }>();
-  const organizationId = id ?? "";
+  const { workspaceId: organizationId } = useWorkspace();
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageOrganizations = isFacilityManager(role);
-  const canAttachRoles = role === "HOSPITAL_ADMIN" || role === "SUPER_ADMIN";
+  const roles = session?.roles ?? [];
+  const canManageOrganizations = isFacilityManager(roles);
+  const canAttachRoles = roles.includes("HOSPITAL_ADMIN") || roles.includes("SUPER_ADMIN");
   const queryClient = useQueryClient();
 
   const [selectedGroupByUsername, setSelectedGroupByUsername] = useState<
@@ -118,7 +118,7 @@ function OrganizationUsersPage() {
     enabled:
       canManageOrganizations &&
       facilityCode.length > 0 &&
-      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
+      canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
   });
 
   const attachRoleMutation = useMutation({
@@ -163,12 +163,12 @@ function OrganizationUsersPage() {
     return <Navigate to="/facilities" replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
-    return <Navigate to="/dashboard" replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
-  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to="/dashboard" replace />;
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
   return (
@@ -186,10 +186,7 @@ function OrganizationUsersPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
+          { label: facilityName, to: `/${organizationId}/organization` },
           { label: "Users" },
         ]}
       />
@@ -225,22 +222,21 @@ function OrganizationUsersPage() {
       {usersQuery.data ? (
         <article className="org-table-card">
           <div className="org-table-tools">
-            <label className="org-filter-control" htmlFor="facility-group-filter">
+            <label className="org-filter-control">
               Group filter
-              <select
-                id="facility-group-filter"
-                className="field-input org-filter-select"
+              <Select
                 value={selectedUserGroupFilter}
-                onChange={(event) =>
-                  setSelectedUserGroupFilter(event.target.value as FacilityUserGroupFilter)
-                }
+                onValueChange={(v) => setSelectedUserGroupFilter(v as FacilityUserGroupFilter)}
               >
-                {FACILITY_USER_GROUP_FILTERS.map((group) => (
-                  <option key={group} value={group}>
-                    {FACILITY_USER_GROUP_FILTER_LABELS[group]}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="org-filter-select"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FACILITY_USER_GROUP_FILTERS.map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {FACILITY_USER_GROUP_FILTER_LABELS[group]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           </div>
           {users.length === 0 ? (
@@ -260,7 +256,7 @@ function OrganizationUsersPage() {
                 </thead>
                 <tbody>
                   {users.map((user) => {
-                    const displayGroups = getDisplayGroups(user, session?.email, session?.role);
+                    const displayGroups = getDisplayGroups(user, session?.email, session?.roles);
 
                     return (
                     <tr key={user.username}>
@@ -270,20 +266,22 @@ function OrganizationUsersPage() {
                       <td>{displayGroups.length > 0 ? displayGroups.join(", ") : "-"}</td>
                       {canAttachRoles ? (
                         <td>
-                          <select
-                            className="field-input user-role-select"
+                          <Select
                             value={resolveSelectedRole(user)}
-                            onChange={(event) =>
+                            onValueChange={(v) =>
                               setSelectedGroupByUsername((previous) => ({
                                 ...previous,
-                                [user.username]: event.target.value as AuthGroupName,
+                                [user.username]: v as AuthGroupName,
                               }))
                             }
                           >
-                            <option value="HOSPITAL_ADMIN">hospital_admin</option>
-                            <option value="DOCTOR">doctor</option>
-                            <option value="NURSE">nurse</option>
-                          </select>
+                            <SelectTrigger className="user-role-select"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="HOSPITAL_ADMIN">hospital_admin</SelectItem>
+                              <SelectItem value="DOCTOR">doctor</SelectItem>
+                              <SelectItem value="NURSE">nurse</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </td>
                       ) : null}
                       {canAttachRoles ? (

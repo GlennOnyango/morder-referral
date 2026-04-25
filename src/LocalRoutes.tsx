@@ -15,16 +15,27 @@ import OrganizationServiceFormPage from "./pages/facilities/OrganizationServiceF
 import OrganizationUsersPage from "./pages/facilities/OrganizationUsersPage";
 import OrganizationsPage from "./pages/facilities/OrganizationsPage";
 import OrganizationWorkspacePage from "./pages/facilities/OrganizationWorkspacePage";
+import FacilityServicesPage from "./pages/facilities/FacilityServicesPage";
 import OrganizationCreateReferralPage from "./pages/referrals/OrganizationCreateReferralPage";
 import OrganizationFacilityReferralsPage from "./pages/referrals/OrganizationFacilityReferralsPage";
 import OrganizationPoolReferralDetailPage from "./pages/referrals/OrganizationPoolReferralDetailPage";
 import OrganizationReferralsPage from "./pages/referrals/OrganizationReferralsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
+import AdminPage from "./pages/admin/AdminPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import { WorkspaceLayout } from "./routes/WorkspaceLayout";
+import { useAuthContext } from "./context/useAuthContext";
+
+function WorkspaceFallback() {
+  const { activeWorkspaceId } = useAuthContext();
+  if (activeWorkspaceId) return <Navigate to={`/${activeWorkspaceId}/dashboard`} replace />;
+  return <Navigate to="/signin" replace />;
+}
 
 export default function LocalRoutes() {
   return (
     <Routes>
+      {/* ── Public routes ── */}
       <Route path="/" element={<HomePage />} />
       <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route path="/about" element={<AboutPage />} />
@@ -32,134 +43,164 @@ export default function LocalRoutes() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/confirm-signup" element={<ConfirmSignUpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        path="/users"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <Navigate to="/facilities" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute fallbackPath="/signin">
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/notifications"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <NotificationsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/new"
-        element={
-          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
-            <OrganizationFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/edit"
-        element={
-          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
-            <OrganizationFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationWorkspacePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/services"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationServicesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/services/create"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationServiceFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/services/:serviceId/edit"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationServiceFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/users"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationUsersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/referrals"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationReferralsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/referrals/create"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationCreateReferralPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/referrals/pool/:referralCode"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationPoolReferralDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/facilities/:id/referrals/facility"
-        element={
-          <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-            <OrganizationFacilityReferralsPage />
-          </ProtectedRoute>
-        }
-      />
+
+      {/* ── Legacy redirects ── */}
+      <Route path="/dashboard" element={<WorkspaceFallback />} />
+      <Route path="/admin" element={<WorkspaceFallback />} />
+      <Route path="/notifications" element={<WorkspaceFallback />} />
+      <Route path="/settings" element={<WorkspaceFallback />} />
+      <Route path="/facilities" element={<WorkspaceFallback />} />
+
+      {/* ── Workspace routes ── */}
+      <Route path="/:workspaceId" element={<WorkspaceLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute fallbackPath="/signin">
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="referrals"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationReferralsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="referrals/create"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationCreateReferralPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="referrals/pool/:referralCode"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationPoolReferralDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="referrals/facility"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationFacilityReferralsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="services"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SERVICE_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationServicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="services/create"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationServiceFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="services/:serviceId/edit"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationServiceFormPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="facility-services"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <FacilityServicesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="users"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationUsersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="organization"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationWorkspacePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="organization/new"
+          element={
+            <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+              <OrganizationFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="organization/edit"
+          element={
+            <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+              <OrganizationFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="organizations"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <OrganizationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin"
+          element={
+            <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="notifications"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

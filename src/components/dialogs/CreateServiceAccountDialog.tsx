@@ -14,6 +14,13 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "../ui/select";
 import { useAuthContext } from "../../context/useAuthContext";
 
 function formatOrgError(error: unknown): string {
@@ -104,10 +111,13 @@ export default function CreateServiceAccountDialog({
 
           <label className="field">
             <span>Organization Type</span>
-            <select className="field-input" value="service" disabled>
-              <option value="facility">Facility</option>
-              <option value="service">Service</option>
-            </select>
+            <Select value="service" disabled>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="facility">Facility</SelectItem>
+                <SelectItem value="service">Service</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
 
           {validationError && (

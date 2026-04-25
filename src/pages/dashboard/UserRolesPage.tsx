@@ -1,4 +1,11 @@
 import { Button } from "../../components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
@@ -58,8 +65,8 @@ const FACILITY_USER_GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string>
 
 function UserRolesPage() {
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const isSuperAdmin = role === "SUPER_ADMIN";
+  const roles = session?.roles ?? [];
+  const isSuperAdmin = roles.includes("SUPER_ADMIN");
   const queryClient = useQueryClient();
 
   const [selectedGroupByUsername, setSelectedGroupByUsername] = useState<
@@ -122,33 +129,26 @@ function UserRolesPage() {
           <p>View facility users and attach a role group (`HOSPITAL_ADMIN`, `DOCTOR`, `NURSE`).</p>
         </div>
         <div className="org-actions">
-          <label className="org-filter-control" htmlFor="facility-group-filter">
+          <label className="org-filter-control">
             Group filter
-            <select
-              id="facility-group-filter"
-              className="field-input org-filter-select"
+            <Select
               value={selectedUserGroupFilter}
-              onChange={(event) =>
-                setSelectedUserGroupFilter(event.target.value as FacilityUserGroupFilter)
-              }
+              onValueChange={(v) => setSelectedUserGroupFilter(v as FacilityUserGroupFilter)}
             >
-              {FACILITY_USER_GROUP_FILTERS.map((group) => (
-                <option key={group} value={group}>
-                  {FACILITY_USER_GROUP_FILTER_LABELS[group]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="org-filter-select"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {FACILITY_USER_GROUP_FILTERS.map((group) => (
+                  <SelectItem key={group} value={group}>
+                    {FACILITY_USER_GROUP_FILTER_LABELS[group]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
         </div>
       </div>
 
-      <Breadcrumbs
-        items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "User Roles" },
-        ]}
-      />
+      <Breadcrumbs items={[{ label: "User Roles" }]} />
 
       {!session?.facilityId ? (
         <article className="access-note error-block">
@@ -196,20 +196,22 @@ function UserRolesPage() {
                       <td>{user.status ?? (user.enabled === true ? "ENABLED" : "-")}</td>
                       <td>{user.groups.length > 0 ? user.groups.join(", ") : "-"}</td>
                       <td>
-                        <select
-                          className="field-input user-role-select"
+                        <Select
                           value={resolveSelectedRole(user)}
-                          onChange={(event) =>
+                          onValueChange={(v) =>
                             setSelectedGroupByUsername((previous) => ({
                               ...previous,
-                              [user.username]: event.target.value as AuthGroupName,
+                              [user.username]: v as AuthGroupName,
                             }))
                           }
                         >
-                          <option value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</option>
-                          <option value="DOCTOR">DOCTOR</option>
-                          <option value="NURSE">NURSE</option>
-                        </select>
+                          <SelectTrigger className="user-role-select"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</SelectItem>
+                            <SelectItem value="DOCTOR">DOCTOR</SelectItem>
+                            <SelectItem value="NURSE">NURSE</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </td>
                       <td>
                         <Button

@@ -2,12 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listOrganizations } from "../../api/organizations";
-import { listNotifications, markNotificationAsRead } from "../../api/referrals";
+import {
+  listNotifications,
+  markNotificationAsRead,
+} from "../../api/notifications";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { useAuthContext } from "../../context/useAuthContext";
-import type { ModelsNotification } from "../../types/referrals.generated";
+import type { Notification } from "../../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
 
 const PAGE_SIZE = 10;
@@ -44,7 +47,7 @@ const extractPayloadMessage = (payload: unknown): string | null => {
   return null;
 };
 
-const getNotificationSummary = (n: ModelsNotification): string =>
+const getNotificationSummary = (n: Notification): string =>
   extractPayloadMessage(n.payload) ??
   (n.referralCode ? `Referral ${n.referralCode}` : null) ??
   (n.targetFacilityCode ? `Facility ${n.targetFacilityCode}` : null) ??
@@ -125,13 +128,13 @@ function NotificationsPage() {
   const hasNextPage = notifications.length === PAGE_SIZE;
   const hasPrevPage = page > 0;
 
-  const openNotification = (n: ModelsNotification) => {
+  const openNotification = (n: Notification) => {
     if (n.id && !n.isRead) markAsReadMutation.mutate(n.id);
     const code = n.referralCode?.trim() ?? "";
     if (code && facilityId) {
-      navigate(`/facilities/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
+      navigate(`/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
     } else if (facilityId) {
-      navigate(`/facilities/${facilityId}/referrals`);
+      navigate(`/${facilityId}/referrals`);
     } else {
       navigate("/dashboard");
     }
@@ -143,11 +146,13 @@ function NotificationsPage() {
   };
 
   return (
-    <div className="org-page">
-      <Breadcrumbs items={[{ label: "Home", to: "/dashboard" }, { label: "Notifications" }]} />
-
-      <div className="org-page-header">
-        <h1 className="org-page-title">Notifications</h1>
+    <div className="org-shell reveal delay-1">
+      <div className="org-header">
+        <div>
+          <p className="eyebrow">Notifications</p>
+          <h1>Activity Feed</h1>
+          <p>Real-time referral events and workflow updates for your facility.</p>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant={unreadOnly ? "default" : "outline"}
@@ -167,29 +172,38 @@ function NotificationsPage() {
         </div>
       </div>
 
+      <Breadcrumbs items={[{ label: "Notifications" }]} />
+
       {isHospitalAdmin && !facilityCode && !facilityContextQuery.isLoading && (
-        <p className="text-sm text-slate-500">
-          Could not resolve your facility code for notifications.
-        </p>
+        <article className="access-note error-block">
+          <h2>Facility context unavailable</h2>
+          <p>Could not resolve your facility code for notifications.</p>
+        </article>
       )}
 
       {notificationsQuery.isLoading && (
-        <p className="text-sm text-slate-500">Loading notifications…</p>
+        <article className="access-note">
+          <h2>Loading notifications</h2>
+          <p>Fetching latest activity…</p>
+        </article>
       )}
 
       {notificationsQuery.isError && (
-        <p className="text-[0.85rem] font-semibold text-[#b43b33]">
-          Could not load notifications.
-        </p>
+        <article className="access-note error-block">
+          <h2>Could not load notifications</h2>
+          <p>Check your connection or sign in again.</p>
+        </article>
       )}
 
       {!notificationsQuery.isLoading && !notificationsQuery.isError && (
-        <>
+        <article className="org-table-card">
           {notifications.length > 0 ? (
-            <ul className="grid list-none gap-3 p-0">
+            <ul className="grid list-none gap-3 p-0 m-0">
               {notifications.map((n) => (
                 <li key={n.id ?? `${n.eventType ?? "event"}-${n.createdAt ?? ""}`}>
-                  <Card className={`overflow-hidden border-2 ${n.isRead ? "border-slate-200" : "border-sky-700/35"}`}>
+                  <Card
+                    className={`overflow-hidden border-2 ${n.isRead ? "border-slate-200" : "border-sky-700/35"}`}
+                  >
                     <button
                       type="button"
                       className={`grid w-full cursor-pointer gap-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-sky-700/50 ${
@@ -221,12 +235,12 @@ function NotificationsPage() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">
+            <p className="org-empty">
               {unreadOnly ? "No unread notifications." : "No notifications found."}
             </p>
           )}
 
-          <div className="mt-6 flex items-center justify-between">
+          <div className="facilities-pagination mt-4">
             <Button
               variant="outline"
               size="sm"
@@ -235,7 +249,7 @@ function NotificationsPage() {
             >
               Previous
             </Button>
-            <span className="text-sm text-slate-500">Page {page + 1}</span>
+            <span className="facilities-page-indicator">Page {page + 1}</span>
             <Button
               variant="outline"
               size="sm"
@@ -245,7 +259,7 @@ function NotificationsPage() {
               Next
             </Button>
           </div>
-        </>
+        </article>
       )}
     </div>
   );

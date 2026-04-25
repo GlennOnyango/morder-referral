@@ -4,6 +4,7 @@ import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
 import { getOrganizationById, validateOrganizationFacilityCode } from "../../api/organizations";
 import {
   acceptReferralByCode,
@@ -90,12 +91,12 @@ function safeDecode(value: string): string {
 }
 
 function OrganizationPoolReferralDetailPage() {
-  const { id, referralCode: referralCodeParam } = useParams<{ id: string; referralCode: string }>();
-  const organizationId = id ?? "";
+  const { referralCode: referralCodeParam } = useParams<{ referralCode: string }>();
+  const { workspaceId: organizationId } = useWorkspace();
   const referralCode = safeDecode((referralCodeParam ?? "").trim());
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageReferrals = isFacilityManager(role);
+  const roles = session?.roles ?? [];
+  const canManageReferrals = isFacilityManager(roles);
   const queryClient = useQueryClient();
   const [acceptSuccessMessage, setAcceptSuccessMessage] = useState<string | null>(null);
   const [isRequestInfoDialogOpen, setIsRequestInfoDialogOpen] = useState(false);
@@ -111,7 +112,7 @@ function OrganizationPoolReferralDetailPage() {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
-  const hasFacilityAccess = canAccessOrganization(role, session?.facilityId, organizationQuery.data);
+  const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
   const referralDetailQuery = useQuery({
@@ -205,15 +206,15 @@ function OrganizationPoolReferralDetailPage() {
   }
 
   if (!referralCode) {
-    return <Navigate to={`/facilities/${organizationId}/referrals`} replace />;
+    return <Navigate to={`/${organizationId}/referrals`} replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
-    return <Navigate to="/dashboard" replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
-  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to="/dashboard" replace />;
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
   const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
@@ -257,10 +258,10 @@ function OrganizationPoolReferralDetailPage() {
           <p>Review all details before taking a referral action.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
             Back to Open Referrals
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals/facility`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
             View Facility Referrals
           </Link>
         </div>
@@ -268,11 +269,8 @@ function OrganizationPoolReferralDetailPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
-          { label: "Referrals", to: `/facilities/${organizationId}/referrals` },
+          { label: facilityName, to: `/${organizationId}/organization` },
+          { label: "Referrals", to: `/${organizationId}/referrals` },
           { label: referralCode },
         ]}
       />

@@ -1,8 +1,10 @@
 import { Button } from "../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
 import { getOrganizationById } from "../../api/organizations";
 import { getReferralByCode, getReferralHistoryByCode, listFacilityReferrals } from "../../api/referrals";
 import Breadcrumbs from "../../components/Breadcrumbs";
@@ -46,8 +48,7 @@ function formatDateTime(value?: string): string {
 }
 
 function OrganizationFacilityReferralsPage() {
-  const { id } = useParams<{ id: string }>();
-  const organizationId = id ?? "";
+  const { workspaceId: organizationId } = useWorkspace();
   const { session, isAuthenticated } = useAuthContext();
   const roles = session?.roles ?? [];
   const canManageReferrals = isFacilityManager(roles);
@@ -129,10 +130,10 @@ function OrganizationFacilityReferralsPage() {
           <p>View referrals created by or accepted by this facility.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
             Back to Referrals
           </Link>
-          <Link className="btn btn-primary org-btn" to={`/facilities/${organizationId}/referrals/create`}>
+          <Link className="btn btn-primary org-btn" to={`/${organizationId}/referrals/create`}>
             Create Referral
           </Link>
         </div>
@@ -140,11 +141,8 @@ function OrganizationFacilityReferralsPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
-          { label: "Referrals", to: `/facilities/${organizationId}/referrals` },
+          { label: facilityName, to: `/${organizationId}/organization` },
+          { label: "Referrals", to: `/${organizationId}/referrals` },
           { label: "Facility Referrals" },
         ]}
       />
@@ -166,20 +164,18 @@ function OrganizationFacilityReferralsPage() {
       <article className="org-table-card">
         <h2>Facility Referrals Table</h2>
         <div className="org-table-tools">
-          <label className="org-filter-control" htmlFor="facility-referral-status">
+          <label className="org-filter-control">
             Status
-            <select
-              id="facility-referral-status"
-              className="field-input org-filter-select"
-              value={facilityStatusFilter}
-              onChange={(event) => setFacilityStatusFilter(event.target.value as FacilityStatusFilter)}
-            >
-              <option value="all">all</option>
-              <option value={ModelsReferralStatus.ReferralStatusOpen}>open</option>
-              <option value={ModelsReferralStatus.ReferralStatusAccepted}>accepted</option>
-              <option value={ModelsReferralStatus.ReferralStatusCancelled}>cancelled</option>
-              <option value={ModelsReferralStatus.ReferralStatusClosed}>closed</option>
-            </select>
+            <Select value={facilityStatusFilter} onValueChange={(v) => setFacilityStatusFilter(v as FacilityStatusFilter)}>
+              <SelectTrigger className="org-filter-select"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">all</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusOpen}>open</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusAccepted}>accepted</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusCancelled}>cancelled</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusClosed}>closed</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
           {/* <label className="org-filter-control" htmlFor="facility-referral-role">
             Role

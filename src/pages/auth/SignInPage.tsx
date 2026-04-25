@@ -16,7 +16,7 @@ const TOGGLE_CLS =
 
 const SignInPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const { isAuthenticated, signIn } = useAuthContext();
+  const { isAuthenticated, signIn, activeWorkspaceId } = useAuthContext();
   const navigate = useNavigate();
 
   const {
@@ -29,7 +29,7 @@ const SignInPage = () => {
 
   const email = useWatch({ control, name: "email" });
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to={activeWorkspaceId ? `/${activeWorkspaceId}/dashboard` : "/dashboard"} replace />;
 
   const onSubmit = async (formValues: SignInFormValues) => {
     const parsed = signInSchema.safeParse(formValues);
@@ -46,7 +46,7 @@ const SignInPage = () => {
     try {
       const result = await signIn(parsed.data.email, parsed.data.password);
       if (result.isSignedIn) {
-        navigate("/dashboard", { replace: true });
+        navigate(activeWorkspaceId ? `/${activeWorkspaceId}/dashboard` : "/dashboard", { replace: true });
       } else {
         const step = result.nextStep?.signInStep;
         setError("root", {
@@ -90,7 +90,7 @@ const SignInPage = () => {
 
         <Breadcrumbs
           className="mt-3.5"
-          items={[{ label: "Home", to: "/" }, { label: "Sign in" }]}
+          items={[{ label: "Sign in" }]}
         />
 
         <form className="mt-4.5 grid gap-3.5" onSubmit={handleSubmit(onSubmit)}>

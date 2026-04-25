@@ -137,7 +137,7 @@ const SignUpPage = () => {
 
         <Breadcrumbs
           className="mt-3.5"
-          items={[{ label: "Home", to: "/" }, { label: "Sign up" }]}
+          items={[{ label: "Sign up" }]}
         />
 
         <form className="mt-4.5 grid gap-3.5" onSubmit={handleSubmit(onSubmit)}>

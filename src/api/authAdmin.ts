@@ -22,6 +22,9 @@ const DELETE_USER_PATH =
 const GET_USER_PATH =
   (import.meta.env.VITE_AUTH_GET_USER_PATH as string | undefined) ??
   "/get-user";
+const INVITE_USER_PATH =
+  (import.meta.env.VITE_AUTH_INVITE_USER_PATH as string | undefined) ??
+  "/invite-user";
 
 const authAdminApi = createApiClient(AUTHENTICATION_BASE_URL);
 
@@ -354,4 +357,13 @@ export async function getUser(email: string): Promise<NrsAuthenticationInternalD
   });
 
   return response.data.Users?.[0] ?? null;
+}
+
+export async function inviteUser(
+  input: { email: string; facility_code: string; groupName: AuthGroupName },
+  accessToken?: string,
+): Promise<void> {
+  await authAdminApi.post(INVITE_USER_PATH, input, {
+    headers: authHeaders(accessToken),
+  });
 }

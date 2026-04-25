@@ -21,6 +21,7 @@ import PermissionsPanel from "./components/PermissionsPanel";
 import ProfilePanel from "./components/ProfilePanel";
 import StaffPanel from "./components/StaffPanel";
 import WorkflowPanel from "./components/WorkflowPanel";
+import WorkspacePanel from "./components/WorkspacePanel";
 import {
   NAV_ITEMS,
   SETTINGS_STORAGE_KEY,
@@ -220,11 +221,7 @@ const SettingsPage = () => {
 
         <Card className="space-y-4 p-5">
           <Breadcrumbs
-            items={[
-              { label: "Home", to: "/" },
-              { label: "Dashboard", to: "/dashboard" },
-              { label: "Settings" },
-            ]}
+            items={[{ label: "Settings" }]}
           />
 
           {settingsSaved && (
@@ -239,6 +236,8 @@ const SettingsPage = () => {
               staffFacilityCode={staffFacilityCode}
             />
           )}
+
+          {activePanel === "workspace" && <WorkspacePanel roles={roles} />}
 
           {activePanel === "permissions" && (
             <PermissionsPanel settings={settings} togglePermission={togglePermission} />

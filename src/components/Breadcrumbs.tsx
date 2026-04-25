@@ -1,43 +1,49 @@
 import { Fragment } from "react";
 import { Link } from "react-router-dom";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "./ui/breadcrumb";
 
-export type BreadcrumbItem = {
+export type BreadcrumbEntry = {
   label: string;
   to?: string;
 };
 
 type BreadcrumbsProps = {
-  items: BreadcrumbItem[];
+  items: BreadcrumbEntry[];
   className?: string;
-  ariaLabel?: string;
 };
 
-function Breadcrumbs({ items, className, ariaLabel = "Breadcrumb" }: BreadcrumbsProps) {
-  const navClassName = className ? `org-breadcrumbs ${className}` : "org-breadcrumbs";
-
+function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   return (
-    <nav className={navClassName} aria-label={ariaLabel}>
-      {items.map((item, index) => {
-        const isLast = index === items.length - 1;
-        const canLink = Boolean(item.to) && !isLast;
-
-        return (
-          <Fragment key={`${item.label}-${index}`}>
-            {canLink ? (
-              <Link className="org-breadcrumb-link" to={item.to!}>
-                {item.label}
-              </Link>
-            ) : (
-              <span className="org-breadcrumb-current" aria-current={isLast ? "page" : undefined}>
-                {item.label}
-              </span>
-            )}
-
-            {!isLast ? <span className="org-breadcrumb-separator">/</span> : null}
-          </Fragment>
-        );
-      })}
-    </nav>
+    <Breadcrumb className={className}>
+      <BreadcrumbList>
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          return (
+            <Fragment key={`${item.label}-${index}`}>
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                ) : item.to ? (
+                  <BreadcrumbLink asChild>
+                    <Link to={item.to}>{item.label}</Link>
+                  </BreadcrumbLink>
+                ) : (
+                  <span>{item.label}</span>
+                )}
+              </BreadcrumbItem>
+              {!isLast && <BreadcrumbSeparator />}
+            </Fragment>
+          );
+        })}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
 

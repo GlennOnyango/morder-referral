@@ -7,8 +7,32 @@ import { buildAuthSession } from "./authSession";
 import { persistSession, readStoredSession } from "./authStorage";
 import type { AuthContextValue, AuthSession } from "./authTypes";
 
+const WORKSPACE_STORAGE_KEY = "refconnect.active.workspace";
+
+const readStoredWorkspace = (): string | undefined => {
+  try {
+    return window.localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<AuthSession | null>(() => readStoredSession());
+  const [storedWorkspaceId, setStoredWorkspaceId] = useState<string | undefined>(
+    () => readStoredWorkspace(),
+  );
+
+  const activeWorkspaceId = storedWorkspaceId ?? session?.facilityId;
+
+  const setActiveWorkspace = useCallback((id: string) => {
+    setStoredWorkspaceId(id);
+    try {
+      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, id);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const saveSession = useCallback((nextSession: AuthSession | null) => {
     setSession(nextSession);
@@ -73,11 +97,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       session,
       isAuthenticated: Boolean(session?.accessToken),
+      activeWorkspaceId,
+      setActiveWorkspace,
       signIn,
       logout,
       refreshSession,
     }),
-    [logout, refreshSession, session, signIn],
+    [activeWorkspaceId, logout, refreshSession, session, setActiveWorkspace, signIn],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -16,9 +16,11 @@
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.2",
     "@fontsource-variable/geist": "^5.2.8",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.91.0",
+    "@tanstack/react-table": "^8.21.3",
     "@untitledui/icons-react": "^0.3.0",
     "aws-amplify": "^6.16.3",
     "axios": "^1.13.6",

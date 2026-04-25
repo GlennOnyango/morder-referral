@@ -1,5 +1,6 @@
 import type { AuthGroupName, AuthUser } from "../../../api/authAdmin";
 import { Button } from "../../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { Input } from "../../../components/ui/input";
 import type { MutationInfo, QueryInfo } from "../types";
 import { formatError, isUserEnabled } from "../utils";
@@ -129,17 +130,14 @@ const StaffPanel = ({
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <select
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
-                          value={resolveSelectedRole(user)}
-                          onChange={(e) =>
-                            onGroupChange(user.username, e.target.value as AuthGroupName)
-                          }
-                        >
-                          <option value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</option>
-                          <option value="DOCTOR">DOCTOR</option>
-                          <option value="NURSE">NURSE</option>
-                        </select>
+                        <Select value={resolveSelectedRole(user)} onValueChange={(v) => onGroupChange(user.username, v as AuthGroupName)}>
+                          <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</SelectItem>
+                            <SelectItem value="DOCTOR">DOCTOR</SelectItem>
+                            <SelectItem value="NURSE">NURSE</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           disabled={assignRoleMutation.isPending}

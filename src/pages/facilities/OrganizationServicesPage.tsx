@@ -1,7 +1,8 @@
 import { Button } from "../../components/ui/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
 import { getOrganizationById } from "../../api/organizations";
 import { deleteServiceById, listOrganizationServices } from "../../api/services";
 import Breadcrumbs from "../../components/Breadcrumbs";
@@ -28,11 +29,10 @@ function formatError(error: unknown): string {
 }
 
 function OrganizationServicesPage() {
-  const { id } = useParams<{ id: string }>();
-  const organizationId = id ?? "";
+  const { workspaceId: organizationId } = useWorkspace();
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageOrganizations = isFacilityManager(role);
+  const roles = session?.roles ?? [];
+  const canManageOrganizations = isFacilityManager(roles);
   const queryClient = useQueryClient();
 
   const organizationQuery = useQuery({
@@ -47,7 +47,7 @@ function OrganizationServicesPage() {
     enabled:
       canManageOrganizations &&
       organizationId.length > 0 &&
-      canAccessOrganization(role, session?.facilityId, organizationQuery.data),
+      canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
   });
 
   const deleteMutation = useMutation({
@@ -81,12 +81,12 @@ function OrganizationServicesPage() {
     return <Navigate to="/facilities" replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
-    return <Navigate to="/dashboard" replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
-  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to="/dashboard" replace />;
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
   const facilityName =
@@ -103,17 +103,14 @@ function OrganizationServicesPage() {
           </h1>
           <p>View facility services and open a dedicated page to create or update them.</p>
         </div>
-        <Link className="btn btn-primary" to={`/facilities/${organizationId}/services/create`}>
+        <Link className="btn btn-primary" to={`/${organizationId}/services/create`}>
           Create Service
         </Link>
       </div>
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
+          { label: facilityName, to: `/${organizationId}/organization` },
           { label: "Services" },
         ]}
       />
@@ -139,7 +136,7 @@ function OrganizationServicesPage() {
         </article>
       ) : null}
 
-      {servicesQuery.data ? (
+      {Array.isArray(servicesQuery.data) ? (
         <article className="org-table-card">
           {servicesQuery.data.length === 0 ? (
             <p className="org-empty">No services found for this facility.</p>
@@ -155,7 +152,7 @@ function OrganizationServicesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {servicesQuery.data.map((service) => {
+                  {(Array.isArray(servicesQuery.data) ? servicesQuery.data : []).map((service) => {
                     const serviceId = service.id ?? "";
                     const serviceName = service.service_name ?? "Unnamed service";
 
@@ -169,7 +166,7 @@ function OrganizationServicesPage() {
                             {serviceId ? (
                               <Link
                                 className="btn btn-ghost org-btn"
-                                to={`/facilities/${organizationId}/services/${serviceId}/edit`}
+                                to={`/${organizationId}/services/${serviceId}/edit`}
                               >
                                 Edit
                               </Link>
