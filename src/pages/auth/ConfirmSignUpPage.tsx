@@ -15,6 +15,7 @@ const ConfirmSignUpPage = () => {
 
   const email = searchParams.get("email")?.trim() ?? "";
   const username = searchParams.get("username")?.trim() ?? "";
+  const inviteId = searchParams.get("inviteId")?.trim() ?? "";
   const isUsernameMissing = username.length === 0;
 
   const {
@@ -41,7 +42,11 @@ const ConfirmSignUpPage = () => {
     try {
       const result = await confirmUser(username, parsed.data.code.trim());
       if (result.isSignUpComplete) {
-        navigate("/signin", { replace: true });
+        const nextParams = new URLSearchParams();
+        if (inviteId) {
+          nextParams.set("inviteId", inviteId);
+        }
+        navigate(nextParams.size > 0 ? `/signin?${nextParams.toString()}` : "/signin", { replace: true });
         return;
       }
       const step = result.nextStep?.signUpStep;

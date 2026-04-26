@@ -1,5 +1,17 @@
+import type {
+  DtoAcceptInviteResponse,
+  DtoAttachRoleResponse,
+  DtoCreateInviteRequest,
+  DtoInviteResponse,
+  DtoUserOrganizationMappingResponse,
+} from "../types/auth.generated";
 import { createApiClient } from "./httpClient";
-import type { NrsAuthenticationInternalDtoListUsersOutputSwagger, NrsAuthenticationInternalDtoUserTypeSwagger } from "../types/auth.generated";
+
+type CognitoUser = {
+  Username?: string;
+  UserStatus?: string;
+};
+
 
 const AUTHENTICATION_BASE_URL =
   (import.meta.env.VITE_AUTHENTICATION_API_BASE_URL as string | undefined) ??
@@ -351,8 +363,8 @@ export async function deleteUser(
   return response.data;
 }
 
-export async function getUser(email: string): Promise<NrsAuthenticationInternalDtoUserTypeSwagger | null> {
-  const response = await authAdminApi.get<NrsAuthenticationInternalDtoListUsersOutputSwagger>(GET_USER_PATH, {
+export async function getUser(email: string): Promise<CognitoUser | null> {
+  const response = await authAdminApi.get<{ Users?: CognitoUser[] }>(GET_USER_PATH, {
     params: { email },
   });
 
@@ -366,4 +378,70 @@ export async function inviteUser(
   await authAdminApi.post(INVITE_USER_PATH, input, {
     headers: authHeaders(accessToken),
   });
+}
+
+export async function createInvite(
+  payload: DtoCreateInviteRequest,
+  accessToken?: string,
+): Promise<DtoInviteResponse> {
+  const response = await authAdminApi.post<DtoInviteResponse>("/me/invites", payload, {
+    headers: authHeaders(accessToken),
+  });
+  return response.data;
+}
+
+export async function acceptInvite(inviteId: string): Promise<DtoAcceptInviteResponse> {
+  const trimmedInviteId = inviteId.trim();
+  if (!trimmedInviteId) {
+    throw new Error("Missing invite ID.");
+  }
+
+  const response = await authAdminApi.get<DtoAcceptInviteResponse>(
+    `/invites/${trimmedInviteId}/accept`,
+  );
+  return response.data;
+}
+
+export async function attachRoleFromInvite(
+  inviteId: string,
+  accessToken?: string,
+): Promise<DtoAttachRoleResponse> {
+  const trimmedInviteId = inviteId.trim();
+  if (!trimmedInviteId) {
+    throw new Error("Missing invite ID.");
+  }
+
+  const response = await authAdminApi.post<DtoAttachRoleResponse>(
+    `/invites/${trimmedInviteId}/attach-role`,
+    undefined,
+    {
+      headers: authHeaders(accessToken),
+    },
+  );
+  return response.data;
+}
+
+export async function listPendingInvites(
+  organizationId: string,
+  accessToken?: string,
+): Promise<DtoInviteResponse[]> {
+  const response = await authAdminApi.get<DtoInviteResponse[]>("/me/invites/pending", {
+    params: { organizationId },
+    headers: authHeaders(accessToken),
+  });
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function listOrganizationMembers(
+  organizationId: string,
+  accessToken?: string,
+): Promise<DtoUserOrganizationMappingResponse[]> {
+  const response = await authAdminApi.get<DtoUserOrganizationMappingResponse[]>(
+    "/me/organizations/members",
+    {
+      params: { organizationId },
+      headers: authHeaders(accessToken),
+    },
+  );
+  return Array.isArray(response.data) ? response.data : [];
 }

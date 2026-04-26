@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { CheckIcon, EyeIcon, EyeOffIcon, XCircleIcon } from "@untitledui/icons-react/outline";
@@ -33,9 +33,11 @@ const ROLE_OPTIONS: { value: SignUpRole; label: string; desc: string }[] = [
 ];
 
 const SignUpPage = () => {
+  const [searchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const { isAuthenticated } = useAuthContext();
   const navigate = useNavigate();
+  const inviteId = searchParams.get("inviteId")?.trim() ?? "";
 
   const {
     register,
@@ -116,7 +118,14 @@ const SignUpPage = () => {
       });
       const encodedEmail = encodeURIComponent(formValues.email.trim());
       const encodedUsername = encodeURIComponent(result.username);
-      navigate(`/confirm-signup?email=${encodedEmail}&username=${encodedUsername}`, { replace: true });
+      const params = new URLSearchParams({
+        email: decodeURIComponent(encodedEmail),
+        username: decodeURIComponent(encodedUsername),
+      });
+      if (inviteId) {
+        params.set("inviteId", inviteId);
+      }
+      navigate(`/confirm-signup?${params.toString()}`, { replace: true });
     } catch (error) {
       setError("root", {
         message: error instanceof Error ? error.message : "Failed to sign up",

@@ -23,7 +23,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     () => readStoredWorkspace(),
   );
 
-  const activeWorkspaceId = storedWorkspaceId ?? session?.facilityId;
+  const isSuperAdmin = session?.roles?.includes("SUPER_ADMIN") ?? false;
+  const activeWorkspaceId =
+    storedWorkspaceId ?? session?.facilityId ?? (isSuperAdmin ? "system" : undefined);
 
   const setActiveWorkspace = useCallback((id: string) => {
     setStoredWorkspaceId(id);
@@ -55,6 +57,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Signed in but could not resolve the current session.");
     }
 
+    // Clear any stale workspace from a previous user's session before saving
+    setStoredWorkspaceId(undefined);
+    try { window.localStorage.removeItem(WORKSPACE_STORAGE_KEY); } catch { /* ignore */ }
+
     saveSession(nextSession);
     return result;
   }, [saveSession]);
@@ -64,6 +70,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await logoutUser();
     } finally {
       saveSession(null);
+      setStoredWorkspaceId(undefined);
+      try { window.localStorage.removeItem(WORKSPACE_STORAGE_KEY); } catch { /* ignore */ }
     }
   }, [saveSession]);
 

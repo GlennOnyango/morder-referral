@@ -1,7 +1,6 @@
 import type {
-  Notification,
-  NotificationListResponse,
-  NotificationReadResponse,
+  GithubComVaudKKNrsNotificationsInternalModelsNotification as Notification,
+  InternalHandlerNotificationListResponse as NotificationListResponse,
 } from "../types/notifications.generated";
 import { createApiClient } from "./httpClient";
 
@@ -51,7 +50,7 @@ export async function markNotificationAsRead(
   query?: NotificationReadQuery,
   accessToken?: string,
 ): Promise<Notification> {
-  const response = await notificationsApi.patch<NotificationReadResponse>(
+  const response = await notificationsApi.patch<Notification>(
     `/api/v1/notifications/${encodeURIComponent(id)}/read`,
     undefined,
     {

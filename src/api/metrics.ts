@@ -1,7 +1,7 @@
 import type {
-  MsOrganizationsInternalDomainModelOrganization as Organization,
-  MsOrganizationsInternalDomainModelService as Service,
-} from "../types/api.generated";
+  ModelOrganization as Organization,
+  ModelService as Service,
+} from "../types/organizations.generated";
 import { createApiClient } from "./httpClient";
 
 type MetricsSummary = {

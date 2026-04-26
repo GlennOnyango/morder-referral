@@ -38,22 +38,6 @@ export interface HandlerErrorResponse {
   message?: string;
 }
 
-export interface HandlerNotificationListResponse {
-  items?: ModelsNotification[];
-}
-
-export interface HandlerNotificationResponse {
-  createdAt?: string;
-  eventType?: string;
-  id?: string;
-  isRead?: boolean;
-  payload?: object;
-  referralCode?: string;
-  referralId?: string;
-  targetFacilityCode?: string;
-  updatedAt?: string;
-}
-
 export interface HandlerReferralHistoryListResponse {
   items?: ModelsReferralHistory[];
 }
@@ -97,18 +81,6 @@ export interface ModelsAdditionalInformationRequest {
   requestedBySub?: string;
   requestedByUsername?: string;
   title?: string;
-  updatedAt?: string;
-}
-
-export interface ModelsNotification {
-  createdAt?: string;
-  eventType?: string;
-  id?: string;
-  isRead?: boolean;
-  payload?: object;
-  referralCode?: string;
-  referralId?: string;
-  targetFacilityCode?: string;
   updatedAt?: string;
 }
 
@@ -504,105 +476,6 @@ export class Api<
       this.request<HandlerStatusResponse, any>({
         path: `/healthz`,
         method: "GET",
-        format: "json",
-        ...params,
-      }),
-  };
-  notifications = {
-    /**
-     * @description Returns notifications for a facility.
-     *
-     * @tags notifications
-     * @name NotificationsList
-     * @summary List notifications
-     * @request GET:/notifications
-     * @secure
-     */
-    notificationsList: (
-      query?: {
-        /** Facility code */
-        facility_code?: string;
-        /** Unread only */
-        unread_only?: boolean;
-        /** Page size */
-        limit?: number;
-        /** Page offset */
-        offset?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<HandlerNotificationListResponse, HandlerErrorResponse>({
-        path: `/notifications`,
-        method: "GET",
-        query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Opens a Server-Sent Events stream for facility and pool notifications.
-     *
-     * @tags notifications
-     * @name StreamList
-     * @summary Stream notifications
-     * @request GET:/notifications/stream
-     * @secure
-     */
-    streamList: (
-      query?: {
-        /** Facility code */
-        facility_code?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<string, HandlerErrorResponse>({
-        path: `/notifications/stream`,
-        method: "GET",
-        query: query,
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * @description Opens a Server-Sent Events stream for a facility using the facility code path parameter.
-     *
-     * @tags notifications
-     * @name StreamDetail
-     * @summary Stream notifications by facility
-     * @request GET:/notifications/stream/{facilityCode}
-     * @secure
-     */
-    streamDetail: (facilityCode: string, params: RequestParams = {}) =>
-      this.request<string, HandlerErrorResponse>({
-        path: `/notifications/stream/${facilityCode}`,
-        method: "GET",
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * @description Marks a facility notification as read.
-     *
-     * @tags notifications
-     * @name ReadPartialUpdate
-     * @summary Mark notification as read
-     * @request PATCH:/notifications/{id}/read
-     * @secure
-     */
-    readPartialUpdate: (
-      id: string,
-      query?: {
-        /** Facility code */
-        facility_code?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<HandlerNotificationResponse, HandlerErrorResponse>({
-        path: `/notifications/${id}/read`,
-        method: "PATCH",
-        query: query,
-        secure: true,
         format: "json",
         ...params,
       }),

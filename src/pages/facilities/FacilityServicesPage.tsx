@@ -30,7 +30,7 @@ import {
 import { useAuthContext } from "../../context/useAuthContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { isFacilityManager } from "../../utils/facilityAccess";
-import type { MsOrganizationsInternalDomainModelOrganization as Organization } from "../../types/api.generated";
+import type { ModelOrganization as Organization } from "../../types/organizations.generated";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {

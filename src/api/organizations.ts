@@ -1,9 +1,9 @@
 import axios from "axios";
 import type {
-  InternalApiCreateOrganizationRequest,
-  InternalApiUpdateOrganizationRequest,
-  MsOrganizationsInternalDomainModelOrganization as Organization,
-} from "../types/api.generated";
+  ApiCreateOrganizationRequest,
+  ApiUpdateOrganizationRequest,
+  ModelOrganization as Organization,
+} from "../types/organizations.generated";
 import { createApiClient } from "./httpClient";
 
 const ORGANIZATIONS_BASE_URL =
@@ -67,18 +67,8 @@ function authHeaders(accessToken?: string) {
   };
 }
 
-export type OrganizationCreateInput = InternalApiCreateOrganizationRequest & {
-  sub_county: string;
-  ward: string;
-  transport_available: boolean;
-  organization_type?: "facility" | "service";
-};
-export type OrganizationUpdateInput = InternalApiUpdateOrganizationRequest & {
-  sub_county: string;
-  ward: string;
-  transport_available: boolean;
-  organization_type?: "facility" | "service";
-};
+export type OrganizationCreateInput = ApiCreateOrganizationRequest;
+export type OrganizationUpdateInput = ApiUpdateOrganizationRequest;
 export type FacilityCodeValidationResult = {
   exists: boolean;
   facilityId?: string;

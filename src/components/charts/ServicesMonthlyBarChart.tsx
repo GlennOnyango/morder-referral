@@ -6,7 +6,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "../ui/chart";
-import type { MsOrganizationsInternalDomainModelService as Service } from "../../types/api.generated";
+import type { ModelService as Service } from "../../types/organizations.generated";
 
 const config: ChartConfig = { count: { label: "Services", color: "var(--chart-3)" } };
 

@@ -10,83 +10,57 @@
  * ---------------------------------------------------------------
  */
 
-export enum TypesUserStatusType {
-  UserStatusTypeUnconfirmed = "UNCONFIRMED",
-  UserStatusTypeConfirmed = "CONFIRMED",
-  UserStatusTypeArchived = "ARCHIVED",
-  UserStatusTypeCompromised = "COMPROMISED",
-  UserStatusTypeUnknown = "UNKNOWN",
-  UserStatusTypeResetRequired = "RESET_REQUIRED",
-  UserStatusTypeForceChangePassword = "FORCE_CHANGE_PASSWORD",
-  UserStatusTypeExternalProvider = "EXTERNAL_PROVIDER",
-}
-
-export enum TypesDeliveryMediumType {
-  DeliveryMediumTypeSms = "SMS",
-  DeliveryMediumTypeEmail = "EMAIL",
-}
-
-export interface NrsAuthenticationInternalDtoAttachRoleResponse {
+export interface DtoAcceptInviteResponse {
+  invite?: any;
   message?: string;
   success?: boolean;
 }
 
-export interface NrsAuthenticationInternalDtoAttributeTypeSwagger {
-  Name?: string;
-  Value?: string;
+export interface DtoAttachRoleResponse {
+  message?: string;
+  success?: boolean;
 }
 
-export interface NrsAuthenticationInternalDtoListUsersOutputSwagger {
-  PaginationToken?: string;
-  ResultMetadata?: NrsAuthenticationInternalDtoMetadataSwagger;
-  Users?: NrsAuthenticationInternalDtoUserTypeSwagger[];
+export interface DtoCreateInviteRequest {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  organizationId: string;
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  organizationName: string;
+  /**
+   * @minLength 3
+   * @maxLength 100
+   */
+  roleName: string;
+  targetEmail: string;
 }
 
-export interface NrsAuthenticationInternalDtoMFAOptionTypeSwagger {
-  AttributeName?: string;
-  DeliveryMedium?: string;
+export interface DtoInviteResponse {
+  accepted?: boolean;
+  createdAt?: string;
+  id?: string;
+  organizationId?: string;
+  organizationName?: string;
+  roleName?: string;
+  sent?: boolean;
+  targetEmail?: string;
+  updatedAt?: string;
 }
 
-export type NrsAuthenticationInternalDtoMetadataSwagger = object;
-
-export interface NrsAuthenticationInternalDtoUserTypeSwagger {
-  Attributes?: NrsAuthenticationInternalDtoAttributeTypeSwagger[];
-  Enabled?: boolean;
-  MFAOptions?: NrsAuthenticationInternalDtoMFAOptionTypeSwagger[];
-  UserCreateDate?: string;
-  UserLastModifiedDate?: string;
-  UserStatus?: string;
-  Username?: string;
-}
-
-export interface TypesAttributeType {
-  /** The name of the attribute, for example email or custom:department . */
-  name?: string;
-  /** The value of the attribute. */
-  value?: string;
-}
-
-export interface TypesMFAOptionType {
-  /** The attribute name of the MFA option type. The only valid value is phone_number . */
-  attributeName?: string;
-  /** The delivery medium to send the MFA code. */
-  deliveryMedium?: TypesDeliveryMediumType;
-}
-
-export interface TypesUserType {
-  /** Names and values of a user's attributes, for example email . */
-  attributes?: TypesAttributeType[];
-  /** Indicates whether the user's account is enabled or disabled. */
-  enabled?: boolean;
-  /** The user's MFA configuration. */
-  mfaoptions?: TypesMFAOptionType[];
-  /** The date and time when the item was created. */
-  userCreateDate?: string;
-  /** The date and time when the item was modified. */
-  userLastModifiedDate?: string;
-  userStatus?: TypesUserStatusType;
-  /** The user's username. */
-  username?: string;
+export interface DtoUserOrganizationMappingResponse {
+  active?: boolean;
+  createdAt?: string;
+  id?: string;
+  organizationId?: string;
+  organizationName?: string;
+  roleName?: string;
+  updatedAt?: string;
+  userEmail?: string;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -354,44 +328,36 @@ export class HttpClient<SecurityDataType = unknown> {
 export class Api<
   SecurityDataType extends unknown,
 > extends HttpClient<SecurityDataType> {
-  attachRole = {
+  invites = {
     /**
-     * @description attaches a role to a user
+     * @description Marks an invite as accepted.
      *
-     * @tags roles
-     * @name AttachRoleCreate
-     * @summary Attach a role to a user
-     * @request POST:/attach-role
+     * @tags invites
+     * @name AcceptList
+     * @summary Accept invite
+     * @request GET:/invites/{inviteId}/accept
      */
-    attachRoleCreate: (params: RequestParams = {}) =>
-      this.request<NrsAuthenticationInternalDtoAttachRoleResponse, any>({
-        path: `/attach-role`,
-        method: "POST",
+    acceptList: (inviteId: string, params: RequestParams = {}) =>
+      this.request<DtoAcceptInviteResponse, DtoAcceptInviteResponse>({
+        path: `/invites/${inviteId}/accept`,
+        method: "GET",
         type: ContentType.Json,
         format: "json",
         ...params,
       }),
-  };
-  getUser = {
+
     /**
-     * @description Returns a user by email.
+     * @description Attaches the invited role after the invite is accepted.
      *
-     * @tags users
-     * @name GetUserList
-     * @summary Get user by email
-     * @request GET:/get-user
+     * @tags invites
+     * @name AttachRoleCreate
+     * @summary Attach role from invite
+     * @request POST:/invites/{inviteId}/attach-role
      */
-    getUserList: (
-      query: {
-        /** Email */
-        email: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<NrsAuthenticationInternalDtoListUsersOutputSwagger, any>({
-        path: `/get-user`,
-        method: "GET",
-        query: query,
+    attachRoleCreate: (inviteId: string, params: RequestParams = {}) =>
+      this.request<DtoAttachRoleResponse, DtoAttachRoleResponse>({
+        path: `/invites/${inviteId}/attach-role`,
+        method: "POST",
         type: ContentType.Json,
         format: "json",
         ...params,
@@ -399,26 +365,94 @@ export class Api<
   };
   me = {
     /**
-     * @description returns a list of facility users
+     * @description Creates an invite, sends the email, and stores invite metadata.
      *
-     * @tags users
-     * @name GetFacilityUsersList
-     * @summary Get users for a facility
-     * @request GET:/me/get-facility-users
+     * @tags invites
+     * @name InvitesCreate
+     * @summary Invite a user by email
+     * @request POST:/me/invites
+     * @secure
      */
-    getFacilityUsersList: (
+    invitesCreate: (
+      request: DtoCreateInviteRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<DtoInviteResponse, Record<string, any>>({
+        path: `/me/invites`,
+        method: "POST",
+        body: request,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns all invites that have not been accepted.
+     *
+     * @tags invites
+     * @name InvitesPendingList
+     * @summary List pending invites
+     * @request GET:/me/invites/pending
+     * @secure
+     */
+    invitesPendingList: (
       query: {
-        /** facility_code */
-        facility_code: string;
-        /** group */
-        group: string;
+        /** Organization ID */
+        organizationId: string;
       },
       params: RequestParams = {},
     ) =>
-      this.request<TypesUserType[], any>({
-        path: `/me/get-facility-users`,
+      this.request<DtoInviteResponse[], Record<string, any>>({
+        path: `/me/invites/pending`,
         method: "GET",
         query: query,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns the organizations the authenticated user belongs to.
+     *
+     * @tags organizations
+     * @name OrganizationsList
+     * @summary List authenticated user's organizations
+     * @request GET:/me/organizations
+     * @secure
+     */
+    organizationsList: (params: RequestParams = {}) =>
+      this.request<DtoUserOrganizationMappingResponse[], Record<string, any>>({
+        path: `/me/organizations`,
+        method: "GET",
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns the members of an organization for authorized admin roles.
+     *
+     * @tags organizations
+     * @name OrganizationsMembersList
+     * @summary List organization members
+     * @request GET:/me/organizations/members
+     * @secure
+     */
+    organizationsMembersList: (
+      query: {
+        /** Organization ID */
+        organizationId: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<DtoUserOrganizationMappingResponse[], Record<string, any>>({
+        path: `/me/organizations/members`,
+        method: "GET",
+        query: query,
+        secure: true,
         type: ContentType.Json,
         format: "json",
         ...params,

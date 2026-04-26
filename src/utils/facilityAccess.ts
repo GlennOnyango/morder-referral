@@ -1,5 +1,5 @@
 import type { AppRole } from "../context/authTypes";
-import type { MsOrganizationsInternalDomainModelOrganization as Organization } from "../types/api.generated";
+import type { ModelOrganization as Organization } from "../types/organizations.generated";
 
 function normalizeFacilityIdentifier(value?: string | null): string {
   return (value ?? "").trim().toLowerCase();

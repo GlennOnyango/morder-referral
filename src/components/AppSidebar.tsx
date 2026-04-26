@@ -96,16 +96,17 @@ export default function AppSidebar() {
   const avatarLetter = email.charAt(0).toUpperCase() || "U";
   const displayName = email.split("@")[0] || "User";
   const workspaceId = activeWorkspaceId ?? "";
-  const orgLabel = workspaceId
-    ? workspaceId.slice(0, 8).toUpperCase()
-    : isSuperAdmin
-      ? "SYSTEM"
+  const isSystemWorkspace = workspaceId === "system";
+  const orgLabel = isSystemWorkspace
+    ? "SYSTEM"
+    : workspaceId
+      ? workspaceId.slice(0, 8).toUpperCase()
       : "ORG";
 
   const orgQuery = useQuery({
     queryKey: ["org-sidebar", workspaceId, session?.accessToken],
     queryFn: () => getOrganizationById(workspaceId, session?.accessToken),
-    enabled: Boolean(workspaceId) && Boolean(session?.accessToken),
+    enabled: Boolean(workspaceId) && !isSystemWorkspace && Boolean(session?.accessToken),
     staleTime: 5 * 60 * 1000,
   });
 

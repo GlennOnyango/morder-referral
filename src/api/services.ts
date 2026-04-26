@@ -1,8 +1,8 @@
 import type {
-  InternalApiCreateServiceRequest,
-  InternalApiUpdateServiceRequest,
-  MsOrganizationsInternalDomainModelService as Service,
-} from "../types/api.generated";
+  ApiCreateServiceRequest,
+  ApiUpdateServiceRequest,
+  ModelService as Service,
+} from "../types/organizations.generated";
 import { createApiClient } from "./httpClient";
 
 const ORGANIZATIONS_BASE_URL =
@@ -21,7 +21,7 @@ function authHeaders(accessToken?: string) {
   };
 }
 
-export type ServiceUpsertInput = InternalApiCreateServiceRequest;
+export type ServiceUpsertInput = ApiCreateServiceRequest;
 
 export async function listOrganizationServices(
   organizationId: string,
@@ -52,7 +52,7 @@ export async function createOrganizationService(
 
 export async function updateServiceById(
   serviceId: string,
-  payload: InternalApiUpdateServiceRequest,
+  payload: ApiUpdateServiceRequest,
   accessToken?: string,
 ): Promise<Service> {
   const response = await servicesApi.put<Service>(`/services/${serviceId}`, payload, {

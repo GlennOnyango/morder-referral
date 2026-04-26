@@ -30,6 +30,7 @@ type OrganizationFormState = {
   lat: string;
   lng: string;
   ownership_type: "public" | "private" | "faith_based";
+  organization_type: "facility" | "service";
 };
 
 type WardOption = {
@@ -58,6 +59,7 @@ const defaultFormState: OrganizationFormState = {
   lat: "",
   lng: "",
   ownership_type: "public",
+  organization_type: "facility",
 };
 
 function formatError(error: unknown): string {
@@ -126,6 +128,8 @@ function mapOrgToForm(org: Record<string, unknown>): OrganizationFormState {
       org.ownership_type === "private" || org.ownership_type === "faith_based"
         ? org.ownership_type
         : "public",
+    organization_type:
+      org.organization_type === "service" ? "service" : "facility",
   };
 }
 
@@ -152,6 +156,7 @@ function mapFormToCreatePayload(form: OrganizationFormState): OrganizationCreate
     lat,
     lng,
     ownership_type: form.ownership_type,
+    organization_type: form.organization_type,
   };
 }
 
@@ -469,6 +474,25 @@ function OrganizationFormPage() {
                 />
               </label>
             </div>
+
+            <label className="field">
+              <span>Organization Type</span>
+              <Select
+                value={formState.organization_type}
+                onValueChange={(v) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    organization_type: v as OrganizationFormState["organization_type"],
+                  }))
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="facility">Facility</SelectItem>
+                  <SelectItem value="service">Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
 
             <label className="field">
               <span>Ownership Type</span>

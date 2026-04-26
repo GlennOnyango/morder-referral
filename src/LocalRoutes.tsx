@@ -7,6 +7,7 @@ import HomePage from "./pages/public/HomePage";
 import HowItWorksPage from "./pages/public/HowItWorksPage";
 import ConfirmSignUpPage from "./pages/auth/ConfirmSignUpPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import AcceptInvitePage from "./pages/auth/AcceptInvitePage";
 import SignInPage from "./pages/auth/SignInPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import OrganizationFormPage from "./pages/facilities/OrganizationFormPage";
@@ -27,9 +28,35 @@ import { WorkspaceLayout } from "./routes/WorkspaceLayout";
 import { useAuthContext } from "./context/useAuthContext";
 
 function WorkspaceFallback() {
-  const { activeWorkspaceId } = useAuthContext();
+  const { activeWorkspaceId, isAuthenticated } = useAuthContext();
   if (activeWorkspaceId) return <Navigate to={`/${activeWorkspaceId}/dashboard`} replace />;
+  if (isAuthenticated) return <Navigate to="/pending" replace />;
   return <Navigate to="/signin" replace />;
+}
+
+function PendingWorkspacePage() {
+  const { logout, session } = useAuthContext();
+  const email = session?.email ?? "";
+  return (
+    <section className="grid place-items-center min-h-screen p-8">
+      <article className="w-full max-w-md rounded-3xl border border-[rgba(10,52,60,0.13)] bg-[rgba(255,255,255,0.82)] p-10 shadow-[0_14px_34px_rgba(12,35,40,0.1)] text-center">
+        <p className="eyebrow">Account Setup</p>
+        <h1 className="mt-2.5 font-heading text-[#0d2230] text-2xl leading-tight tracking-tight">
+          No organisation assigned
+        </h1>
+        <p className="mt-3.5 text-[#506071] text-[0.97rem] leading-relaxed">
+          Your account <strong>{email}</strong> is not linked to any organisation yet.
+          Ask your system administrator to invite you or assign your account to a facility.
+        </p>
+        <button
+          className="mt-8 btn btn-outline text-sm"
+          onClick={() => logout()}
+        >
+          Sign out
+        </button>
+      </article>
+    </section>
+  );
 }
 
 export default function LocalRoutes() {
@@ -43,6 +70,11 @@ export default function LocalRoutes() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/confirm-signup" element={<ConfirmSignUpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/invite/:inviteId" element={<AcceptInvitePage />} />
+      <Route path="/invites/:inviteId/accept" element={<AcceptInvitePage />} />
+
+      {/* ── No-workspace landing for authenticated users without an org ── */}
+      <Route path="/pending" element={<PendingWorkspacePage />} />
 
       {/* ── Legacy redirects ── */}
       <Route path="/dashboard" element={<WorkspaceFallback />} />

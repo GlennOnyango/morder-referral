@@ -10,7 +10,7 @@ import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { useAuthContext } from "../../context/useAuthContext";
-import type { Notification } from "../../types/notifications.generated";
+import type { GithubComVaudKKNrsNotificationsInternalModelsNotification as Notification } from "../../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
 
 const PAGE_SIZE = 10;
