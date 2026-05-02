@@ -1,5 +1,19 @@
+import type {
+  DtoAcceptInviteResponse,
+  DtoAttachRoleResponse,
+  DtoCheckEmailResponse,
+  DtoCreateInviteRequest,
+  DtoInviteResponse,
+  DtoUserOrganizationMappingResponse,
+} from "../types/auth.generated";
 import { createApiClient } from "./httpClient";
-import type { NrsAuthenticationInternalDtoListUsersOutputSwagger, NrsAuthenticationInternalDtoUserTypeSwagger } from "../types/auth.generated";
+
+export type CheckEmailResult = {
+  exists: boolean;
+  verified: boolean;
+  username?: string;
+};
+
 
 const AUTHENTICATION_BASE_URL =
   (import.meta.env.VITE_AUTHENTICATION_API_BASE_URL as string | undefined) ??
@@ -19,10 +33,9 @@ const DISABLE_USER_PATH =
 const DELETE_USER_PATH =
   (import.meta.env.VITE_AUTH_DELETE_USER_PATH as string | undefined) ??
   "/delete-user";
-const GET_USER_PATH =
-  (import.meta.env.VITE_AUTH_GET_USER_PATH as string | undefined) ??
-  "/get-user";
-
+const CHECK_EMAIL_PATH =
+  (import.meta.env.VITE_AUTH_CHECK_EMAIL_PATH as string | undefined) ??
+  "/check-email";
 const authAdminApi = createApiClient(AUTHENTICATION_BASE_URL);
 
 function authHeaders(accessToken?: string) {
@@ -348,10 +361,95 @@ export async function deleteUser(
   return response.data;
 }
 
-export async function getUser(email: string): Promise<NrsAuthenticationInternalDtoUserTypeSwagger | null> {
-  const response = await authAdminApi.get<NrsAuthenticationInternalDtoListUsersOutputSwagger>(GET_USER_PATH, {
-    params: { email },
+export async function checkEmail(email: string): Promise<CheckEmailResult> {
+  const response = await authAdminApi.get<DtoCheckEmailResponse>(CHECK_EMAIL_PATH, {
+    params: { email: email.trim() },
   });
 
-  return response.data.Users?.[0] ?? null;
+  const data = response.data;
+  if (typeof data.exists === "boolean") {
+    return {
+      exists: data.exists,
+      verified: data.verified ?? false,
+      username: data.username,
+    };
+  }
+
+  return { exists: false, verified: false };
+}
+
+export async function createInvite(
+  payload: DtoCreateInviteRequest,
+  accessToken?: string,
+): Promise<DtoInviteResponse> {
+  const response = await authAdminApi.post<DtoInviteResponse>("/me/invites", payload, {
+    headers: authHeaders(accessToken),
+  });
+  return response.data;
+}
+
+export async function acceptInvite(inviteId: string): Promise<DtoAcceptInviteResponse> {
+  const trimmedInviteId = inviteId.trim();
+  if (!trimmedInviteId) {
+    throw new Error("Missing invite ID.");
+  }
+
+  const response = await authAdminApi.get<DtoAcceptInviteResponse>(
+    `/invites/${trimmedInviteId}/accept`,
+  );
+  return response.data;
+}
+
+export async function attachRoleFromInvite(
+  inviteId: string,
+  accessToken?: string,
+): Promise<DtoAttachRoleResponse> {
+  const trimmedInviteId = inviteId.trim();
+  if (!trimmedInviteId) {
+    throw new Error("Missing invite ID.");
+  }
+
+  const response = await authAdminApi.post<DtoAttachRoleResponse>(
+    `/invites/${trimmedInviteId}/attach-role`,
+    undefined,
+    {
+      headers: authHeaders(accessToken),
+    },
+  );
+  return response.data;
+}
+
+export async function listPendingInvites(
+  organizationId: string,
+  accessToken?: string,
+): Promise<DtoInviteResponse[]> {
+  const response = await authAdminApi.get<DtoInviteResponse[]>("/me/invites/pending", {
+    params: { organizationId },
+    headers: authHeaders(accessToken),
+  });
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function listOrganizationMembers(
+  organizationId: string,
+  accessToken?: string,
+): Promise<DtoUserOrganizationMappingResponse[]> {
+  const response = await authAdminApi.get<DtoUserOrganizationMappingResponse[]>(
+    "/me/organizations/members",
+    {
+      params: { organizationId },
+      headers: authHeaders(accessToken),
+    },
+  );
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function listUserOrganizations(
+  accessToken?: string,
+): Promise<DtoUserOrganizationMappingResponse[]> {
+  const response = await authAdminApi.get<DtoUserOrganizationMappingResponse[]>(
+    "/me/organizations",
+    { headers: authHeaders(accessToken) },
+  );
+  return Array.isArray(response.data) ? response.data : [];
 }

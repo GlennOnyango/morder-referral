@@ -1,16 +1,16 @@
 import { Button } from "../../components/ui/button";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { getOrganizationById, validateOrganizationFacilityCode } from "../../api/organizations";
-import {
-  acceptReferralByCode,
-  createReferralInformationRequest,
-  getReferralByCode,
-  streamReferralSummaryByCode,
-} from "../../api/referrals";
+import { useWorkspace } from "../../context/WorkspaceContext";
+import { validateOrganizationFacilityCode } from "../../api/organizations";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
+import { useAcceptReferral } from "../../api/hooks/referrals/AcceptReferral.hook";
+import { useCreateReferralInfoRequest } from "../../api/hooks/referrals/CreateReferralInfoRequest.hook";
+import { useSummarizeReferral } from "../../api/hooks/referrals/SummarizeReferral.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { useAuthContext } from "../../context/useAuthContext";
@@ -89,13 +89,13 @@ function safeDecode(value: string): string {
   }
 }
 
-function OrganizationPoolReferralDetailPage() {
-  const { id, referralCode: referralCodeParam } = useParams<{ id: string; referralCode: string }>();
-  const organizationId = id ?? "";
+function PoolReferralDetailPage() {
+  const { referralCode: referralCodeParam } = useParams<{ referralCode: string }>();
+  const { workspaceId: organizationId } = useWorkspace();
   const referralCode = safeDecode((referralCodeParam ?? "").trim());
   const { session, isAuthenticated } = useAuthContext();
-  const role = session?.role;
-  const canManageReferrals = isFacilityManager(role);
+  const roles = session?.roles ?? [];
+  const canManageReferrals = isFacilityManager(roles);
   const queryClient = useQueryClient();
   const [acceptSuccessMessage, setAcceptSuccessMessage] = useState<string | null>(null);
   const [isRequestInfoDialogOpen, setIsRequestInfoDialogOpen] = useState(false);
@@ -105,87 +105,39 @@ function OrganizationPoolReferralDetailPage() {
   const [aiSummary, setAiSummary] = useState("");
   const [aiSummaryRequested, setAiSummaryRequested] = useState(false);
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
-  const hasFacilityAccess = canAccessOrganization(role, session?.facilityId, organizationQuery.data);
+  const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const referralDetailQuery = useQuery({
-    queryKey: ["referral-detail", organizationId, referralCode, session?.accessToken],
-    queryFn: () => getReferralByCode(referralCode, session?.accessToken),
+  const referralDetailQuery = useReferralByCode(referralCode, session?.accessToken, {
     enabled: canManageReferrals && referralCode.length > 0 && hasFacilityAccess,
   });
 
-  const acceptReferralMutation = useMutation({
-    mutationFn: () =>
-      acceptReferralByCode(
-        referralCode,
-        {
-          facilityCode,
-        },
-        session?.accessToken,
-      ),
+  const acceptReferralMutation = useAcceptReferral(session?.accessToken, {
     onSuccess: async (acceptedReferral) => {
       setAcceptSuccessMessage(
         acceptedReferral.referralCode
           ? `Referral ${acceptedReferral.referralCode} accepted successfully.`
           : "Referral accepted successfully.",
       );
-      await queryClient.invalidateQueries({ queryKey: ["referral-pool", organizationId] });
-      await queryClient.invalidateQueries({ queryKey: ["facility-referrals", organizationId] });
-      await queryClient.invalidateQueries({ queryKey: ["referral-detail", organizationId, referralCode] });
+      await queryClient.invalidateQueries({ queryKey: ["referrals", "pool"] });
+      await queryClient.invalidateQueries({ queryKey: ["referrals", "facility"] });
+      await queryClient.invalidateQueries({ queryKey: ["referrals", "detail", referralCode] });
     },
   });
 
-  const requestInfoMutation = useMutation({
-    mutationFn: async () => {
-      const referralId = referralDetailQuery.data?.id?.trim() ?? "";
-      if (!referralId) {
-        throw new Error("Missing referral id for this referral.");
-      }
-
-      const originFacilityCode = referralDetailQuery.data?.originFacilityCode?.trim() ?? "";
-      if (!originFacilityCode) {
-        throw new Error("Missing origin facility code for this referral.");
-      }
-
-      const originFacilityValidation = await validateOrganizationFacilityCode(originFacilityCode);
-      const originFacilityId = originFacilityValidation.facilityId?.trim() ?? "";
-      if (!originFacilityValidation.exists || !originFacilityId) {
-        throw new Error(`Could not resolve facility id for origin facility code ${originFacilityCode}.`);
-      }
-
-      return createReferralInformationRequest(
-        referralId,
-        {
-          facilityId: originFacilityId,
-          title: requestInfoTitle.trim(),
-          additionalInformation: requestInfoDescription.trim(),
-        },
-        session?.accessToken,
-      );
-    },
+  const requestInfoMutation = useCreateReferralInfoRequest(session?.accessToken, {
     onSuccess: async () => {
       setIsRequestInfoDialogOpen(false);
       setRequestInfoSuccessMessage(`Additional information request sent for referral ${referralCode}.`);
-      await queryClient.invalidateQueries({ queryKey: ["referral-notifications"] });
-      await queryClient.invalidateQueries({ queryKey: ["referral-detail", organizationId, referralCode] });
+      await queryClient.invalidateQueries({ queryKey: ["referrals", "detail", referralCode] });
     },
   });
 
-  const summarizeCaseMutation = useMutation({
-    mutationFn: () =>
-      streamReferralSummaryByCode(
-        referralCode,
-        (chunk) => {
-          setAiSummary((currentSummary) => `${currentSummary}${chunk}`);
-        },
-        session?.accessToken,
-      ),
+  const summarizeCaseMutation = useSummarizeReferral(session?.accessToken, {
     onMutate: () => {
       setAiSummaryRequested(true);
       setAiSummary("");
@@ -205,15 +157,15 @@ function OrganizationPoolReferralDetailPage() {
   }
 
   if (!referralCode) {
-    return <Navigate to={`/facilities/${organizationId}/referrals`} replace />;
+    return <Navigate to={`/${organizationId}/referrals`} replace />;
   }
 
-  if (role === "HOSPITAL_ADMIN" && !session?.facilityId) {
-    return <Navigate to="/dashboard" replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
-  if (organizationQuery.data && !canAccessOrganization(role, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to="/dashboard" replace />;
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+    return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
 
   const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
@@ -245,7 +197,22 @@ function OrganizationPoolReferralDetailPage() {
       return;
     }
 
-    requestInfoMutation.mutate();
+    const referralId = referralDetailQuery.data?.id?.trim() ?? "";
+    if (!referralId) return;
+    const originFacilityCode = referralDetailQuery.data?.originFacilityCode?.trim() ?? "";
+    if (!originFacilityCode) return;
+    validateOrganizationFacilityCode(originFacilityCode).then((validation) => {
+      const originFacilityId = validation.facilityId?.trim() ?? "";
+      if (!validation.exists || !originFacilityId) return;
+      requestInfoMutation.mutate({
+        referralId,
+        payload: {
+          facilityId: originFacilityId,
+          title: requestInfoTitle.trim(),
+          additionalInformation: requestInfoDescription.trim(),
+        },
+      });
+    }).catch(() => {});
   };
 
   return (
@@ -257,10 +224,10 @@ function OrganizationPoolReferralDetailPage() {
           <p>Review all details before taking a referral action.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
             Back to Open Referrals
           </Link>
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals/facility`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
             View Facility Referrals
           </Link>
         </div>
@@ -268,11 +235,8 @@ function OrganizationPoolReferralDetailPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
-          { label: "Referrals", to: `/facilities/${organizationId}/referrals` },
+          { label: facilityName, to: `/${organizationId}/organization` },
+          { label: "Referrals", to: `/${organizationId}/referrals` },
           { label: referralCode },
         ]}
       />
@@ -306,7 +270,7 @@ function OrganizationPoolReferralDetailPage() {
               onClick={() => {
                 setAcceptSuccessMessage(null);
                 setRequestInfoSuccessMessage(null);
-                summarizeCaseMutation.mutate();
+                summarizeCaseMutation.mutate({ referralCode, onChunk: (chunk) => setAiSummary((s) => `${s}${chunk}`) });
               }}
               disabled={summarizeCaseMutation.isPending}
             >
@@ -517,7 +481,7 @@ function OrganizationPoolReferralDetailPage() {
               onClick={() => {
                 setAcceptSuccessMessage(null);
                 setRequestInfoSuccessMessage(null);
-                acceptReferralMutation.mutate();
+                acceptReferralMutation.mutate({ referralCode, payload: { facilityCode } });
               }}
               disabled={!canAcceptReferral || acceptReferralMutation.isPending}
             >
@@ -608,4 +572,4 @@ function OrganizationPoolReferralDetailPage() {
   );
 }
 
-export default OrganizationPoolReferralDetailPage;
+export default PoolReferralDetailPage;

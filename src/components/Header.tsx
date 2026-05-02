@@ -59,11 +59,8 @@ const Header = () => {
         </div>
       ) : (
         <div className="inline-flex items-center gap-2">
-          <Button asChild variant="ghost">
-            <Link to="/signin">Sign in</Link>
-          </Button>
           <Button asChild variant="primary">
-            <Link to="/signup">Sign up</Link>
+            <Link to="/signin">Sign in</Link>
           </Button>
         </div>
       )}

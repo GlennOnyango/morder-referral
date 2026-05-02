@@ -1,5 +1,4 @@
 import { isAxiosError } from "axios";
-import type { AuthGroupName, AuthUser } from "../../api/authAdmin";
 import type { AppRole } from "../../context/authTypes";
 import { PERMISSION_ROWS, SETTINGS_STORAGE_KEY, type PermissionKey, type SettingsState } from "./types";
 
@@ -87,14 +86,3 @@ export const formatError = (error: unknown): string => {
   return "Request failed. Please try again.";
 };
 
-export const isUserEnabled = (user: AuthUser): boolean => {
-  if (typeof user.enabled === "boolean") return user.enabled;
-  return (user.status ?? "").trim().toUpperCase() === "ENABLED";
-};
-
-export const inferDefaultGroup = (user: AuthUser): AuthGroupName => {
-  const normalizedGroups = user.groups.map((g) => g.trim().toUpperCase());
-  if (normalizedGroups.includes("HOSPITAL_ADMIN")) return "HOSPITAL_ADMIN";
-  if (normalizedGroups.includes("DOCTOR")) return "DOCTOR";
-  return "NURSE";
-};

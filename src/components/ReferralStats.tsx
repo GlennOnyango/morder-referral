@@ -76,7 +76,7 @@ export default function ReferralStats({
         <div className="flex gap-3 flex-wrap">
           <Link
             className="btn btn-ghost org-btn"
-            to={`/facilities/${facilityId}/referrals`}
+            to={`/${facilityId}/referrals`}
           >
             Manage Referrals →
           </Link>

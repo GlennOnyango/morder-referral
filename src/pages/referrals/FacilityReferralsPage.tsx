@@ -1,10 +1,13 @@
 import { Button } from "../../components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { isAxiosError } from "axios";
 import { useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
-import { getOrganizationById } from "../../api/organizations";
-import { getReferralByCode, getReferralHistoryByCode, listFacilityReferrals } from "../../api/referrals";
+import { Link, Navigate } from "react-router-dom";
+import { useWorkspace } from "../../context/WorkspaceContext";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useFacilityReferrals } from "../../api/hooks/referrals/FacilityReferrals.hook";
+import { useReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
+import { useReferralHistory } from "../../api/hooks/referrals/ReferralHistory.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
@@ -45,9 +48,8 @@ function formatDateTime(value?: string): string {
   return parsed.toLocaleString();
 }
 
-function OrganizationFacilityReferralsPage() {
-  const { id } = useParams<{ id: string }>();
-  const organizationId = id ?? "";
+function FacilityReferralsPage() {
+  const { workspaceId: organizationId } = useWorkspace();
   const { session, isAuthenticated } = useAuthContext();
   const roles = session?.roles ?? [];
   const canManageReferrals = isFacilityManager(roles);
@@ -56,45 +58,25 @@ function OrganizationFacilityReferralsPage() {
   // const [facilityRoleFilter, setFacilityRoleFilter] = useState<FacilityRoleFilter>("all");
   const [selectedReferralCode, setSelectedReferralCode] = useState("");
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
   const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const facilityReferralsQuery = useQuery({
-    queryKey: [
-      "facility-referrals",
-      organizationId,
-      facilityCode,
-      facilityStatusFilter,
-      // facilityRoleFilter,
-      session?.accessToken,
-    ],
-    queryFn: () =>
-      listFacilityReferrals(
-        facilityCode,
-        {
-          status: facilityStatusFilter === "all" ? undefined : facilityStatusFilter,
-          // role: facilityRoleFilter === "all" ? undefined : facilityRoleFilter,
-        },
-        session?.accessToken,
-      ),
-    enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess,
-  });
+  const facilityReferralsQuery = useFacilityReferrals(
+    facilityCode,
+    { status: facilityStatusFilter === "all" ? undefined : facilityStatusFilter },
+    session?.accessToken,
+    { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess },
+  );
 
-  const referralDetailQuery = useQuery({
-    queryKey: ["referral-detail", selectedReferralCode, session?.accessToken],
-    queryFn: () => getReferralByCode(selectedReferralCode, session?.accessToken),
+  const referralDetailQuery = useReferralByCode(selectedReferralCode, session?.accessToken, {
     enabled: canManageReferrals && selectedReferralCode.length > 0 && hasFacilityAccess,
   });
 
-  const referralHistoryQuery = useQuery({
-    queryKey: ["referral-history", selectedReferralCode, session?.accessToken],
-    queryFn: () => getReferralHistoryByCode(selectedReferralCode, session?.accessToken),
+  const referralHistoryQuery = useReferralHistory(selectedReferralCode, session?.accessToken, {
     enabled: canManageReferrals && selectedReferralCode.length > 0 && hasFacilityAccess,
   });
 
@@ -129,10 +111,10 @@ function OrganizationFacilityReferralsPage() {
           <p>View referrals created by or accepted by this facility.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/facilities/${organizationId}/referrals`}>
+          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
             Back to Referrals
           </Link>
-          <Link className="btn btn-primary org-btn" to={`/facilities/${organizationId}/referrals/create`}>
+          <Link className="btn btn-primary org-btn" to={`/${organizationId}/referrals/create`}>
             Create Referral
           </Link>
         </div>
@@ -140,11 +122,8 @@ function OrganizationFacilityReferralsPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Home", to: "/" },
-          { label: "Dashboard", to: "/dashboard" },
-          { label: "Facilities", to: "/facilities" },
-          { label: facilityName, to: `/facilities/${organizationId}` },
-          { label: "Referrals", to: `/facilities/${organizationId}/referrals` },
+          { label: facilityName, to: `/${organizationId}/organization` },
+          { label: "Referrals", to: `/${organizationId}/referrals` },
           { label: "Facility Referrals" },
         ]}
       />
@@ -166,20 +145,18 @@ function OrganizationFacilityReferralsPage() {
       <article className="org-table-card">
         <h2>Facility Referrals Table</h2>
         <div className="org-table-tools">
-          <label className="org-filter-control" htmlFor="facility-referral-status">
+          <label className="org-filter-control">
             Status
-            <select
-              id="facility-referral-status"
-              className="field-input org-filter-select"
-              value={facilityStatusFilter}
-              onChange={(event) => setFacilityStatusFilter(event.target.value as FacilityStatusFilter)}
-            >
-              <option value="all">all</option>
-              <option value={ModelsReferralStatus.ReferralStatusOpen}>open</option>
-              <option value={ModelsReferralStatus.ReferralStatusAccepted}>accepted</option>
-              <option value={ModelsReferralStatus.ReferralStatusCancelled}>cancelled</option>
-              <option value={ModelsReferralStatus.ReferralStatusClosed}>closed</option>
-            </select>
+            <Select value={facilityStatusFilter} onValueChange={(v) => setFacilityStatusFilter(v as FacilityStatusFilter)}>
+              <SelectTrigger className="org-filter-select"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">all</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusOpen}>open</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusAccepted}>accepted</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusCancelled}>cancelled</SelectItem>
+                <SelectItem value={ModelsReferralStatus.ReferralStatusClosed}>closed</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
           {/* <label className="org-filter-control" htmlFor="facility-referral-role">
             Role
@@ -332,4 +309,4 @@ function OrganizationFacilityReferralsPage() {
   );
 }
 
-export default OrganizationFacilityReferralsPage;
+export default FacilityReferralsPage;

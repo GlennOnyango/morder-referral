@@ -48,7 +48,7 @@ function isTokenValidationError(error: unknown): boolean {
     return false;
   }
 
-  return ["token", "jwt", "expired", "unauthorized", "not authorized", "signature"].some(
+  return ["token", "jwt", "expired", "signature"].some(
     (keyword) => loweredMessage.includes(keyword),
   );
 }
