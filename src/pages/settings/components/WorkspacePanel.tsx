@@ -1,35 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { listOrganizations } from "../../../api/organizations";
+import { useOrganizations } from "../../../api/hooks/organizations/Organizations.hook";
 import { Button } from "../../../components/ui/button";
 import { useAuthContext } from "../../../context/useAuthContext";
-import type { AppRole } from "../../../context/authTypes";
+import type { ModelOrganization } from "../../../types/organizations.generated";
 
-type WorkspacePanelProps = {
-  roles: AppRole[];
-};
-
-function WorkspacePanel({ roles }: WorkspacePanelProps) {
+function WorkspacePanel() {
   const { session, activeWorkspaceId, setActiveWorkspace } = useAuthContext();
   const navigate = useNavigate();
-  const isSuperAdmin = roles.includes("SUPER_ADMIN");
 
-  const orgsQuery = useQuery({
-    queryKey: ["settings-workspace-orgs", session?.accessToken],
-    queryFn: () => listOrganizations(session?.accessToken),
+  const orgsQuery = useOrganizations(session?.accessToken, {
     enabled: Boolean(session?.accessToken),
   });
 
-  const handleActivate = (orgId: string) => {
-    setActiveWorkspace(orgId);
-    navigate(`/${orgId}/dashboard`, { replace: true });
+  const handleActivate = (workspaceId: string, org: ModelOrganization) => {
+    setActiveWorkspace(workspaceId, org);
+    navigate(`/${workspaceId}/dashboard`, { replace: true });
   };
 
   const orgs = orgsQuery.data ?? [];
-
-  const visibleOrgs = isSuperAdmin
-    ? orgs
-    : orgs.filter((o) => o.id === session?.facilityId);
 
   return (
     <div className="space-y-4">
@@ -50,19 +38,18 @@ function WorkspacePanel({ roles }: WorkspacePanelProps) {
 
       {!orgsQuery.isLoading && !orgsQuery.isError && (
         <ul className="grid gap-3">
-          {visibleOrgs.length === 0 && (
+          {orgs.length === 0 && (
             <p className="text-sm text-slate-500">No organisations found for your account.</p>
           )}
-          {visibleOrgs.map((org) => {
+
+          {orgs.map((org) => {
             const orgId = org.id ?? "";
             const isActive = orgId === activeWorkspaceId;
             return (
               <li
                 key={orgId}
                 className={`flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors ${
-                  isActive
-                    ? "border-emerald-300 bg-emerald-50"
-                    : "border-slate-200 bg-white"
+                  isActive ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
                 }`}
               >
                 <div className="min-w-0">
@@ -92,7 +79,7 @@ function WorkspacePanel({ roles }: WorkspacePanelProps) {
                     size="sm"
                     variant="outline"
                     className="shrink-0"
-                    onClick={() => handleActivate(orgId)}
+                    onClick={() => handleActivate(orgId, org)}
                   >
                     Set active
                   </Button>

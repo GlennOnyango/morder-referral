@@ -7,7 +7,7 @@ import { Input } from "../../components/ui/input";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { resendSignUpCode } from "../../auth";
-import { attachRoleFromInvite, getUser } from "../../api/authAdmin";
+import { attachRoleFromInvite, checkEmail } from "../../api/authAdmin";
 import { getAuthTokens } from "../../auth";
 import { signInSchema, type SignInFormValues } from "../../schemas/auth";
 
@@ -17,7 +17,7 @@ const TOGGLE_CLS =
 const SignInPage = () => {
   const [searchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
-  const { isAuthenticated, signIn, activeWorkspaceId } = useAuthContext();
+  const { isAuthenticated, signIn, activeWorkspaceId, session } = useAuthContext();
   const navigate = useNavigate();
   const inviteId = searchParams.get("inviteId")?.trim() ?? "";
 
@@ -31,7 +31,11 @@ const SignInPage = () => {
 
   const email = useWatch({ control, name: "email" });
 
-  if (isAuthenticated) return <Navigate to={activeWorkspaceId ? `/${activeWorkspaceId}/admin` : "/pending"} replace />;
+  if (isAuthenticated) {
+    if (!activeWorkspaceId) return <Navigate to="/pending" replace />;
+    const isSuperAdmin = session?.roles?.includes("SUPER_ADMIN") ?? false;
+    return <Navigate to={`/${activeWorkspaceId}/${isSuperAdmin ? "admin" : "dashboard"}`} replace />;
+  }
 
   const onSubmit = async (formValues: SignInFormValues) => {
     const parsed = signInSchema.safeParse(formValues);
@@ -62,15 +66,15 @@ const SignInPage = () => {
       // Navigation is handled by the render guard above once isAuthenticated + activeWorkspaceId update
     } catch (err) {
       try {
-        const user = await getUser(parsed.data.email);
+        const result = await checkEmail(parsed.data.email);
 
-        if (user?.UserStatus === "UNCONFIRMED") {
-          if (user?.Username) {
-            await resendSignUpCode(user.Username);
+        if (result.exists && !result.verified) {
+          if (result.username) {
+            await resendSignUpCode(result.username);
           }
           const params = new URLSearchParams({
             email: parsed.data.email,
-            username: user?.Username ?? parsed.data.email,
+            username: result.username ?? parsed.data.email,
           });
           if (inviteId) {
             params.set("inviteId", inviteId);
@@ -79,7 +83,7 @@ const SignInPage = () => {
           return;
         }
       } catch {
-        // getUser failed — fall through to show the original error
+        // checkEmail failed — fall through to show the original error
       }
       setError("root", {
         message: err instanceof Error ? err.message : "Failed to sign in",

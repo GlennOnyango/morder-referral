@@ -1,12 +1,13 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { getOrganizationById } from "../../api/organizations";
-import { getReferralByCode, getReferralHistoryByCode, listFacilityReferrals } from "../../api/referrals";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useFacilityReferrals } from "../../api/hooks/referrals/FacilityReferrals.hook";
+import { useReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
+import { useReferralHistory } from "../../api/hooks/referrals/ReferralHistory.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
@@ -47,7 +48,7 @@ function formatDateTime(value?: string): string {
   return parsed.toLocaleString();
 }
 
-function OrganizationFacilityReferralsPage() {
+function FacilityReferralsPage() {
   const { workspaceId: organizationId } = useWorkspace();
   const { session, isAuthenticated } = useAuthContext();
   const roles = session?.roles ?? [];
@@ -57,45 +58,25 @@ function OrganizationFacilityReferralsPage() {
   // const [facilityRoleFilter, setFacilityRoleFilter] = useState<FacilityRoleFilter>("all");
   const [selectedReferralCode, setSelectedReferralCode] = useState("");
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
   const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const facilityReferralsQuery = useQuery({
-    queryKey: [
-      "facility-referrals",
-      organizationId,
-      facilityCode,
-      facilityStatusFilter,
-      // facilityRoleFilter,
-      session?.accessToken,
-    ],
-    queryFn: () =>
-      listFacilityReferrals(
-        facilityCode,
-        {
-          status: facilityStatusFilter === "all" ? undefined : facilityStatusFilter,
-          // role: facilityRoleFilter === "all" ? undefined : facilityRoleFilter,
-        },
-        session?.accessToken,
-      ),
-    enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess,
-  });
+  const facilityReferralsQuery = useFacilityReferrals(
+    facilityCode,
+    { status: facilityStatusFilter === "all" ? undefined : facilityStatusFilter },
+    session?.accessToken,
+    { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess },
+  );
 
-  const referralDetailQuery = useQuery({
-    queryKey: ["referral-detail", selectedReferralCode, session?.accessToken],
-    queryFn: () => getReferralByCode(selectedReferralCode, session?.accessToken),
+  const referralDetailQuery = useReferralByCode(selectedReferralCode, session?.accessToken, {
     enabled: canManageReferrals && selectedReferralCode.length > 0 && hasFacilityAccess,
   });
 
-  const referralHistoryQuery = useQuery({
-    queryKey: ["referral-history", selectedReferralCode, session?.accessToken],
-    queryFn: () => getReferralHistoryByCode(selectedReferralCode, session?.accessToken),
+  const referralHistoryQuery = useReferralHistory(selectedReferralCode, session?.accessToken, {
     enabled: canManageReferrals && selectedReferralCode.length > 0 && hasFacilityAccess,
   });
 
@@ -328,4 +309,4 @@ function OrganizationFacilityReferralsPage() {
   );
 }
 
-export default OrganizationFacilityReferralsPage;
+export default FacilityReferralsPage;

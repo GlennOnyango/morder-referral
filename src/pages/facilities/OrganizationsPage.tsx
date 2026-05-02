@@ -1,9 +1,8 @@
 import { Button } from "../../components/ui/button";
-import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { listOrganizations } from "../../api/organizations";
+import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import {
@@ -115,9 +114,7 @@ function OrganizationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const facilitiesPerPage = 9;
 
-  const organizationsQuery = useQuery({
-    queryKey: ["organizations", session?.accessToken],
-    queryFn: () => listOrganizations(session?.accessToken),
+  const organizationsQuery = useOrganizations(session?.accessToken, {
     enabled: isAuthenticated && canManageOrganizations,
   });
   const countyOptionsQuery = useQuery({

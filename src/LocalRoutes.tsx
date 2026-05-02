@@ -7,7 +7,8 @@ import HomePage from "./pages/public/HomePage";
 import HowItWorksPage from "./pages/public/HowItWorksPage";
 import ConfirmSignUpPage from "./pages/auth/ConfirmSignUpPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import AcceptInvitePage from "./pages/auth/AcceptInvitePage";
+import AcceptInvitePage from "./pages/auth/registration/AcceptInvitePage";
+import RegisterPage from "./pages/auth/registration/RegisterPage";
 import SignInPage from "./pages/auth/SignInPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import OrganizationFormPage from "./pages/facilities/OrganizationFormPage";
@@ -15,12 +16,12 @@ import OrganizationServicesPage from "./pages/facilities/OrganizationServicesPag
 import OrganizationServiceFormPage from "./pages/facilities/OrganizationServiceFormPage";
 import OrganizationUsersPage from "./pages/facilities/OrganizationUsersPage";
 import OrganizationsPage from "./pages/facilities/OrganizationsPage";
-import OrganizationWorkspacePage from "./pages/facilities/OrganizationWorkspacePage";
+import OrganizationWorkspacePage from "./pages/organization/OrganizationWorkspacePage";
 import FacilityServicesPage from "./pages/facilities/FacilityServicesPage";
-import OrganizationCreateReferralPage from "./pages/referrals/OrganizationCreateReferralPage";
-import OrganizationFacilityReferralsPage from "./pages/referrals/OrganizationFacilityReferralsPage";
-import OrganizationPoolReferralDetailPage from "./pages/referrals/OrganizationPoolReferralDetailPage";
-import OrganizationReferralsPage from "./pages/referrals/OrganizationReferralsPage";
+import CreateReferralPage from "./pages/referrals/CreateReferralPage";
+import FacilityReferralsPage from "./pages/referrals/FacilityReferralsPage";
+import PoolReferralDetailPage from "./pages/referrals/PoolReferralDetailPage";
+import ReferralsPage from "./pages/referrals/ReferralsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import AdminPage from "./pages/admin/AdminPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -72,6 +73,7 @@ export default function LocalRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/invite/:inviteId" element={<AcceptInvitePage />} />
       <Route path="/invites/:inviteId/accept" element={<AcceptInvitePage />} />
+      <Route path="/invite/:inviteId/register" element={<RegisterPage />} />
 
       {/* ── No-workspace landing for authenticated users without an org ── */}
       <Route path="/pending" element={<PendingWorkspacePage />} />
@@ -100,7 +102,7 @@ export default function LocalRoutes() {
           path="referrals"
           element={
             <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-              <OrganizationReferralsPage />
+              <ReferralsPage />
             </ProtectedRoute>
           }
         />
@@ -108,7 +110,7 @@ export default function LocalRoutes() {
           path="referrals/create"
           element={
             <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-              <OrganizationCreateReferralPage />
+              <CreateReferralPage />
             </ProtectedRoute>
           }
         />
@@ -116,7 +118,7 @@ export default function LocalRoutes() {
           path="referrals/pool/:referralCode"
           element={
             <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-              <OrganizationPoolReferralDetailPage />
+              <PoolReferralDetailPage />
             </ProtectedRoute>
           }
         />
@@ -124,7 +126,7 @@ export default function LocalRoutes() {
           path="referrals/facility"
           element={
             <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-              <OrganizationFacilityReferralsPage />
+              <FacilityReferralsPage />
             </ProtectedRoute>
           }
         />

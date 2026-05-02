@@ -6,8 +6,18 @@ import { AuthContext } from "./authContextValue";
 import { buildAuthSession } from "./authSession";
 import { persistSession, readStoredSession } from "./authStorage";
 import type { AuthContextValue, AuthSession } from "./authTypes";
+import type { ModelOrganization } from "../types/organizations.generated";
+import { getOrganizationById } from "../api/organizations";
 
 const WORKSPACE_STORAGE_KEY = "refconnect.active.workspace";
+const WORKSPACE_DETAILS_KEY = "refconnect.active.workspace.details";
+
+function resolveWorkspace(stored: string | undefined, session: AuthSession | null): string | undefined {
+  if (stored) return stored;
+  if (session?.facilityId) return session.facilityId;
+  if (session?.roles?.includes("SUPER_ADMIN")) return "system";
+  return undefined;
+}
 
 const readStoredWorkspace = (): string | undefined => {
   try {
@@ -17,23 +27,45 @@ const readStoredWorkspace = (): string | undefined => {
   }
 };
 
+const readStoredWorkspaceDetails = (): ModelOrganization | null => {
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_DETAILS_KEY);
+    return raw ? (JSON.parse(raw) as ModelOrganization) : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearWorkspaceStorage = () => {
+  try {
+    window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    window.localStorage.removeItem(WORKSPACE_DETAILS_KEY);
+  } catch { /* ignore */ }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<AuthSession | null>(() => readStoredSession());
   const [storedWorkspaceId, setStoredWorkspaceId] = useState<string | undefined>(
     () => readStoredWorkspace(),
   );
+  const [activeWorkspace, setActiveWorkspaceDetails] = useState<ModelOrganization | null>(
+    () => readStoredWorkspaceDetails(),
+  );
 
-  const isSuperAdmin = session?.roles?.includes("SUPER_ADMIN") ?? false;
-  const activeWorkspaceId =
-    storedWorkspaceId ?? session?.facilityId ?? (isSuperAdmin ? "system" : undefined);
+  const activeWorkspaceId = resolveWorkspace(storedWorkspaceId, session);
 
-  const setActiveWorkspace = useCallback((id: string) => {
+  const setActiveWorkspace = useCallback((id: string, workspace?: ModelOrganization | null) => {
+    const details = workspace ?? null;
     setStoredWorkspaceId(id);
+    setActiveWorkspaceDetails(details);
     try {
       window.localStorage.setItem(WORKSPACE_STORAGE_KEY, id);
-    } catch {
-      // ignore
-    }
+      if (details) {
+        window.localStorage.setItem(WORKSPACE_DETAILS_KEY, JSON.stringify(details));
+      } else {
+        window.localStorage.removeItem(WORKSPACE_DETAILS_KEY);
+      }
+    } catch { /* ignore */ }
   }, []);
 
   const saveSession = useCallback((nextSession: AuthSession | null) => {
@@ -59,7 +91,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Clear any stale workspace from a previous user's session before saving
     setStoredWorkspaceId(undefined);
-    try { window.localStorage.removeItem(WORKSPACE_STORAGE_KEY); } catch { /* ignore */ }
+    setActiveWorkspaceDetails(null);
+    clearWorkspaceStorage();
 
     saveSession(nextSession);
     return result;
@@ -71,13 +104,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       saveSession(null);
       setStoredWorkspaceId(undefined);
-      try { window.localStorage.removeItem(WORKSPACE_STORAGE_KEY); } catch { /* ignore */ }
+      setActiveWorkspaceDetails(null);
+      clearWorkspaceStorage();
+      window.location.replace("/signin");
     }
   }, [saveSession]);
 
   useEffect(() => {
     void refreshSession();
   }, [refreshSession]);
+
+  useEffect(() => {
+    if (!activeWorkspaceId || activeWorkspaceId === "system" || activeWorkspace || !session?.accessToken) {
+      return;
+    }
+    getOrganizationById(activeWorkspaceId, session.accessToken)
+      .then((org) => {
+        setActiveWorkspaceDetails(org);
+        try {
+          window.localStorage.setItem(WORKSPACE_DETAILS_KEY, JSON.stringify(org));
+        } catch { /* ignore */ }
+      })
+      .catch(() => { /* silently ignore — sidebar falls back to truncated ID */ });
+  }, [activeWorkspaceId, activeWorkspace, session?.accessToken]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -106,12 +155,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       session,
       isAuthenticated: Boolean(session?.accessToken),
       activeWorkspaceId,
+      activeWorkspace,
       setActiveWorkspace,
       signIn,
       logout,
       refreshSession,
     }),
-    [activeWorkspaceId, logout, refreshSession, session, setActiveWorkspace, signIn],
+    [activeWorkspace, activeWorkspaceId, logout, refreshSession, session, setActiveWorkspace, signIn],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

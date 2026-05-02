@@ -16,6 +16,12 @@ export interface DtoAcceptInviteResponse {
   success?: boolean;
 }
 
+export interface DtoCheckEmailResponse {
+  exists?: boolean;
+  username?: string;
+  verified?: boolean;
+}
+
 export interface DtoAttachRoleResponse {
   message?: string;
   success?: boolean;

@@ -4,15 +4,13 @@ type ProfilePanelProps = {
   email: string | undefined;
   roles: AppRole[];
   facilityId: string | undefined;
-  staffFacilityCode: string;
 };
 
-const ProfilePanel = ({ email, roles, facilityId, staffFacilityCode }: ProfilePanelProps) => {
+const ProfilePanel = ({ email, roles, facilityId }: ProfilePanelProps) => {
   const items = [
     { label: "Email", value: email ?? "Unknown user" },
     { label: "Roles", value: roles.length > 0 ? roles.join(", ") : "UNASSIGNED" },
     { label: "Session facility ID", value: facilityId ?? "Not assigned" },
-    { label: "Resolved facility code", value: staffFacilityCode || "Not resolved" },
   ];
 
   return (

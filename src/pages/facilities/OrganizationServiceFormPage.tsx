@@ -1,18 +1,16 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import type { SetStateAction, SubmitEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { getOrganizationById } from "../../api/organizations";
-import {
-  createOrganizationService,
-  listOrganizationServices,
-  updateServiceById,
-  type ServiceUpsertInput,
-} from "../../api/services";
+import { type ServiceUpsertInput } from "../../api/services";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
+import { useUpdateService } from "../../api/hooks/services/UpdateService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import type { ModelService as Service } from "../../types/organizations.generated";
@@ -94,15 +92,11 @@ function OrganizationServiceFormPage() {
   });
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
-  const servicesQuery = useQuery({
-    queryKey: ["organizations", organizationId, "services", session?.accessToken],
-    queryFn: () => listOrganizationServices(organizationId, session?.accessToken),
+  const servicesQuery = useOrganizationServices(organizationId, session?.accessToken, {
     enabled:
       isEdit &&
       canManageOrganizations &&
@@ -136,26 +130,18 @@ function OrganizationServiceFormPage() {
     navigate(`/${organizationId}/services`, { replace: true });
   };
 
-  const createMutation = useMutation({
-    mutationFn: (payload: ServiceUpsertInput) =>
-      createOrganizationService(organizationId, payload, session?.accessToken),
+  const createMutation = useCreateOrganizationService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["organizations", organizationId, "services"],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigateToServicesTable();
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (payload: ServiceUpsertInput) =>
-      updateServiceById(serviceId!, payload, session?.accessToken),
+  const updateMutation = useUpdateService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["organizations", organizationId, "services"],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigateToServicesTable();
     },
   });
@@ -174,11 +160,11 @@ function OrganizationServiceFormPage() {
     }
 
     if (isEdit) {
-      updateMutation.mutate(payload);
+      updateMutation.mutate({ serviceId: serviceId!, payload });
       return;
     }
 
-    createMutation.mutate(payload);
+    createMutation.mutate({ organizationId, payload });
   };
 
   if (!isAuthenticated) {

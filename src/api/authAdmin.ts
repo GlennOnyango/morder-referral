@@ -1,15 +1,17 @@
 import type {
   DtoAcceptInviteResponse,
   DtoAttachRoleResponse,
+  DtoCheckEmailResponse,
   DtoCreateInviteRequest,
   DtoInviteResponse,
   DtoUserOrganizationMappingResponse,
 } from "../types/auth.generated";
 import { createApiClient } from "./httpClient";
 
-type CognitoUser = {
-  Username?: string;
-  UserStatus?: string;
+export type CheckEmailResult = {
+  exists: boolean;
+  verified: boolean;
+  username?: string;
 };
 
 
@@ -31,13 +33,9 @@ const DISABLE_USER_PATH =
 const DELETE_USER_PATH =
   (import.meta.env.VITE_AUTH_DELETE_USER_PATH as string | undefined) ??
   "/delete-user";
-const GET_USER_PATH =
-  (import.meta.env.VITE_AUTH_GET_USER_PATH as string | undefined) ??
-  "/get-user";
-const INVITE_USER_PATH =
-  (import.meta.env.VITE_AUTH_INVITE_USER_PATH as string | undefined) ??
-  "/invite-user";
-
+const CHECK_EMAIL_PATH =
+  (import.meta.env.VITE_AUTH_CHECK_EMAIL_PATH as string | undefined) ??
+  "/check-email";
 const authAdminApi = createApiClient(AUTHENTICATION_BASE_URL);
 
 function authHeaders(accessToken?: string) {
@@ -363,21 +361,21 @@ export async function deleteUser(
   return response.data;
 }
 
-export async function getUser(email: string): Promise<CognitoUser | null> {
-  const response = await authAdminApi.get<{ Users?: CognitoUser[] }>(GET_USER_PATH, {
-    params: { email },
+export async function checkEmail(email: string): Promise<CheckEmailResult> {
+  const response = await authAdminApi.get<DtoCheckEmailResponse>(CHECK_EMAIL_PATH, {
+    params: { email: email.trim() },
   });
 
-  return response.data.Users?.[0] ?? null;
-}
+  const data = response.data;
+  if (typeof data.exists === "boolean") {
+    return {
+      exists: data.exists,
+      verified: data.verified ?? false,
+      username: data.username,
+    };
+  }
 
-export async function inviteUser(
-  input: { email: string; facility_code: string; groupName: AuthGroupName },
-  accessToken?: string,
-): Promise<void> {
-  await authAdminApi.post(INVITE_USER_PATH, input, {
-    headers: authHeaders(accessToken),
-  });
+  return { exists: false, verified: false };
 }
 
 export async function createInvite(
@@ -442,6 +440,16 @@ export async function listOrganizationMembers(
       params: { organizationId },
       headers: authHeaders(accessToken),
     },
+  );
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function listUserOrganizations(
+  accessToken?: string,
+): Promise<DtoUserOrganizationMappingResponse[]> {
+  const response = await authAdminApi.get<DtoUserOrganizationMappingResponse[]>(
+    "/me/organizations",
+    { headers: authHeaders(accessToken) },
   );
   return Array.isArray(response.data) ? response.data : [];
 }

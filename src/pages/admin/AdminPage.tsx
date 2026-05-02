@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -14,28 +14,17 @@ import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
-  attachRoleToUser,
-  createInvite,
-  FACILITY_USER_GROUP_FILTERS,
-  listFacilityUsers,
-  listOrganizationMembers,
-  listPendingInvites,
-  type AuthGroupName,
-  type AuthUser,
-  type FacilityUserGroupFilter,
-} from "../../api/authAdmin";
-import {
-  createOrganization,
-  getOrganizationById,
-  listOrganizations,
-  type OrganizationCreateInput,
-} from "../../api/organizations";
-import {
-  createOrganizationService,
-  deleteServiceById,
-  listOrganizationServices,
   type ServiceUpsertInput,
 } from "../../api/services";
+import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useCreateOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
+import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
+import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
+import { usePendingInvites } from "../../api/hooks/authentication/PendingInvites.hook";
+import { useOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
+import { useCreateInvite } from "../../api/hooks/authentication/CreateInvite.hook";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -161,12 +150,10 @@ function CreateFacilityDialog({
   const [form, setForm] = useState<OrgFormState>(defaultOrgForm);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const createMutation = useMutation({
-    mutationFn: (payload: OrganizationCreateInput) =>
-      createOrganization(payload, session?.accessToken),
+  const createMutation = useCreateOrganization(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["organizations", "list", session?.accessToken] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard", session?.accessToken] });
       setForm(defaultOrgForm);
       setValidationError(null);
       onClose();
@@ -323,12 +310,10 @@ function CreateServiceProviderDialog({
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
 
-  const createMutation = useMutation({
-    mutationFn: (payload: OrganizationCreateInput) =>
-      createOrganization(payload, session?.accessToken),
+  const createMutation = useCreateOrganization(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["organizations", "list", session?.accessToken] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard", session?.accessToken] });
       setName("");
       onClose();
     },
@@ -385,29 +370,8 @@ function CreateServiceProviderDialog({
 }
 
 /* ─────────────────────────────────────────────
-   User role helpers
-───────────────────────────────────────────── */
-
-function inferDefaultGroup(user: AuthUser): AuthGroupName {
-  const groups = user.groups.map((g) => g.trim().toUpperCase());
-  if (groups.includes("HOSPITAL_ADMIN")) return "HOSPITAL_ADMIN";
-  if (groups.includes("DOCTOR")) return "DOCTOR";
-  return "NURSE";
-}
-
-const GROUP_FILTER_LABELS: Record<FacilityUserGroupFilter, string> = {
-  none: "None",
-  all: "All",
-  hospital_admin: "Hospital Admin",
-  doctor: "Doctor",
-  nurse: "Nurse",
-};
-
-/* ─────────────────────────────────────────────
    Main AdminPage
 ───────────────────────────────────────────── */
-
-type AdminTab = "organizations" | "users";
 
 const defaultAddServiceForm: ServiceUpsertInput = {
   service_name: "",
@@ -422,7 +386,6 @@ function AdminPage() {
   const isSuperAdmin = roles.includes("SUPER_ADMIN");
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<AdminTab>("organizations");
   const [createModal, setCreateModal] = useState<null | "facility" | "service">(null);
   const [selectedOrg, setSelectedOrg] = useState<OrgRow | null>(null);
   const [orgDetailTab, setOrgDetailTab] = useState<OrgDetailTab>("details");
@@ -440,11 +403,6 @@ function AdminPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  // ── User roles state ──
-  const [selectedGroupByUsername, setSelectedGroupByUsername] = useState<Record<string, AuthGroupName>>({});
-  const [selectedUserGroupFilter, setSelectedUserGroupFilter] = useState<FacilityUserGroupFilter>("none");
-  const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
-
   // ── County data ──
   const countyOptionsQuery = useQuery({
     queryKey: ["kenya-administrative-units"],
@@ -457,88 +415,64 @@ function AdminPage() {
   });
 
   // ── Organizations query ──
-  const orgsQuery = useQuery({
-    queryKey: ["organizations", session?.accessToken],
-    queryFn: () => listOrganizations(session?.accessToken),
+  const orgsQuery = useOrganizations(session?.accessToken, {
     enabled: isAuthenticated && isSuperAdmin,
   });
 
-  // ── Users query ──
-  const usersQuery = useQuery({
-    queryKey: ["auth-users", session?.accessToken, session?.facilityId, selectedUserGroupFilter],
-    queryFn: () =>
-      listFacilityUsers(session?.facilityId ?? "", selectedUserGroupFilter, session?.accessToken),
-    enabled: isAuthenticated && isSuperAdmin && Boolean(session?.facilityId) && activeTab === "users",
-  });
-
-  const attachRoleMutation = useMutation({
-    mutationFn: ({ username, groupName }: { username: string; groupName: AuthGroupName }) =>
-      attachRoleToUser({ username, groupName }, session?.accessToken),
-    onSuccess: async (_data, variables) => {
-      setLastActionMessage(`Updated ${variables.username} to ${variables.groupName}.`);
-      await queryClient.invalidateQueries({ queryKey: ["auth-users"] });
-    },
-  });
-
   // ── Org detail queries ──
-  const orgDetailQuery = useQuery({
-    queryKey: ["admin-org-detail", selectedOrg?.id, session?.accessToken],
-    queryFn: () => getOrganizationById(selectedOrg!.id, session?.accessToken),
-    enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id),
-    staleTime: 5 * 60 * 1000,
-  });
+  const orgDetailQuery = useOrganizationById(
+    selectedOrg?.id ?? "",
+    session?.accessToken,
+    {
+      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id),
+      staleTime: 5 * 60 * 1000,
+    },
+  );
 
-  const orgServicesQuery = useQuery({
-    queryKey: ["admin-org-services", selectedOrg?.id, session?.accessToken],
-    queryFn: () => listOrganizationServices(selectedOrg!.id, session?.accessToken),
-    enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id),
-  });
+  const orgServicesQuery = useOrganizationServices(
+    selectedOrg?.id ?? "",
+    session?.accessToken,
+    {
+      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id),
+    },
+  );
 
-  const pendingInvitesQuery = useQuery({
-    queryKey: ["admin-org-invites", selectedOrg?.id, session?.accessToken],
-    queryFn: () => listPendingInvites(selectedOrg!.id, session?.accessToken),
-    enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id) && orgDetailTab === "team",
-  });
+  const pendingInvitesQuery = usePendingInvites(
+    selectedOrg?.id ?? "",
+    session?.accessToken,
+    {
+      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id) && orgDetailTab === "team",
+    },
+  );
 
-  const orgMembersQuery = useQuery({
-    queryKey: ["admin-org-members", selectedOrg?.id, session?.accessToken],
-    queryFn: () => listOrganizationMembers(selectedOrg!.id, session?.accessToken),
-    enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id) && orgDetailTab === "team",
-  });
+  const orgMembersQuery = useOrganizationMembers(
+    selectedOrg?.id ?? "",
+    session?.accessToken,
+    {
+      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id) && orgDetailTab === "team",
+    },
+  );
 
   // ── Org detail mutations ──
-  const addServiceMutation = useMutation({
-    mutationFn: (payload: ServiceUpsertInput) =>
-      createOrganizationService(selectedOrg!.id, payload, session?.accessToken),
+  const addServiceMutation = useCreateOrganizationService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["admin-org-services", selectedOrg?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", selectedOrg?.id, session?.accessToken] });
       setAddServiceForm(defaultAddServiceForm);
       setShowAddService(false);
     },
   });
 
-  const deleteServiceMutation = useMutation({
-    mutationFn: (serviceId: string) => deleteServiceById(serviceId, session?.accessToken),
+  const deleteServiceMutation = useDeleteService(session?.accessToken, {
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin-org-services", selectedOrg?.id] }),
+      queryClient.invalidateQueries({ queryKey: ["services", "list", selectedOrg?.id, session?.accessToken] }),
   });
 
-  const inviteMutation = useMutation({
-    mutationFn: () =>
-      createInvite(
-        {
-          organizationId: selectedOrg!.id,
-          organizationName: selectedOrg!.name,
-          roleName: inviteRole,
-          targetEmail: inviteEmail.trim(),
-        },
-        session?.accessToken,
-      ),
+  const inviteMutation = useCreateInvite(session?.accessToken, {
     onSuccess: async () => {
       setInviteSuccess(`Invite sent to ${inviteEmail.trim()}.`);
       setInviteEmail("");
       setInviteRole("HOSPITAL_ADMIN");
-      await queryClient.invalidateQueries({ queryKey: ["admin-org-invites", selectedOrg?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["invites", "pending", selectedOrg?.id, session?.accessToken] });
     },
   });
 
@@ -650,14 +584,6 @@ function AdminPage() {
     });
   };
 
-  const resolveSelectedRole = (user: AuthUser): AuthGroupName =>
-    selectedGroupByUsername[user.username] ?? inferDefaultGroup(user);
-
-  const handleAttachRole = (user: AuthUser) => {
-    setLastActionMessage(null);
-    attachRoleMutation.mutate({ username: user.username, groupName: resolveSelectedRole(user) });
-  };
-
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
   if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -672,7 +598,7 @@ function AdminPage() {
           <h1>Admin Console</h1>
           <p>Manage organizations, service providers, and user access roles.</p>
         </div>
-        {activeTab === "organizations" && !selectedOrg && (
+        {!selectedOrg && (
           <div className="org-actions">
             <button
               type="button"
@@ -720,36 +646,13 @@ function AdminPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Top-level tab switcher — hidden in org detail view */}
-      {!selectedOrg && (
-        <div className="inline-flex gap-1 rounded-xl border border-[rgba(10,45,55,0.13)] bg-[rgba(255,255,255,0.7)] p-1">
-          {(["organizations", "users"] as AdminTab[]).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold capitalize transition-all ${
-                activeTab === tab
-                  ? "bg-white shadow-sm text-[#0a5240]"
-                  : "text-[#4a6373] hover:text-[#0a5240]"
-              }`}
-            >
-              {tab === "organizations" ? "Organizations" : "User Roles"}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* ══════════════════════════════════════
           CONFIGURE ORGANISATION (tabbed detail)
       ══════════════════════════════════════ */}
-      {activeTab === "organizations" && selectedOrg && (
+      {selectedOrg && (
         <article className="org-table-card">
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
-            <button type="button" className="btn btn-ghost org-btn" onClick={() => setSelectedOrg(null)}>
-              ← Back
-            </button>
             <div>
               <h2 className="text-lg font-bold text-slate-800">{selectedOrg.name}</h2>
               <OrgTypeBadge type={selectedOrg.organization_type} />
@@ -856,10 +759,13 @@ function AdminPage() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     addServiceMutation.mutate({
-                      service_name: addServiceForm.service_name?.trim() ?? "",
-                      service_type: addServiceForm.service_type?.trim() ?? "",
-                      availability: addServiceForm.availability,
-                      notes: addServiceForm.notes?.trim() ?? "",
+                      organizationId: selectedOrg!.id,
+                      payload: {
+                        service_name: addServiceForm.service_name?.trim() ?? "",
+                        service_type: addServiceForm.service_type?.trim() ?? "",
+                        availability: addServiceForm.availability,
+                        notes: addServiceForm.notes?.trim() ?? "",
+                      },
                     });
                   }}
                 >
@@ -989,11 +895,16 @@ function AdminPage() {
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Invite User</h3>
                 <form
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 grid gap-3 max-w-lg"
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 grid grid-cols-3 gap-3 w-full"
                   onSubmit={(e) => {
                     e.preventDefault();
                     setInviteSuccess(null);
-                    inviteMutation.mutate();
+                    inviteMutation.mutate({
+                      organizationId: selectedOrg!.id,
+                      organizationName: selectedOrg!.name,
+                      roleName: inviteRole,
+                      targetEmail: inviteEmail.trim(),
+                    });
                   }}
                 >
                   <label className="field">
@@ -1018,17 +929,17 @@ function AdminPage() {
                       </SelectContent>
                     </Select>
                   </label>
+                  <div className="flex items-end">
+                    <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
+                      {inviteMutation.isPending ? "Sending…" : "Send Invite"}
+                    </Button>
+                  </div>
                   {inviteMutation.isError && (
                     <p className="text-sm text-destructive">{formatError(inviteMutation.error)}</p>
                   )}
                   {inviteSuccess && (
                     <p className="text-sm font-semibold text-emerald-700">{inviteSuccess}</p>
                   )}
-                  <div className="flex justify-end">
-                    <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
-                      {inviteMutation.isPending ? "Sending…" : "Send Invite"}
-                    </Button>
-                  </div>
                 </form>
               </div>
 
@@ -1129,7 +1040,7 @@ function AdminPage() {
       {/* ══════════════════════════════════════
           ORGANIZATIONS TABLE
       ══════════════════════════════════════ */}
-      {activeTab === "organizations" && !selectedOrg && (
+      {!selectedOrg && (
         <article className="org-table-card">
           <div className="org-table-tools referrals-table-tools mb-3">
             <div className="flex items-center gap-2 flex-wrap">
@@ -1224,118 +1135,6 @@ function AdminPage() {
                 </div>
               </div>
             </>
-          )}
-        </article>
-      )}
-
-      {/* ══════════════════════════════════════
-          USER ROLES TAB
-      ══════════════════════════════════════ */}
-      {activeTab === "users" && (
-        <article className="org-table-card">
-          <div className="org-table-tools mb-3">
-            <label className="org-filter-control">
-              Group filter
-              <Select
-                value={selectedUserGroupFilter}
-                onValueChange={(v) => setSelectedUserGroupFilter(v as FacilityUserGroupFilter)}
-              >
-                <SelectTrigger className="org-filter-select"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FACILITY_USER_GROUP_FILTERS.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {GROUP_FILTER_LABELS[g]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-          </div>
-
-          {!session?.facilityId && (
-            <article className="access-note error-block">
-              <h2>Missing facility ID</h2>
-              <p>Could not resolve `facility_id` from your session token.</p>
-            </article>
-          )}
-
-          {usersQuery.isLoading && (
-            <article className="access-note">
-              <h2>Loading users</h2>
-              <p>Fetching users from the authentication service…</p>
-            </article>
-          )}
-          {usersQuery.isError && (
-            <article className="access-note error-block">
-              <h2>Could not load users</h2>
-              <p>{formatError(usersQuery.error)}</p>
-            </article>
-          )}
-
-          {usersQuery.data && (
-            <div className="org-table-wrap">
-              {usersQuery.data.length === 0 ? (
-                <p className="org-empty">No users found.</p>
-              ) : (
-                <table className="org-table">
-                  <thead>
-                    <tr>
-                      <th>Username</th>
-                      <th>Email</th>
-                      <th>Status</th>
-                      <th>Current Groups</th>
-                      <th>Assign Role</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {usersQuery.data.map((user) => (
-                      <tr key={user.username}>
-                        <td>{user.username}</td>
-                        <td>{user.email ?? "—"}</td>
-                        <td>{user.status ?? (user.enabled ? "ENABLED" : "—")}</td>
-                        <td>{user.groups.length > 0 ? user.groups.join(", ") : "—"}</td>
-                        <td>
-                          <Select
-                            value={resolveSelectedRole(user)}
-                            onValueChange={(v) =>
-                              setSelectedGroupByUsername((prev) => ({
-                                ...prev,
-                                [user.username]: v as AuthGroupName,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="user-role-select"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="HOSPITAL_ADMIN">HOSPITAL_ADMIN</SelectItem>
-                              <SelectItem value="DOCTOR">DOCTOR</SelectItem>
-                              <SelectItem value="NURSE">NURSE</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td>
-                          <Button
-                            type="button"
-                            className="btn btn-primary org-btn"
-                            disabled={attachRoleMutation.isPending}
-                            onClick={() => handleAttachRole(user)}
-                          >
-                            Attach
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {attachRoleMutation.isError && (
-            <p className="result-note error-note">{formatError(attachRoleMutation.error)}</p>
-          )}
-          {lastActionMessage && (
-            <p className="result-note success-note">{lastActionMessage}</p>
           )}
         </article>
       )}
