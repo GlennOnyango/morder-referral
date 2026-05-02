@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "serve -s dist -l $PORT",
-    "generate:types": "npx swagger-typescript-api generate --path swagger-doc.json --output src/types --name api.generated.ts",
+    "generate:notifactions:types": "npx swagger-typescript-api generate --path https://nrs-notifications-production.up.railway.app/swagger/doc.json --output src/types --name notifications.generated.ts",
+    "generate:organizations:types": "npx swagger-typescript-api generate --path https://nrs-organizations-production.up.railway.app/swagger/doc.json --output src/types --name organizations.generated.ts",
     "generate:referral:types": "npx swagger-typescript-api generate --path https://nrs-referrals-production.up.railway.app/swagger/doc.json --output src/types --name referrals.generated.ts",
     "generate:auth:types": "npx swagger-typescript-api generate --path https://nrs-authentication-production.up.railway.app/swagger/doc.json --output src/types --name auth.generated.ts"
   },

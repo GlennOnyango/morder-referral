@@ -13,9 +13,7 @@ import {
   X,
   Stethoscope,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { useAuthContext } from "../context/useAuthContext";
-import { getOrganizationById } from "../api/organizations";
 import type { AppRole } from "../context/authTypes";
 
 type NavItem = {
@@ -61,7 +59,8 @@ const NAV_ITEMS: NavItem[] = [
     icon: Building2,
     allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
     end: true,
-    getPath: (w, isSuperAdmin) => (isSuperAdmin ? `/${w}/organizations` : `/${w}/organization`),
+    getPath: (w, isSuperAdmin) =>
+      isSuperAdmin ? `/${w}/organizations` : `/${w}/organization`,
   },
   {
     label: "Admin",
@@ -87,7 +86,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function AppSidebar() {
-  const { session, logout, activeWorkspaceId } = useAuthContext();
+  const { session, logout, activeWorkspaceId, activeWorkspace } =
+    useAuthContext();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const roles = session?.roles ?? [];
@@ -96,26 +96,14 @@ export default function AppSidebar() {
   const avatarLetter = email.charAt(0).toUpperCase() || "U";
   const displayName = email.split("@")[0] || "User";
   const workspaceId = activeWorkspaceId ?? "";
-  const orgLabel = workspaceId
-    ? workspaceId.slice(0, 8).toUpperCase()
-    : isSuperAdmin
-      ? "SYSTEM"
-      : "ORG";
+  const orgLabel =
+    activeWorkspace?.name ?? (workspaceId.slice(0, 8).toUpperCase() || "ORG");
 
-  const orgQuery = useQuery({
-    queryKey: ["org-sidebar", workspaceId, session?.accessToken],
-    queryFn: () => getOrganizationById(workspaceId, session?.accessToken),
-    enabled: Boolean(workspaceId) && Boolean(session?.accessToken),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Treat org as facility when type is "facility" or not explicitly set
-  const isFacilityOrg =
-    !orgQuery.data ||
-    (orgQuery.data as Record<string, unknown>).organization_type !== "service";
+  const isFacilityOrg = activeWorkspace?.organization_type !== "service";
 
   const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.allowedRoles && !item.allowedRoles.some((r) => roles.includes(r))) return false;
+    if (item.allowedRoles && !item.allowedRoles.some((r) => roles.includes(r)))
+      return false;
     if (item.showWhen && !item.showWhen({ isFacilityOrg })) return false;
     return true;
   });
@@ -135,7 +123,9 @@ export default function AppSidebar() {
       <nav className="sidebar-nav" aria-label="Main navigation">
         {visibleItems.map((item) => {
           const Icon = item.icon;
-          const path = workspaceId ? item.getPath(workspaceId, isSuperAdmin) : "/dashboard";
+          const path = workspaceId
+            ? item.getPath(workspaceId, isSuperAdmin)
+            : "/dashboard";
           return (
             <NavLink
               key={item.label}
@@ -187,9 +177,7 @@ export default function AppSidebar() {
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {mobileOpen && (
-        <div className="sidebar-overlay" onClick={closeMobile} />
-      )}
+      {mobileOpen && <div className="sidebar-overlay" onClick={closeMobile} />}
 
       <div className={`sidebar-wrap${mobileOpen ? " sidebar-wrap--open" : ""}`}>
         {sidebarContent}

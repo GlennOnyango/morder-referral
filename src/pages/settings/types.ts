@@ -18,7 +18,7 @@ export type SettingsState = {
   aiReviewEnabled: boolean;
 };
 
-export type ActivePanel = "profile" | "permissions" | "workflow" | "staff" | "workspace";
+export type ActivePanel = "profile" | "permissions" | "workflow" | "workspace";
 
 export type MutationInfo = {
   isPending: boolean;
@@ -79,5 +79,4 @@ export const NAV_ITEMS = [
   { id: "workspace" as const, label: "Workspace" },
   { id: "permissions" as const, label: "Permissions matrix" },
   { id: "workflow" as const, label: "Workflow and AI" },
-  { id: "staff" as const, label: "Staff management" },
 ];

@@ -1,16 +1,12 @@
-import { Button } from "../../components/ui/button";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "./ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useWorkspace } from "../../context/WorkspaceContext";
-import { getOrganizationById } from "../../api/organizations";
-import { listReferralPool, streamReferralSummaryByCode } from "../../api/referrals";
-import Breadcrumbs from "../../components/Breadcrumbs";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { useAuthContext } from "../../context/useAuthContext";
-import type { ModelsReferral } from "../../types/referrals.generated";
-import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
+import { useNavigate } from "react-router-dom";
+import { useReferralPool } from "../api/hooks/referrals/ReferralPool.hook";
+import { useSummarizeReferral } from "../api/hooks/referrals/SummarizeReferral.hook";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import type { ModelsReferral } from "../types/referrals.generated";
 
 const DEFAULT_POOL_PAGE_SIZE = 10;
 
@@ -19,41 +15,38 @@ function formatError(error: unknown): string {
     const payload = error.response?.data;
     if (payload && typeof payload === "object" && "message" in payload) {
       const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
+      if (typeof value === "string") return value;
     }
-
     return error.message;
   }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
+  if (error instanceof Error) return error.message;
   return "Request failed. Please try again.";
 }
 
 function formatDateTime(value?: string): string {
-  if (!value) {
-    return "-";
-  }
-
+  if (!value) return "-";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
+  if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleString();
 }
 
-function OrganizationReferralsPage() {
-  const { workspaceId: organizationId } = useWorkspace();
+interface ReferralPoolProps {
+  organizationId: string;
+  facilityCode: string;
+  hasFacilityAccess: boolean;
+  accessToken: string | undefined;
+  canManageReferrals: boolean;
+}
+
+function ReferralPool({
+  organizationId,
+  facilityCode,
+  hasFacilityAccess,
+  accessToken,
+  canManageReferrals,
+}: ReferralPoolProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
-  const canManageReferrals = isFacilityManager(roles);
 
   const [poolSearchTerm, setPoolSearchTerm] = useState("");
   const [debouncedPoolSearchTerm, setDebouncedPoolSearchTerm] = useState("");
@@ -66,73 +59,39 @@ function OrganizationReferralsPage() {
   const [poolSummary, setPoolSummary] = useState("");
   const poolPageSize = DEFAULT_POOL_PAGE_SIZE;
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
-    enabled: canManageReferrals && organizationId.length > 0,
-  });
-
-  const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
-  const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
-
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedPoolSearchTerm(poolSearchTerm.trim());
     }, 350);
-
     return () => window.clearTimeout(timeoutId);
   }, [poolSearchTerm]);
 
   const poolOffset = poolPage * poolPageSize;
 
-  const poolReferralsQuery = useQuery({
-    queryKey: [
-      "referral-pool",
-      organizationId,
-      debouncedPoolSearchTerm,
-      poolPageSize,
-      poolOffset,
-      session?.accessToken,
-    ],
-    queryFn: () =>
-      listReferralPool(
-        {
-          query: debouncedPoolSearchTerm || undefined,
-          limit: poolPageSize,
-          offset: poolOffset,
-        },
-        session?.accessToken,
-      ),
-    enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess,
-  });
+  const poolReferralsQuery = useReferralPool(
+    { query: debouncedPoolSearchTerm || undefined, limit: poolPageSize, offset: poolOffset },
+    accessToken,
+    { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess && Boolean(accessToken) },
+  );
 
-  const poolReferrals = poolReferralsQuery.data ?? [];
+  const poolReferrals = poolReferralsQuery?.data ?? [];
+
   const hasNextPoolPage = poolReferrals.length === poolPageSize;
   const isSearchSettling = poolSearchTerm.trim() !== debouncedPoolSearchTerm;
 
-  const summarizeReferralMutation = useMutation({
-    mutationFn: (code: string) =>
-      streamReferralSummaryByCode(
-        code,
-        (chunk) => {
-          setPoolSummary((currentSummary) => `${currentSummary}${chunk}`);
-        },
-        session?.accessToken,
-      ),
-    onMutate: () => {
-      setPoolSummary("");
-    },
+  const summarizeReferralMutation = useSummarizeReferral(accessToken, {
+    onMutate: () => { setPoolSummary(""); },
   });
 
   const openSummaryDialog = (referral: ModelsReferral) => {
     const code = referral.referralCode?.trim() ?? "";
-    if (!code) {
-      return;
-    }
-
+    if (!code) return;
     setSummaryDialogCollapsed(false);
     setSummaryDialogReferral(referral);
-    summarizeReferralMutation.mutate(code);
+    summarizeReferralMutation.mutate({
+      referralCode: code,
+      onChunk: (chunk) => setPoolSummary((s) => `${s}${chunk}`),
+    });
   };
 
   const closeSummaryDialog = () => {
@@ -160,7 +119,6 @@ function OrganizationReferralsPage() {
     setPoolSearchTerm(normalizedQuery);
     setDebouncedPoolSearchTerm(normalizedQuery);
     closeAiSearchDialog();
-
     setIsAiSearchSubmitting(true);
     try {
       await queryClient.invalidateQueries({
@@ -172,69 +130,8 @@ function OrganizationReferralsPage() {
     }
   };
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (!canManageReferrals) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (!organizationId) {
-    return <Navigate to="/facilities" replace />;
-  }
-
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
-  const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
-
   return (
-    <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Referrals</p>
-          <h1>
-            Referrals: {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
-          </h1>
-          <p>Use the explicit referral workflow pages to create and manage facility referrals.</p>
-        </div>
-        <div className="org-actions referrals-page-actions">
-          <Link className="btn btn-primary org-btn referrals-page-btn" to={`/${organizationId}/referrals/create`}>
-            Create Referral
-          </Link>
-          <Link className="btn btn-ghost org-btn referrals-page-btn" to={`/${organizationId}/referrals/facility`}>
-            View Facility Referrals
-          </Link>
-        </div>
-      </div>
-
-      <Breadcrumbs
-        items={[
-          { label: facilityName, to: `/${organizationId}/organization` },
-          { label: "Referrals" },
-        ]}
-      />
-
-      {organizationQuery.isError ? (
-        <article className="access-note error-block">
-          <h2>Could not load facility</h2>
-          <p>{formatError(organizationQuery.error)}</p>
-        </article>
-      ) : null}
-
-      {organizationQuery.data && !facilityCode ? (
-        <article className="access-note error-block">
-          <h2>Missing facility code</h2>
-          <p>This facility does not have a facility code, so referrals cannot be scoped correctly.</p>
-        </article>
-      ) : null}
-
+    <>
       <article className="org-table-card">
         <h2 className="referrals-pool-title">Referral Pool</h2>
         <p className="org-section-note referrals-pool-subtext">
@@ -350,11 +247,7 @@ function OrganizationReferralsPage() {
                       <Button
                         type="button"
                         className="btn btn-ghost org-btn"
-                        onClick={() => {
-                          if (referralCode) {
-                            openReferralDetail(referralCode);
-                          }
-                        }}
+                        onClick={() => { if (referralCode) openReferralDetail(referralCode); }}
                         disabled={!referralCode}
                       >
                         View More
@@ -448,7 +341,7 @@ function OrganizationReferralsPage() {
                   variant="ghost"
                   onClick={() => {
                     const code = summaryDialogReferral?.referralCode?.trim() ?? "";
-                    if (code) summarizeReferralMutation.mutate(code);
+                    if (code) summarizeReferralMutation.mutate({ referralCode: code, onChunk: (chunk) => setPoolSummary((s) => `${s}${chunk}`) });
                   }}
                   disabled={summarizeReferralMutation.isPending || !summaryDialogReferral?.referralCode}
                 >
@@ -542,8 +435,8 @@ function OrganizationReferralsPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </>
   );
 }
 
-export default OrganizationReferralsPage;
+export default ReferralPool;

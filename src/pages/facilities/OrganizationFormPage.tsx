@@ -1,19 +1,19 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import {
-  createOrganization,
-  deleteOrganization,
-  getOrganizationById,
-  updateOrganization,
   type OrganizationCreateInput,
   type OrganizationUpdateInput,
 } from "../../api/organizations";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useCreateOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
+import { useUpdateOrganization } from "../../api/hooks/organizations/UpdateOrganization.hook";
+import { useDeleteOrganization } from "../../api/hooks/organizations/DeleteOrganization.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { useAuthContext } from "../../context/useAuthContext";
@@ -30,6 +30,7 @@ type OrganizationFormState = {
   lat: string;
   lng: string;
   ownership_type: "public" | "private" | "faith_based";
+  organization_type: "facility" | "service";
 };
 
 type WardOption = {
@@ -58,6 +59,7 @@ const defaultFormState: OrganizationFormState = {
   lat: "",
   lng: "",
   ownership_type: "public",
+  organization_type: "facility",
 };
 
 function formatError(error: unknown): string {
@@ -126,6 +128,8 @@ function mapOrgToForm(org: Record<string, unknown>): OrganizationFormState {
       org.ownership_type === "private" || org.ownership_type === "faith_based"
         ? org.ownership_type
         : "public",
+    organization_type:
+      org.organization_type === "service" ? "service" : "facility",
   };
 }
 
@@ -152,6 +156,7 @@ function mapFormToCreatePayload(form: OrganizationFormState): OrganizationCreate
     lat,
     lng,
     ownership_type: form.ownership_type,
+    organization_type: form.organization_type,
   };
 }
 
@@ -177,9 +182,7 @@ function OrganizationFormPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: isEdit && canManageOrganizations && Boolean(organizationId),
   });
 
@@ -208,31 +211,26 @@ function OrganizationFormPage() {
     setFormOverrides(typeof updater === "function" ? updater(formState) : updater);
   };
 
-  const createMutation = useMutation({
-    mutationFn: (payload: OrganizationCreateInput) =>
-      createOrganization(payload, session?.accessToken),
+  const createMutation = useCreateOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigate("/facilities", { replace: true });
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (payload: OrganizationUpdateInput) =>
-      updateOrganization(organizationId, payload, session?.accessToken),
+  const updateMutation = useUpdateOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigate("/facilities", { replace: true });
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteOrganization(organizationId, session?.accessToken),
+  const deleteMutation = useDeleteOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigate("/facilities", { replace: true });
     },
   });
@@ -255,7 +253,7 @@ function OrganizationFormPage() {
     }
 
     if (isEdit) {
-      updateMutation.mutate(payload);
+      updateMutation.mutate({ id: organizationId, payload });
       return;
     }
 
@@ -267,7 +265,7 @@ function OrganizationFormPage() {
       return;
     }
 
-    deleteMutation.mutate();
+    deleteMutation.mutate(organizationId);
   };
 
   if (!isAuthenticated) {
@@ -469,6 +467,25 @@ function OrganizationFormPage() {
                 />
               </label>
             </div>
+
+            <label className="field">
+              <span>Organization Type</span>
+              <Select
+                value={formState.organization_type}
+                onValueChange={(v) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    organization_type: v as OrganizationFormState["organization_type"],
+                  }))
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="facility">Facility</SelectItem>
+                  <SelectItem value="service">Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
 
             <label className="field">
               <span>Ownership Type</span>

@@ -1,4 +1,4 @@
-import type { MsOrganizationsInternalDomainModelService as Service } from "../types/api.generated";
+import type { ModelService as Service } from "../types/organizations.generated";
 import StatCard from "./StatCard";
 import ChartSection from "./ChartSection";
 import { ServicesMonthlyBarChart } from "./charts/ServicesMonthlyBarChart";

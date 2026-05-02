@@ -10,7 +10,7 @@ import {
     getCurrentUser,
 
 } from "aws-amplify/auth"
-import type { AuthTokens } from "aws-amplify/auth";
+import type { AuthTokens, ResendSignUpCodeOutput } from "aws-amplify/auth";
 
 type TokenPayload = Record<string, unknown>;
 
@@ -27,6 +27,20 @@ export type AuthTokenSnapshot = {
 };
 
 export type PasswordResetStartResult = Awaited<ReturnType<typeof amplifyResetPassword>>;
+
+export type RegisterUserResult = {
+    username: string;
+    isSignUpComplete: boolean;
+    nextStep: Awaited<ReturnType<typeof signUp>>["nextStep"];
+    userId?: string;
+};
+
+export type ConfirmUserResult = {
+    isSignUpComplete: boolean;
+    nextStep: Awaited<ReturnType<typeof confirmSignUp>>["nextStep"];
+};
+
+export type ResendCodeResult = ResendSignUpCodeOutput;
 
 function tokenPayloadToRecord(token?: AuthTokens["accessToken"]): TokenPayload | undefined {
     if (!token?.payload || typeof token.payload !== "object") {
@@ -53,6 +67,32 @@ function extractGroups(payload?: TokenPayload): string[] {
 function makeUsername(email: string) {
     const base = email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "");
     return `${base}_${crypto.randomUUID().slice(0, 8)}`;
+}
+
+export async function registerInvitedUser(input: {
+    username: string;
+    name: string;
+    email: string;
+    password: string;
+}): Promise<RegisterUserResult> {
+    const { isSignUpComplete, nextStep, userId } = await signUp({
+        username: input.username,
+        password: input.password,
+        options: {
+            userAttributes: {
+                email: input.email,
+                name: input.name,
+                updated_at: Math.floor(Date.now() / 1000).toString(),
+            },
+        },
+    });
+
+    return {
+        username: input.username,
+        isSignUpComplete,
+        nextStep,
+        userId,
+    };
 }
 
 export async function registerUser(input: {
@@ -95,7 +135,7 @@ export async function registerUser(input: {
     };
 }
 
-export async function confirmUser(username: string, code: string) {
+export async function confirmUser(username: string, code: string): Promise<ConfirmUserResult> {
     const { isSignUpComplete, nextStep } = await confirmSignUp({
         username,
         confirmationCode: code,
@@ -107,12 +147,8 @@ export async function confirmUser(username: string, code: string) {
     };
 }
 
-export async function resendSignUpCode(username: string) {
-    const codeDeliveryDetails = await amplifyResendSignUpCode({
-        username,
-    });
-
-    return codeDeliveryDetails;
+export async function resendSignUpCode(username: string): Promise<ResendCodeResult> {
+    return amplifyResendSignUpCode({ username });
 }
 
 export async function requestPasswordReset(username: string): Promise<PasswordResetStartResult> {

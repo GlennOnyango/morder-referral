@@ -1,16 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listOrganizations } from "../../api/organizations";
-import {
-  listNotifications,
-  markNotificationAsRead,
-} from "../../api/notifications";
+import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
+import { useNotifications } from "../../api/hooks/notifications/Notifications.hook";
+import { useMarkNotificationRead } from "../../api/hooks/notifications/MarkNotificationRead.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { useAuthContext } from "../../context/useAuthContext";
-import type { Notification } from "../../types/notifications.generated";
+import type { GithubComVaudKKNrsNotificationsInternalModelsNotification as Notification } from "../../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
 
 const PAGE_SIZE = 10;
@@ -63,55 +61,34 @@ function NotificationsPage() {
   const [page, setPage] = useState(0);
   const [unreadOnly, setUnreadOnly] = useState(false);
 
-  const facilityContextQuery = useQuery({
-    queryKey: ["notifications", "facility-context", session?.accessToken, session?.facilityId],
-    queryFn: async (): Promise<NotificationFacilityContext | null> => {
-      const orgs = await listOrganizations(session?.accessToken);
-      const facility =
-        orgs.find((o) => isOrganizationOwnedBySessionFacility(o, session?.facilityId)) ?? null;
-      const facilityId = facility?.id?.trim() ?? "";
-      const facilityCode = facility?.facility_code?.trim() ?? "";
-      return facilityId && facilityCode ? { facilityId, facilityCode } : null;
-    },
+  const orgsForFacilityQuery = useOrganizations(session?.accessToken, {
     enabled: isAuthenticated && isHospitalAdmin && Boolean(session?.facilityId),
     staleTime: 2 * 60 * 1000,
   });
+  const facilityContextData = useMemo<NotificationFacilityContext | null>(() => {
+    const facility = orgsForFacilityQuery.data?.find((o) => isOrganizationOwnedBySessionFacility(o, session?.facilityId)) ?? null;
+    const facilityId = facility?.id?.trim() ?? "";
+    const facilityCode = facility?.facility_code?.trim() ?? "";
+    return facilityId && facilityCode ? { facilityId, facilityCode } : null;
+  }, [orgsForFacilityQuery.data, session?.facilityId]);
 
-  const facilityCode = facilityContextQuery.data?.facilityCode;
-  const facilityId = facilityContextQuery.data?.facilityId;
+  const facilityCode = facilityContextData?.facilityCode;
+  const facilityId = facilityContextData?.facilityId;
 
-  const notificationQueryKey = [
-    "notifications-page",
-    facilityCode,
+  const notificationsQuery = useNotifications(
+    { facilityCode, unreadOnly, limit: PAGE_SIZE, offset: page * PAGE_SIZE },
     session?.accessToken,
-    page,
-    unreadOnly,
-  ];
+    {
+      enabled:
+        isAuthenticated &&
+        Boolean(session?.accessToken) &&
+        (!isHospitalAdmin || Boolean(facilityCode)),
+    },
+  );
 
-  const notificationsQuery = useQuery({
-    queryKey: notificationQueryKey,
-    queryFn: () =>
-      listNotifications(
-        {
-          facilityCode,
-          unreadOnly,
-          limit: PAGE_SIZE,
-          offset: page * PAGE_SIZE,
-        },
-        session?.accessToken,
-      ),
-    enabled:
-      isAuthenticated &&
-      Boolean(session?.accessToken) &&
-      (!isHospitalAdmin || Boolean(facilityCode)),
-  });
-
-  const markAsReadMutation = useMutation({
-    mutationFn: (id: string) =>
-      markNotificationAsRead(id, { facilityCode }, session?.accessToken),
+  const markAsReadMutation = useMarkNotificationRead(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["notifications-page"] });
-      await queryClient.invalidateQueries({ queryKey: ["referral-notifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
     },
   });
 
@@ -129,7 +106,7 @@ function NotificationsPage() {
   const hasPrevPage = page > 0;
 
   const openNotification = (n: Notification) => {
-    if (n.id && !n.isRead) markAsReadMutation.mutate(n.id);
+    if (n.id && !n.isRead) markAsReadMutation.mutate({ id: n.id, query: { facilityCode } });
     const code = n.referralCode?.trim() ?? "";
     if (code && facilityId) {
       navigate(`/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
@@ -174,7 +151,7 @@ function NotificationsPage() {
 
       <Breadcrumbs items={[{ label: "Notifications" }]} />
 
-      {isHospitalAdmin && !facilityCode && !facilityContextQuery.isLoading && (
+      {isHospitalAdmin && !facilityCode && !orgsForFacilityQuery.isLoading && (
         <article className="access-note error-block">
           <h2>Facility context unavailable</h2>
           <p>Could not resolve your facility code for notifications.</p>

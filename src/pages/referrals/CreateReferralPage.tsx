@@ -1,13 +1,14 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { getOrganizationById } from "../../api/organizations";
-import { createReferral, type ReferralCreateInput } from "../../api/referrals";
+import { type ReferralCreateInput } from "../../api/referrals";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useCreateReferral } from "../../api/hooks/referrals/CreateReferral.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
@@ -194,7 +195,7 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
   };
 }
 
-function OrganizationCreateReferralPage() {
+function CreateReferralPage() {
   const { workspaceId: organizationId } = useWorkspace();
   const navigate = useNavigate();
   const { session, isAuthenticated } = useAuthContext();
@@ -206,20 +207,17 @@ function OrganizationCreateReferralPage() {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const createReferralMutation = useMutation({
-    mutationFn: (payload: ReferralCreateInput) => createReferral(payload, session?.accessToken),
+  const createReferralMutation = useCreateReferral(session?.accessToken, {
     onSuccess: async () => {
       setValidationError(null);
-      await queryClient.invalidateQueries({ queryKey: ["referral-pool", organizationId] });
-      await queryClient.invalidateQueries({ queryKey: ["facility-referrals", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["referrals", "pool"] });
+      await queryClient.invalidateQueries({ queryKey: ["referrals", "facility"] });
       navigate(`/${organizationId}/referrals`, { replace: true });
     },
   });
@@ -540,4 +538,4 @@ function OrganizationCreateReferralPage() {
   );
 }
 
-export default OrganizationCreateReferralPage;
+export default CreateReferralPage;

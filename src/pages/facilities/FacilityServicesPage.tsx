@@ -1,13 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { listOrganizations, getOrganizationById } from "../../api/organizations";
-import {
-  createOrganizationService,
-  deleteServiceById,
-  listOrganizationServices,
-} from "../../api/services";
+import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
+import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
@@ -30,7 +29,7 @@ import {
 import { useAuthContext } from "../../context/useAuthContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { isFacilityManager } from "../../utils/facilityAccess";
-import type { MsOrganizationsInternalDomainModelOrganization as Organization } from "../../types/api.generated";
+import type { ModelOrganization as Organization } from "../../types/organizations.generated";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {
@@ -122,31 +121,19 @@ function FacilityServicesPage() {
 
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
 
-  const orgQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const orgQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManage && organizationId.length > 0,
   });
 
-  const servicesQuery = useQuery({
-    queryKey: ["organizations", organizationId, "services", session?.accessToken],
-    queryFn: () => listOrganizationServices(organizationId, session?.accessToken),
+  const servicesQuery = useOrganizationServices(organizationId, session?.accessToken, {
     enabled: canManage && organizationId.length > 0,
   });
 
-  const facilitiesQuery = useQuery({
-    queryKey: ["facilities-directory", session?.accessToken],
-    queryFn: () => listOrganizations(session?.accessToken),
+  const facilitiesQuery = useOrganizations(session?.accessToken, {
     enabled: canManage,
   });
 
-  const addServiceMutation = useMutation({
-    mutationFn: () =>
-      createOrganizationService(
-        organizationId,
-        { service_name: serviceName.trim(), availability, notes: notes.trim() || undefined },
-        session?.accessToken,
-      ),
+  const addServiceMutation = useCreateOrganizationService(session?.accessToken, {
     onSuccess: async () => {
       setServiceName("");
       setNotes("");
@@ -154,19 +141,14 @@ function FacilityServicesPage() {
       setAddError(null);
       setAddSuccess(true);
       setTimeout(() => setAddSuccess(false), 2000);
-      await queryClient.invalidateQueries({
-        queryKey: ["organizations", organizationId, "services"],
-      });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
     },
     onError: (err) => setAddError(formatError(err)),
   });
 
-  const deleteServiceMutation = useMutation({
-    mutationFn: (serviceId: string) => deleteServiceById(serviceId, session?.accessToken),
+  const deleteServiceMutation = useDeleteService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["organizations", organizationId, "services"],
-      });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
     },
   });
 
@@ -188,7 +170,10 @@ function FacilityServicesPage() {
       return;
     }
     setAddError(null);
-    addServiceMutation.mutate();
+    addServiceMutation.mutate({
+      organizationId,
+      payload: { service_name: serviceName.trim(), availability, notes: notes.trim() || undefined },
+    });
   };
 
   const toggleFacility = (id: string) =>

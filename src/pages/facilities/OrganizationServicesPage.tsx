@@ -1,10 +1,11 @@
 import { Button } from "../../components/ui/button";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { getOrganizationById } from "../../api/organizations";
-import { deleteServiceById, listOrganizationServices } from "../../api/services";
+import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
@@ -35,28 +36,21 @@ function OrganizationServicesPage() {
   const canManageOrganizations = isFacilityManager(roles);
   const queryClient = useQueryClient();
 
-  const organizationQuery = useQuery({
-    queryKey: ["organizations", "detail", organizationId, session?.accessToken],
-    queryFn: () => getOrganizationById(organizationId, session?.accessToken),
+  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
-  const servicesQuery = useQuery({
-    queryKey: ["organizations", organizationId, "services", session?.accessToken],
-    queryFn: () => listOrganizationServices(organizationId, session?.accessToken),
+  const servicesQuery = useOrganizationServices(organizationId, session?.accessToken, {
     enabled:
       canManageOrganizations &&
       organizationId.length > 0 &&
       canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (serviceId: string) => deleteServiceById(serviceId, session?.accessToken),
+  const deleteMutation = useDeleteService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["organizations", organizationId, "services"],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
     },
   });
 

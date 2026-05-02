@@ -1,12 +1,9 @@
 import type {
   HandlerAdditionalInformationRequestResponse,
-  HandlerNotificationListResponse,
-  HandlerNotificationResponse,
   HandlerReferralHistoryListResponse,
   HandlerReferralListResponse,
   HandlerReferralResponse,
   ModelsAdditionalInformationRequest,
-  ModelsNotification,
   ModelsReferral,
   ModelsReferralHistory,
   ModelsReferralStatus,
@@ -72,17 +69,6 @@ export type ReferralPoolListQuery = {
   query?: string;
   limit?: number;
   offset?: number;
-};
-
-export type NotificationListQuery = {
-  facilityCode?: string;
-  unreadOnly?: boolean;
-  limit?: number;
-  offset?: number;
-};
-
-export type NotificationReadQuery = {
-  facilityCode?: string;
 };
 
 export type ReferralSummaryChunkHandler = (chunk: string) => void;
@@ -315,42 +301,6 @@ export async function createReferralInformationRequest(
     `/referrals/by-id/${encodeURIComponent(referralId)}/information-requests`,
     payload,
     {
-      headers: authHeaders(accessToken),
-    },
-  );
-
-  return response.data;
-}
-
-export async function listNotifications(
-  query?: NotificationListQuery,
-  accessToken?: string,
-): Promise<ModelsNotification[]> {
-  const response = await referralsApi.get<HandlerNotificationListResponse>("/notifications", {
-    params: {
-      facility_code: query?.facilityCode,
-      unread_only: query?.unreadOnly,
-      limit: query?.limit,
-      offset: query?.offset,
-    },
-    headers: authHeaders(accessToken),
-  });
-
-  return response.data.items ?? [];
-}
-
-export async function markNotificationAsRead(
-  id: string,
-  query?: NotificationReadQuery,
-  accessToken?: string,
-): Promise<ModelsNotification> {
-  const response = await referralsApi.patch<HandlerNotificationResponse>(
-    `/notifications/${encodeURIComponent(id)}/read`,
-    undefined,
-    {
-      params: {
-        facility_code: query?.facilityCode,
-      },
       headers: authHeaders(accessToken),
     },
   );
