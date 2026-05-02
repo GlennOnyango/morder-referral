@@ -107,11 +107,18 @@ export default function AcceptInvitePage() {
     };
 
     void attach();
-  }, [acceptInviteQuery.isSuccess, isAuthenticated, inviteId, navigate, refreshSession]);
+  }, [
+    acceptInviteQuery.isSuccess,
+    isAuthenticated,
+    inviteId,
+    navigate,
+    refreshSession,
+  ]);
 
   // Route based on check-email result (handles both 409 conflict and success+unauthenticated)
   useEffect(() => {
     const result = checkEmailQuery.data;
+    console.log(result, "", checkEmailQuery);
     if (!result || !targetEmail) return;
 
     if (!result.exists) {

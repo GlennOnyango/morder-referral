@@ -366,13 +366,31 @@ export async function checkEmail(email: string): Promise<CheckEmailResult> {
     params: { email: email.trim() },
   });
 
-  const data = response.data;
+  const data = response.data as unknown as Record<string, unknown>;
+
+  // Structured { exists, verified, username } format
   if (typeof data.exists === "boolean") {
     return {
       exists: data.exists,
-      verified: data.verified ?? false,
-      username: data.username,
+      verified: (data.verified as boolean | undefined) ?? false,
+      username: data.username as string | undefined,
     };
+  }
+
+  // Raw Cognito users-list format: { users: [...] }
+  const users = data.users;
+  if (Array.isArray(users)) {
+    if (users.length === 0) return { exists: false, verified: false };
+    const user = users[0] as Record<string, unknown>;
+    const username = typeof user.username === "string" ? user.username : undefined;
+    const userStatus = typeof user.userStatus === "string" ? user.userStatus : "";
+    const verified =
+      userStatus.toUpperCase() === "CONFIRMED" ||
+      (Array.isArray(user.attributes) &&
+        (user.attributes as { name: string; value: string }[]).some(
+          (a) => a.name === "email_verified" && a.value === "true",
+        ));
+    return { exists: true, verified, username };
   }
 
   return { exists: false, verified: false };
