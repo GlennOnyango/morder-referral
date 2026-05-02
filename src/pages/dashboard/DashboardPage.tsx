@@ -1,16 +1,9 @@
-import { useMemo } from "react";
 import { Navigate } from "react-router-dom";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
-import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
 import SetupActionCards from "@/components/SetUpActionCards";
 import StatCard from "@/components/StatCard";
-import ReferralStats from "@/components/ReferralStats";
-import SuperAdminStats from "@/components/SuperAdminStats";
 import ServiceAdminStats from "@/components/ServiceAdminStats";
-import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
-import { useFacilityReferrals } from "../../api/hooks/referrals/FacilityReferrals.hook";
-import { useReferralPool } from "../../api/hooks/referrals/ReferralPool.hook";
 import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
 import { useDashboardMetrics } from "../../api/hooks/metrics/DashboardMetrics.hook";
 
@@ -26,52 +19,6 @@ function DashboardPage() {
   const showSetupOnly = !hasFacility && roles.length === 0;
   const showRolePending = hasFacility && roles.length === 0;
   const showDashboard = roles.length > 0;
-
-  // ── facility context (hospital admin) — keep inline useQuery for custom filter logic ──
-  const orgsForFacilityQuery = useOrganizations(session?.accessToken, {
-    enabled: isAuthenticated && isHospitalAdmin && Boolean(session?.facilityId),
-  });
-
-  const hospitalFacilityData = useMemo(
-    () =>
-      orgsForFacilityQuery.data?.find((o) =>
-        isOrganizationOwnedBySessionFacility(o, session?.facilityId),
-      ) ?? null,
-    [orgsForFacilityQuery.data, session?.facilityId],
-  );
-
-  // Wrap as a query-like object so downstream references remain unchanged
-  // const hospitalFacilityQuery = {
-  //   data: hospitalFacilityData,
-  //   isLoading: orgsForFacilityQuery.isLoading,
-  //   isError: orgsForFacilityQuery.isError,
-  // };
-
-  // const facilityCode = hospitalFacilityData?.facility_code?.trim() ?? "";
-  // const facilityId = hospitalFacilityData?.id?.trim() ?? "";
-
-  // // ── origin referrals (hospital admin) ──
-  // const originReferralsQuery = useFacilityReferrals(
-  //   facilityCode,
-  //   { role: "origin", limit: 1000, offset: 0 },
-  //   session?.accessToken,
-  //   { enabled: isAuthenticated && isHospitalAdmin && Boolean(facilityCode) },
-  // );
-
-  // // ── accepted referrals (hospital admin) ──
-  // const acceptedReferralsQuery = useFacilityReferrals(
-  //   facilityCode,
-  //   { role: "accepted", limit: 1000, offset: 0 },
-  //   session?.accessToken,
-  //   { enabled: isAuthenticated && isHospitalAdmin && Boolean(facilityCode) },
-  // );
-
-  // // ── pool referrals (super admin) ──
-  // const poolReferralsQuery = useReferralPool(
-  //   { limit: 1000, offset: 0 },
-  //   session?.accessToken,
-  //   { enabled: isAuthenticated && isSuperAdmin },
-  // );
 
   // ── services (service admin) ──
   const serviceAdminServicesQuery = useOrganizationServices(
