@@ -2,9 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
 import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useFacilityServices } from "../../api/hooks/services/FacilityServices.hook";
 import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
@@ -29,7 +28,6 @@ import {
 import { useAuthContext } from "../../context/useAuthContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { isFacilityManager } from "../../utils/facilityAccess";
-import type { ModelOrganization as Organization } from "../../types/organizations.generated";
 
 function formatError(error: unknown): string {
   if (isAxiosError(error)) {
@@ -58,54 +56,6 @@ function availabilityBadgeClass(a?: string) {
   return "inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 border border-slate-200";
 }
 
-function FacilityDetail({ org }: { org: Organization }) {
-  const orgType = (org as Record<string, unknown>).organization_type as string | undefined;
-  const county = (org as Record<string, unknown>).county;
-  const subCounty = (org as Record<string, unknown>).sub_county as string | undefined;
-  const ward = (org as Record<string, unknown>).ward as string | undefined;
-  const ownershipType = (org as Record<string, unknown>).ownership_type as string | undefined;
-  const transport = (org as Record<string, unknown>).transport_available as boolean | undefined;
-
-  return (
-    <div className="grid gap-2 text-sm text-slate-700">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Facility Code</span>
-          <p className="font-mono mt-0.5">{org.facility_code ?? "—"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Level</span>
-          <p className="mt-0.5">{org.level ?? "—"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Type</span>
-          <p className="mt-0.5 capitalize">{orgType ?? "facility"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ownership</span>
-          <p className="mt-0.5">{ownershipType ?? "—"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">County</span>
-          <p className="mt-0.5">{typeof county === "number" || typeof county === "string" ? county : "—"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sub-county</span>
-          <p className="mt-0.5">{subCounty ?? "—"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ward</span>
-          <p className="mt-0.5">{ward ?? "—"}</p>
-        </div>
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Transport</span>
-          <p className="mt-0.5">{transport ? "Available" : "Not available"}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function FacilityServicesPage() {
   const { workspaceId: organizationId } = useWorkspace();
   const { session, isAuthenticated } = useAuthContext();
@@ -119,18 +69,14 @@ function FacilityServicesPage() {
   const [addError, setAddError] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState(false);
 
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
-
   const orgQuery = useOrganizationById(organizationId, session?.accessToken, {
     enabled: canManage && organizationId.length > 0,
   });
 
-  const servicesQuery = useOrganizationServices(organizationId, session?.accessToken, {
-    enabled: canManage && organizationId.length > 0,
-  });
+  const facilityCode = orgQuery.data?.facility_code;
 
-  const facilitiesQuery = useOrganizations(session?.accessToken, {
-    enabled: canManage,
+  const servicesQuery = useFacilityServices(facilityCode, session?.accessToken, {
+    enabled: canManage && Boolean(facilityCode),
   });
 
   const addServiceMutation = useCreateOrganizationService(session?.accessToken, {
@@ -141,14 +87,14 @@ function FacilityServicesPage() {
       setAddError(null);
       setAddSuccess(true);
       setTimeout(() => setAddSuccess(false), 2000);
-      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "facility", facilityCode] });
     },
     onError: (err) => setAddError(formatError(err)),
   });
 
   const deleteServiceMutation = useDeleteService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "facility", facilityCode] });
     },
   });
 
@@ -159,11 +105,8 @@ function FacilityServicesPage() {
     orgQuery.data?.name ?? orgQuery.data?.facility_code ?? "Facility";
 
   const services = Array.isArray(servicesQuery.data) ? servicesQuery.data : [];
-  const facilities = (Array.isArray(facilitiesQuery.data) ? facilitiesQuery.data : []).filter(
-    (f) => f.id !== organizationId,
-  );
 
-  const handleAddService = (e: React.FormEvent) => {
+  const handleAddService = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!serviceName.trim()) {
       setAddError("Service name is required.");
@@ -176,9 +119,6 @@ function FacilityServicesPage() {
     });
   };
 
-  const toggleFacility = (id: string) =>
-    setSelectedFacilityId((prev) => (prev === id ? null : id));
-
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -188,7 +128,7 @@ function FacilityServicesPage() {
           </p>
           <h1 className="text-2xl font-bold text-slate-900">{facilityName}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Manage services offered by this facility and browse the facility directory.
+            Manage services offered by this facility.
           </p>
         </div>
       </div>
@@ -294,76 +234,6 @@ function FacilityServicesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
-            )
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Facility directory ── */}
-      <Card>
-        <CardContent className="pt-5">
-          <h2 className="text-base font-bold text-slate-800 mb-1">Facility Directory</h2>
-          <p className="text-sm text-slate-500 mb-4">
-            Click a facility to view its details.
-          </p>
-
-          {facilitiesQuery.isLoading && <p className="text-sm text-slate-500">Loading facilities…</p>}
-          {facilitiesQuery.isError && (
-            <p className="text-sm text-red-600">{formatError(facilitiesQuery.error)}</p>
-          )}
-          {!facilitiesQuery.isLoading && !facilitiesQuery.isError && (
-            facilities.length === 0 ? (
-              <p className="text-sm text-slate-500">No other facilities found.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Ownership</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {facilities.map((fac) => {
-                    const facId = fac.id ?? "";
-                    const isSelected = selectedFacilityId === facId;
-                    return (
-                      <>
-                        <TableRow
-                          key={facId}
-                          className="cursor-pointer"
-                          onClick={() => toggleFacility(facId)}
-                        >
-                          <TableCell className="font-medium text-slate-900">
-                            <span className="flex items-center gap-2">
-                              <span
-                                className={`text-slate-400 transition-transform ${isSelected ? "rotate-90" : ""}`}
-                                aria-hidden="true"
-                              >
-                                ▶
-                              </span>
-                              {fac.name ?? "Unnamed"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-mono text-slate-600">{fac.facility_code ?? "—"}</TableCell>
-                          <TableCell>{fac.level ?? "—"}</TableCell>
-                          <TableCell>
-                            {(fac as Record<string, unknown>).ownership_type as string ?? "—"}
-                          </TableCell>
-                        </TableRow>
-                        {isSelected && (
-                          <TableRow key={`${facId}-detail`} className="bg-slate-50 hover:bg-slate-50">
-                            <TableCell colSpan={4} className="py-4 px-6">
-                              <FacilityDetail org={fac} />
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
-                    );
-                  })}
                 </TableBody>
               </Table>
             )

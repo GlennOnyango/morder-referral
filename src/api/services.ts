@@ -1,5 +1,6 @@
 import type {
   ApiCreateServiceRequest,
+  ApiPaginatedResponse,
   ApiUpdateServiceRequest,
   ModelService as Service,
 } from "../types/organizations.generated";
@@ -66,4 +67,15 @@ export async function deleteServiceById(serviceId: string, accessToken?: string)
   await servicesApi.delete(`/services/${serviceId}`, {
     headers: authHeaders(accessToken),
   });
+}
+
+export async function listFacilityServicesByCode(
+  facilityCode: string,
+  accessToken?: string,
+): Promise<Service[]> {
+  const response = await servicesApi.get<ApiPaginatedResponse>(
+    `/organizations/facility/${facilityCode}/services`,
+    { headers: authHeaders(accessToken) },
+  );
+  return (response.data?.data as Service[]) ?? [];
 }

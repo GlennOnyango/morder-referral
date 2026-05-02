@@ -17,7 +17,7 @@ const TOGGLE_CLS =
 const SignInPage = () => {
   const [searchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
-  const { isAuthenticated, signIn, activeWorkspaceId, session } = useAuthContext();
+  const { isAuthenticated, signIn, activeWorkspaceId, session, refreshSession } = useAuthContext();
   const navigate = useNavigate();
   const inviteId = searchParams.get("inviteId")?.trim() ?? "";
 
@@ -62,6 +62,7 @@ const SignInPage = () => {
       if (inviteId) {
         const { accessToken } = await getAuthTokens();
         await attachRoleFromInvite(inviteId, accessToken);
+        await refreshSession();
       }
       // Navigation is handled by the render guard above once isAuthenticated + activeWorkspaceId update
     } catch (err) {
