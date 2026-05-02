@@ -15,38 +15,21 @@ function DashboardPage() {
   const isServiceAdmin = roles.includes("SERVICE_ADMIN");
   const hasFacility = Boolean(session?.facilityId);
 
-  // Three states for access control
   const showSetupOnly = !hasFacility && roles.length === 0;
   const showRolePending = hasFacility && roles.length === 0;
   const showDashboard = roles.length > 0;
 
-  // ── services (service admin) ──
   const serviceAdminServicesQuery = useOrganizationServices(
     session?.facilityId ?? "",
     session?.accessToken,
     { enabled: isAuthenticated && isServiceAdmin && Boolean(session?.facilityId) },
   );
 
-  // ── org/service metrics (super admin) ──
   const dashboardQuery = useDashboardMetrics(session?.accessToken, {
     enabled: isAuthenticated && isSuperAdmin,
   });
 
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
-
-  // const hospitalStatsLoading =
-  //   isHospitalAdmin &&
-  //   (hospitalFacilityQuery.isLoading ||
-  //     originReferralsQuery.isLoading ||
-  //     acceptedReferralsQuery.isLoading);
-
-  // const hospitalStatsError =
-  //   isHospitalAdmin &&
-  //   Boolean(
-  //     hospitalFacilityQuery.isError ||
-  //     originReferralsQuery.isError ||
-  //     acceptedReferralsQuery.isError,
-  //   );
 
   return (
     <section className="dashboard-shell reveal delay-1">
@@ -58,78 +41,33 @@ function DashboardPage() {
         </p>
       </div>
 
-      <Breadcrumbs
-        items={[{ label: "Dashboard" }]}
-      />
+      <Breadcrumbs items={[{ label: "Dashboard" }]} />
 
-      {/* ── State 1: no facility, no role → setup cards ── */}
       {showSetupOnly && <SetupActionCards />}
 
-      {/* ── State 2: has facility, no role → role pending ── */}
       {showRolePending && (
         <article className="access-note">
           <h2>Role pending</h2>
-          <p>
-            Wait for a SUPER_ADMIN to assign your role before accessing
-            restricted modules.
-          </p>
+          <p>Wait for a SUPER_ADMIN to assign your role before accessing restricted modules.</p>
         </article>
       )}
 
-      {/* ── State 3: has role → full dashboard ── */}
       {showDashboard && (
         <>
           {isHospitalAdmin && !session?.facilityId && (
             <article className="access-note error-block">
               <h2>Missing facility assignment</h2>
-              <p>
-                Could not resolve your facility_id from token claims. Sign in
-                again or contact support.
-              </p>
-            </article>
-          )}
-{/* 
-          {hospitalStatsLoading && (
-            <article className="access-note">
-              <h2>Loading dashboard</h2>
-              <p>Fetching your facility's referral data…</p>
+              <p>Could not resolve your facility_id from token claims. Sign in again or contact support.</p>
             </article>
           )}
 
-          {hospitalStatsError && (
-            <article className="access-note error-block">
-              <h2>Could not load dashboard data</h2>
-              <p>Check your connection or sign in again.</p>
-              <button type="button" className="btn btn-outline" onClick={() => window.location.reload()}>
-                Reload page
-              </button>
-            </article>
-          )} */}
-
-          {/* Hospital admin stats */}
-          {/* {isHospitalAdmin &&
-            !hospitalStatsLoading &&
-            !hospitalStatsError &&
-            facilityId && (
-              <ReferralStats
-                originReferrals={originReferralsQuery.data ?? []}
-                acceptedReferrals={acceptedReferralsQuery.data ?? []}
-                facilityId={facilityId}
-              />
-            )} */}
-
-          {/* Service admin – missing facility warning */}
           {isServiceAdmin && !session?.facilityId && (
             <article className="access-note error-block">
               <h2>Missing facility assignment</h2>
-              <p>
-                Could not resolve your organisation from token claims. Sign in
-                again or contact support.
-              </p>
+              <p>Could not resolve your organisation from token claims. Sign in again or contact support.</p>
             </article>
           )}
 
-          {/* Service admin – loading */}
           {isServiceAdmin && serviceAdminServicesQuery.isLoading && (
             <article className="access-note">
               <h2>Loading dashboard</h2>
@@ -137,7 +75,6 @@ function DashboardPage() {
             </article>
           )}
 
-          {/* Service admin – error */}
           {isServiceAdmin && serviceAdminServicesQuery.isError && (
             <article className="access-note error-block">
               <h2>Could not load service data</h2>
@@ -149,12 +86,10 @@ function DashboardPage() {
             </article>
           )}
 
-          {/* Service admin – stats */}
           {isServiceAdmin && serviceAdminServicesQuery.data && (
             <ServiceAdminStats services={serviceAdminServicesQuery.data} />
           )}
 
-          {/* Super admin – headline numbers */}
           {isSuperAdmin && dashboardQuery.data && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-2">
               {dashboardQuery.data.organizationMetrics.map((m) => (
@@ -165,33 +100,6 @@ function DashboardPage() {
               ))}
             </div>
           )}
-
-          {/* Super admin – referral charts */}
-          {/* {isSuperAdmin && poolReferralsQuery.isLoading && (
-            <article className="access-note">
-              <h2>Loading referral data</h2>
-              <p>Pulling pool referrals for your dashboard…</p>
-            </article>
-          )}
-
-          {isSuperAdmin && poolReferralsQuery.isError && (
-            <article className="access-note error-block">
-              <h2>Could not load referral data</h2>
-              <p>
-                {poolReferralsQuery.error instanceof Error
-                  ? poolReferralsQuery.error.message
-                  : "Unknown error"}
-              </p>
-              <button type="button" className="btn btn-outline" onClick={() => window.location.reload()}>
-                Reload page
-              </button>
-            </article>
-          )}
-
-          {isSuperAdmin && poolReferralsQuery.data && (
-            <SuperAdminStats referrals={poolReferralsQuery.data} />
-          )} */}
-
         </>
       )}
     </section>

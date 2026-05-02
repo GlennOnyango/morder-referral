@@ -61,8 +61,6 @@ async function refreshAccessToken(): Promise<string | null> {
         if (!accessToken || !idToken) {
           return null;
         }
-
-        dispatchAuthRefreshedEvent();
         return accessToken;
       } catch {
         return null;
@@ -108,7 +106,9 @@ export function createApiClient(baseURL: string): AxiosInstance {
 
       const originalRequest = error.config as RetriableRequestConfig;
       if (originalRequest._authRetry) {
-        redirectToSignIn();
+        // Token was refreshed but the endpoint still rejected the request — the user
+        // is authenticated but not authorised. Let the error propagate so components
+        // can surface a proper "Unauthorized" message instead of forcing a sign-out.
         return Promise.reject(error);
       }
 
@@ -124,7 +124,12 @@ export function createApiClient(baseURL: string): AxiosInstance {
       requestHeaders.set("Authorization", `Bearer ${refreshedAccessToken}`);
       originalRequest.headers = requestHeaders;
 
-      return client.request(originalRequest);
+      // Dispatch only after the retry succeeds. Dispatching earlier (on refresh)
+      // caused session.accessToken to update mid-flight, changing query keys and
+      // spawning a new query that repeated the 401 → refresh cycle indefinitely.
+      const response = await client.request(originalRequest);
+      dispatchAuthRefreshedEvent();
+      return response;
     },
   );
 

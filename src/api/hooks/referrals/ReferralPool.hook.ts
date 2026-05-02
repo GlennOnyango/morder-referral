@@ -12,5 +12,6 @@ export function useReferralPool(
     queryFn: () => listReferralPool(query, accessToken),
     enabled: enabled && Boolean(accessToken),
     staleTime,
+    retry: false,
   });
 }

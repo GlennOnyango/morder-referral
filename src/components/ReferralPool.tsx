@@ -174,7 +174,14 @@ function ReferralPool({
         {isSearchSettling ? <p className="org-section-note referrals-search-summary">Updating search...</p> : null}
 
         {poolReferralsQuery.isError ? (
-          <p className="result-note error-note">{formatError(poolReferralsQuery.error)}</p>
+          isAxiosError(poolReferralsQuery.error) && poolReferralsQuery.error.response?.status === 401 ? (
+            <article className="access-note error-block">
+              <h2>Unauthorized</h2>
+              <p>You do not have permission to access the referral pool.</p>
+            </article>
+          ) : (
+            <p className="result-note error-note">{formatError(poolReferralsQuery.error)}</p>
+          )
         ) : null}
 
         {poolReferralsQuery.data ? (
