@@ -5,7 +5,7 @@ import type { ServiceAcceptReferralInput, ModelsReferral } from "../../../types/
 
 type AcceptReferralVariables = { referralCode: string; payload: ServiceAcceptReferralInput };
 
-export function useAcceptReferral(
+export function usePostAcceptReferral(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<ModelsReferral, Error, AcceptReferralVariables>, "mutationFn">,
 ) {

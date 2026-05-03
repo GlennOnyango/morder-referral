@@ -2,9 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useFacilityServices } from "../../api/hooks/services/FacilityServices.hook";
-import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useGetFacilityServices } from "../../api/hooks/services/FacilityServices.hook";
+import { usePostOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
@@ -69,17 +69,17 @@ function FacilityServicesPage() {
   const [addError, setAddError] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState(false);
 
-  const orgQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const orgQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManage && organizationId.length > 0,
   });
 
   const facilityCode = orgQuery.data?.facility_code;
 
-  const servicesQuery = useFacilityServices(facilityCode, session?.accessToken, {
+  const servicesQuery = useGetFacilityServices(facilityCode, session?.accessToken, {
     enabled: canManage && Boolean(facilityCode),
   });
 
-  const addServiceMutation = useCreateOrganizationService(session?.accessToken, {
+  const addServiceMutation = usePostOrganizationService(session?.accessToken, {
     onSuccess: async () => {
       setServiceName("");
       setNotes("");

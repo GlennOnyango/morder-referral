@@ -6,9 +6,9 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import type { AuthGroupName } from "../../api/authAdmin";
-import { useAttachRoleToUser } from "../../api/hooks/users/AttachRoleToUser.hook";
-import { useOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { usePostAttachRoleToUser } from "../../api/hooks/users/AttachRoleToUser.hook";
+import { useGetOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
@@ -51,21 +51,21 @@ function OrganizationUsersPage() {
   const [selectedRoleByEmail, setSelectedRoleByEmail] = useState<Record<string, AuthGroupName>>({});
   const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
   const facilityName =
     organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
 
-  const membersQuery = useOrganizationMembers(organizationId, session?.accessToken, {
+  const membersQuery = useGetOrganizationMembers(organizationId, session?.accessToken, {
     enabled:
       canManageOrganizations &&
       organizationId.length > 0 &&
       canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
   });
 
-  const attachRoleMutation = useAttachRoleToUser(session?.accessToken, {
+  const attachRoleMutation = usePostAttachRoleToUser(session?.accessToken, {
     onSuccess: async (_data, variables) => {
       setLastActionMessage(`Updated ${variables.username} to ${variables.groupName}.`);
       await queryClient.invalidateQueries({

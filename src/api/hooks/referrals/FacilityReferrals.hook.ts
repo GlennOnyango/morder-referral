@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listFacilityReferrals, type FacilityReferralListQuery } from "../../referrals";
 import type { ModelsReferral } from "../../../types/referrals.generated";
 
-export function useFacilityReferrals(
+export function useGetFacilityReferrals(
   facilityCode: string,
   query: FacilityReferralListQuery | undefined,
   accessToken: string | undefined,

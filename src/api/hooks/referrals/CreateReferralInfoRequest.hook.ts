@@ -8,7 +8,7 @@ type CreateInfoRequestVariables = {
   payload: CreateReferralInformationRequestInput;
 };
 
-export function useCreateReferralInfoRequest(
+export function usePostReferralInfoRequest(
   accessToken: string | undefined,
   options?: Omit<
     UseMutationOptions<ModelsAdditionalInformationRequest, Error, CreateInfoRequestVariables>,

@@ -4,8 +4,8 @@ import { useAuthContext } from "../../context/useAuthContext";
 import SetupActionCards from "@/components/SetUpActionCards";
 import StatCard from "@/components/StatCard";
 import ServiceAdminStats from "@/components/ServiceAdminStats";
-import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
-import { useDashboardMetrics } from "../../api/hooks/metrics/DashboardMetrics.hook";
+import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useGetDashboardMetrics } from "../../api/hooks/metrics/DashboardMetrics.hook";
 
 function DashboardPage() {
   const { isAuthenticated, session } = useAuthContext();
@@ -19,13 +19,13 @@ function DashboardPage() {
   const showRolePending = hasFacility && roles.length === 0;
   const showDashboard = roles.length > 0;
 
-  const serviceAdminServicesQuery = useOrganizationServices(
+  const serviceAdminServicesQuery = useGetOrganizationServices(
     session?.facilityId ?? "",
     session?.accessToken,
     { enabled: isAuthenticated && isServiceAdmin && Boolean(session?.facilityId) },
   );
 
-  const dashboardQuery = useDashboardMetrics(session?.accessToken, {
+  const dashboardQuery = useGetDashboardMetrics(session?.accessToken, {
     enabled: isAuthenticated && isSuperAdmin,
   });
 

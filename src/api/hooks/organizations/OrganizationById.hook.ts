@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getOrganizationById } from "../../organizations";
 import type { ModelOrganization } from "../../../types/organizations.generated";
 
-export function useOrganizationById(
+export function useGetOrganizationById(
   organizationId: string,
   accessToken: string | undefined,
   { enabled = true, staleTime }: { enabled?: boolean; staleTime?: number } = {},

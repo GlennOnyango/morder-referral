@@ -16,15 +16,15 @@ import { Navigate } from "react-router-dom";
 import {
   type ServiceUpsertInput,
 } from "../../api/services";
-import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useCreateOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
-import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
-import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
+import { useGetOrganizations } from "../../api/hooks/organizations/Organizations.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { usePostOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
+import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { usePostOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
-import { usePendingInvites } from "../../api/hooks/authentication/PendingInvites.hook";
-import { useOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
-import { useCreateInvite } from "../../api/hooks/authentication/CreateInvite.hook";
+import { useGetPendingInvites } from "../../api/hooks/authentication/PendingInvites.hook";
+import { useGetOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
+import { usePostInvite } from "../../api/hooks/authentication/CreateInvite.hook";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -150,7 +150,7 @@ function CreateFacilityDialog({
   const [form, setForm] = useState<OrgFormState>(defaultOrgForm);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const createMutation = useCreateOrganization(session?.accessToken, {
+  const createMutation = usePostOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations", "list", session?.accessToken] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard", session?.accessToken] });
@@ -310,7 +310,7 @@ function CreateServiceProviderDialog({
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
 
-  const createMutation = useCreateOrganization(session?.accessToken, {
+  const createMutation = usePostOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations", "list", session?.accessToken] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard", session?.accessToken] });
@@ -415,12 +415,12 @@ function AdminPage() {
   });
 
   // ── Organizations query ──
-  const orgsQuery = useOrganizations(session?.accessToken, {
+  const orgsQuery = useGetOrganizations(session?.accessToken, {
     enabled: isAuthenticated && isSuperAdmin,
   });
 
   // ── Org detail queries ──
-  const orgDetailQuery = useOrganizationById(
+  const orgDetailQuery = useGetOrganizationById(
     selectedOrg?.id ?? "",
     session?.accessToken,
     {
@@ -429,7 +429,7 @@ function AdminPage() {
     },
   );
 
-  const orgServicesQuery = useOrganizationServices(
+  const orgServicesQuery = useGetOrganizationServices(
     selectedOrg?.id ?? "",
     session?.accessToken,
     {
@@ -437,7 +437,7 @@ function AdminPage() {
     },
   );
 
-  const pendingInvitesQuery = usePendingInvites(
+  const pendingInvitesQuery = useGetPendingInvites(
     selectedOrg?.id ?? "",
     session?.accessToken,
     {
@@ -445,7 +445,7 @@ function AdminPage() {
     },
   );
 
-  const orgMembersQuery = useOrganizationMembers(
+  const orgMembersQuery = useGetOrganizationMembers(
     selectedOrg?.id ?? "",
     session?.accessToken,
     {
@@ -454,7 +454,7 @@ function AdminPage() {
   );
 
   // ── Org detail mutations ──
-  const addServiceMutation = useCreateOrganizationService(session?.accessToken, {
+  const addServiceMutation = usePostOrganizationService(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["services", "list", selectedOrg?.id, session?.accessToken] });
       setAddServiceForm(defaultAddServiceForm);
@@ -467,7 +467,7 @@ function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ["services", "list", selectedOrg?.id, session?.accessToken] }),
   });
 
-  const inviteMutation = useCreateInvite(session?.accessToken, {
+  const inviteMutation = usePostInvite(session?.accessToken, {
     onSuccess: async () => {
       setInviteSuccess(`Invite sent to ${inviteEmail.trim()}.`);
       setInviteEmail("");

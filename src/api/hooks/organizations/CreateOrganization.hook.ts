@@ -3,7 +3,7 @@ import type { UseMutationOptions } from "@tanstack/react-query";
 import { createOrganization, type OrganizationCreateInput } from "../../organizations";
 import type { ModelOrganization } from "../../../types/organizations.generated";
 
-export function useCreateOrganization(
+export function usePostOrganization(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<ModelOrganization, Error, OrganizationCreateInput>, "mutationFn">,
 ) {

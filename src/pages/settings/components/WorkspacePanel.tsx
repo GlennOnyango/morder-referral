@@ -1,20 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import { useOrganizations } from "../../../api/hooks/organizations/Organizations.hook";
+import { useGetMyOrganizations } from "../../../api/hooks/authentication/GetMyOrganizations.hook";
 import { Button } from "../../../components/ui/button";
 import { useAuthContext } from "../../../context/useAuthContext";
-import type { ModelOrganization } from "../../../types/organizations.generated";
 
 function WorkspacePanel() {
   const { session, activeWorkspaceId, setActiveWorkspace } = useAuthContext();
   const navigate = useNavigate();
 
-  const orgsQuery = useOrganizations(session?.accessToken, {
-    enabled: Boolean(session?.accessToken),
-  });
+  const orgsQuery = useGetMyOrganizations(session?.accessToken);
 
-  const handleActivate = (workspaceId: string, org: ModelOrganization) => {
-    setActiveWorkspace(workspaceId, org);
-    navigate(`/${workspaceId}/dashboard`, { replace: true });
+  const handleActivate = (organizationId: string, organizationName: string | undefined) => {
+    setActiveWorkspace(organizationId, { id: organizationId, name: organizationName });
+    navigate(`/${organizationId}/dashboard`, { replace: true });
   };
 
   const orgs = orgsQuery.data ?? [];
@@ -43,7 +40,7 @@ function WorkspacePanel() {
           )}
 
           {orgs.map((org) => {
-            const orgId = org.id ?? "";
+            const orgId = org.organizationId ?? "";
             const isActive = orgId === activeWorkspaceId;
             return (
               <li
@@ -54,19 +51,11 @@ function WorkspacePanel() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800">
-                    {org.name ?? "Unnamed organisation"}
+                    {org.organizationName ?? "Unnamed organisation"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {org.facility_code ? (
-                      <span className="font-mono">{org.facility_code}</span>
-                    ) : (
-                      <span className="italic">No facility code</span>
-                    )}
-                    {" · "}
-                    <span className="capitalize">
-                      {String((org as Record<string, unknown>).organization_type ?? "facility")}
-                    </span>
-                  </p>
+                  {org.roleName && (
+                    <p className="text-xs text-slate-500 mt-0.5 capitalize">{org.roleName}</p>
+                  )}
                 </div>
 
                 {isActive ? (
@@ -79,7 +68,7 @@ function WorkspacePanel() {
                     size="sm"
                     variant="outline"
                     className="shrink-0"
-                    onClick={() => handleActivate(orgId, org)}
+                    onClick={() => handleActivate(orgId, org.organizationName)}
                   >
                     Set active
                   </Button>

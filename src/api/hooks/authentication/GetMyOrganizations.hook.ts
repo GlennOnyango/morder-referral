@@ -1,16 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { listOrganizationMembers } from "../../authAdmin";
+import { listUserOrganizations } from "../../authAdmin";
 import type { DtoUserOrganizationMappingResponse } from "../../../types/auth.generated";
 
-export function useGetOrganizationMembers(
-  organizationId: string,
+export function useGetMyOrganizations(
   accessToken: string | undefined,
   { enabled = true, staleTime }: { enabled?: boolean; staleTime?: number } = {},
 ) {
   return useQuery<DtoUserOrganizationMappingResponse[]>({
-    queryKey: ["members", "organization", organizationId, accessToken],
-    queryFn: () => listOrganizationMembers(organizationId, accessToken),
-    enabled: enabled && Boolean(organizationId),
+    queryKey: ["my-organizations", accessToken],
+    queryFn: () => listUserOrganizations(accessToken),
+    enabled: enabled && Boolean(accessToken),
     staleTime,
   });
 }

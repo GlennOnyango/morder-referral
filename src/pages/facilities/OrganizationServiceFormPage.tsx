@@ -7,10 +7,10 @@ import type { SetStateAction, SubmitEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { type ServiceUpsertInput } from "../../api/services";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
-import { useCreateOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
-import { useUpdateService } from "../../api/hooks/services/UpdateService.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { usePostOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
+import { usePutService } from "../../api/hooks/services/UpdateService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import type { ModelService as Service } from "../../types/organizations.generated";
@@ -92,11 +92,11 @@ function OrganizationServiceFormPage() {
   });
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
-  const servicesQuery = useOrganizationServices(organizationId, session?.accessToken, {
+  const servicesQuery = useGetOrganizationServices(organizationId, session?.accessToken, {
     enabled:
       isEdit &&
       canManageOrganizations &&
@@ -130,7 +130,7 @@ function OrganizationServiceFormPage() {
     navigate(`/${organizationId}/services`, { replace: true });
   };
 
-  const createMutation = useCreateOrganizationService(session?.accessToken, {
+  const createMutation = usePostOrganizationService(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
@@ -138,7 +138,7 @@ function OrganizationServiceFormPage() {
     },
   });
 
-  const updateMutation = useUpdateService(session?.accessToken, {
+  const updateMutation = usePutService(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });

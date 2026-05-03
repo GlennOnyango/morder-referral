@@ -7,7 +7,7 @@ type UseAttachRoleOptions = {
   enabled?: boolean;
 };
 
-export const useAttachRole = ({ inviteId, enabled = true }: UseAttachRoleOptions) => {
+export const usePostAttachRole = ({ inviteId, enabled = true }: UseAttachRoleOptions) => {
   const { session, refreshSession } = useAuthContext();
 
   return useQuery({

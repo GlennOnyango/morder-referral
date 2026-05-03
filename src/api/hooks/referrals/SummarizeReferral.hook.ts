@@ -4,7 +4,7 @@ import { streamReferralSummaryByCode, type ReferralSummaryChunkHandler } from ".
 
 type SummarizeVariables = { referralCode: string; onChunk: ReferralSummaryChunkHandler };
 
-export function useSummarizeReferral(
+export function usePostSummarizeReferral(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<string, Error, SummarizeVariables>, "mutationFn">,
 ) {

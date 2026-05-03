@@ -3,7 +3,7 @@ import type { UseMutationOptions } from "@tanstack/react-query";
 import { createInvite } from "../../authAdmin";
 import type { DtoCreateInviteRequest, DtoInviteResponse } from "../../../types/auth.generated";
 
-export function useCreateInvite(
+export function usePostInvite(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<DtoInviteResponse, Error, DtoCreateInviteRequest>, "mutationFn">,
 ) {

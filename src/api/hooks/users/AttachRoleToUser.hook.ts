@@ -4,7 +4,7 @@ import { attachRoleToUser, type AuthGroupName } from "../../authAdmin";
 
 type AttachRoleVariables = { username: string; groupName: AuthGroupName };
 
-export function useAttachRoleToUser(
+export function usePostAttachRoleToUser(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<unknown, Error, AttachRoleVariables>, "mutationFn">,
 ) {

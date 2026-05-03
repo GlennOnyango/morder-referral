@@ -2,9 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Bell01Icon } from "@untitledui/icons-react/outline";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useOrganizations } from "../api/hooks/organizations/Organizations.hook";
-import { useNotifications } from "../api/hooks/notifications/Notifications.hook";
-import { useMarkNotificationRead } from "../api/hooks/notifications/MarkNotificationRead.hook";
+import { useGetOrganizations } from "../api/hooks/organizations/Organizations.hook";
+import { useGetNotifications } from "../api/hooks/notifications/Notifications.hook";
+import { usePatchNotificationRead } from "../api/hooks/notifications/MarkNotificationRead.hook";
 import { useAuthContext } from "../context/useAuthContext";
 import type { GithubComVaudKKNrsNotificationsInternalModelsNotification as Notification } from "../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../utils/facilityAccess";
@@ -57,7 +57,7 @@ const NotificationsMenu = () => {
   const queryClient = useQueryClient();
   const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");
 
-  const orgsForFacilityQuery = useOrganizations(session?.accessToken, {
+  const orgsForFacilityQuery = useGetOrganizations(session?.accessToken, {
     enabled: isAuthenticated && isHospitalAdmin && Boolean(session?.facilityId),
     staleTime: 2 * 60 * 1000,
   });
@@ -73,7 +73,7 @@ const NotificationsMenu = () => {
 
   const POPUP_LIMIT = 5;
 
-  const notificationsQuery = useNotifications(
+  const notificationsQuery = useGetNotifications(
     { facilityCode, unreadOnly: true, limit: POPUP_LIMIT, offset: 0 },
     session?.accessToken,
     {
@@ -85,7 +85,7 @@ const NotificationsMenu = () => {
     },
   );
 
-  const markAsReadMutation = useMarkNotificationRead(session?.accessToken, {
+  const markAsReadMutation = usePatchNotificationRead(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
     },

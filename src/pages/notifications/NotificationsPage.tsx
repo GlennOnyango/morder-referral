@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
-import { useNotifications } from "../../api/hooks/notifications/Notifications.hook";
-import { useMarkNotificationRead } from "../../api/hooks/notifications/MarkNotificationRead.hook";
+import { useGetOrganizations } from "../../api/hooks/organizations/Organizations.hook";
+import { useGetNotifications } from "../../api/hooks/notifications/Notifications.hook";
+import { usePatchNotificationRead } from "../../api/hooks/notifications/MarkNotificationRead.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
@@ -61,7 +61,7 @@ function NotificationsPage() {
   const [page, setPage] = useState(0);
   const [unreadOnly, setUnreadOnly] = useState(false);
 
-  const orgsForFacilityQuery = useOrganizations(session?.accessToken, {
+  const orgsForFacilityQuery = useGetOrganizations(session?.accessToken, {
     enabled: isAuthenticated && isHospitalAdmin && Boolean(session?.facilityId),
     staleTime: 2 * 60 * 1000,
   });
@@ -75,7 +75,7 @@ function NotificationsPage() {
   const facilityCode = facilityContextData?.facilityCode;
   const facilityId = facilityContextData?.facilityId;
 
-  const notificationsQuery = useNotifications(
+  const notificationsQuery = useGetNotifications(
     { facilityCode, unreadOnly, limit: PAGE_SIZE, offset: page * PAGE_SIZE },
     session?.accessToken,
     {
@@ -86,7 +86,7 @@ function NotificationsPage() {
     },
   );
 
-  const markAsReadMutation = useMarkNotificationRead(session?.accessToken, {
+  const markAsReadMutation = usePatchNotificationRead(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
     },

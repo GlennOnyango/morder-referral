@@ -6,11 +6,11 @@ import type { FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { validateOrganizationFacilityCode } from "../../api/organizations";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
-import { useAcceptReferral } from "../../api/hooks/referrals/AcceptReferral.hook";
-import { useCreateReferralInfoRequest } from "../../api/hooks/referrals/CreateReferralInfoRequest.hook";
-import { useSummarizeReferral } from "../../api/hooks/referrals/SummarizeReferral.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useGetReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
+import { usePostAcceptReferral } from "../../api/hooks/referrals/AcceptReferral.hook";
+import { usePostReferralInfoRequest } from "../../api/hooks/referrals/CreateReferralInfoRequest.hook";
+import { usePostSummarizeReferral } from "../../api/hooks/referrals/SummarizeReferral.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { useAuthContext } from "../../context/useAuthContext";
@@ -105,18 +105,18 @@ function PoolReferralDetailPage() {
   const [aiSummary, setAiSummary] = useState("");
   const [aiSummaryRequested, setAiSummaryRequested] = useState(false);
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
   const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const referralDetailQuery = useReferralByCode(referralCode, session?.accessToken, {
+  const referralDetailQuery = useGetReferralByCode(referralCode, session?.accessToken, {
     enabled: canManageReferrals && referralCode.length > 0 && hasFacilityAccess,
   });
 
-  const acceptReferralMutation = useAcceptReferral(session?.accessToken, {
+  const acceptReferralMutation = usePostAcceptReferral(session?.accessToken, {
     onSuccess: async (acceptedReferral) => {
       setAcceptSuccessMessage(
         acceptedReferral.referralCode
@@ -129,7 +129,7 @@ function PoolReferralDetailPage() {
     },
   });
 
-  const requestInfoMutation = useCreateReferralInfoRequest(session?.accessToken, {
+  const requestInfoMutation = usePostReferralInfoRequest(session?.accessToken, {
     onSuccess: async () => {
       setIsRequestInfoDialogOpen(false);
       setRequestInfoSuccessMessage(`Additional information request sent for referral ${referralCode}.`);
@@ -137,7 +137,7 @@ function PoolReferralDetailPage() {
     },
   });
 
-  const summarizeCaseMutation = useSummarizeReferral(session?.accessToken, {
+  const summarizeCaseMutation = usePostSummarizeReferral(session?.accessToken, {
     onMutate: () => {
       setAiSummaryRequested(true);
       setAiSummary("");

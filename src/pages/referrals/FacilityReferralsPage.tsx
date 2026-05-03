@@ -4,10 +4,10 @@ import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useFacilityReferrals } from "../../api/hooks/referrals/FacilityReferrals.hook";
-import { useReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
-import { useReferralHistory } from "../../api/hooks/referrals/ReferralHistory.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useGetFacilityReferrals } from "../../api/hooks/referrals/FacilityReferrals.hook";
+import { useGetReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
+import { useGetReferralHistory } from "../../api/hooks/referrals/ReferralHistory.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
@@ -58,25 +58,25 @@ function FacilityReferralsPage() {
   // const [facilityRoleFilter, setFacilityRoleFilter] = useState<FacilityRoleFilter>("all");
   const [selectedReferralCode, setSelectedReferralCode] = useState("");
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
   const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const facilityReferralsQuery = useFacilityReferrals(
+  const facilityReferralsQuery = useGetFacilityReferrals(
     facilityCode,
     { status: facilityStatusFilter === "all" ? undefined : facilityStatusFilter },
     session?.accessToken,
     { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess },
   );
 
-  const referralDetailQuery = useReferralByCode(selectedReferralCode, session?.accessToken, {
+  const referralDetailQuery = useGetReferralByCode(selectedReferralCode, session?.accessToken, {
     enabled: canManageReferrals && selectedReferralCode.length > 0 && hasFacilityAccess,
   });
 
-  const referralHistoryQuery = useReferralHistory(selectedReferralCode, session?.accessToken, {
+  const referralHistoryQuery = useGetReferralHistory(selectedReferralCode, session?.accessToken, {
     enabled: canManageReferrals && selectedReferralCode.length > 0 && hasFacilityAccess,
   });
 

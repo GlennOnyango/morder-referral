@@ -5,7 +5,7 @@ import type { ApiUpdateServiceRequest, ModelService } from "../../../types/organ
 
 type UpdateServiceVariables = { serviceId: string; payload: ApiUpdateServiceRequest };
 
-export function useUpdateService(
+export function usePutService(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<ModelService, Error, UpdateServiceVariables>, "mutationFn">,
 ) {

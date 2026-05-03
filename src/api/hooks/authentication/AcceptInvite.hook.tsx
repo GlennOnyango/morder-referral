@@ -6,9 +6,9 @@ type UseAcceptInviteOptions = {
   inviteId: string;
 };
 
-export type UseAcceptInviteResult = ReturnType<typeof useAcceptInvite>;
+export type UseAcceptInviteResult = ReturnType<typeof useGetAcceptInvite>;
 
-export const useAcceptInvite = ({ inviteId }: UseAcceptInviteOptions) => {
+export const useGetAcceptInvite = ({ inviteId }: UseAcceptInviteOptions) => {
   return useQuery<DtoAcceptInviteResponse>({
     queryKey: ["invite", inviteId, "accept"],
     queryFn: () => acceptInvite(inviteId),

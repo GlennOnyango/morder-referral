@@ -5,7 +5,7 @@ import type { ModelService } from "../../../types/organizations.generated";
 
 type CreateServiceVariables = { organizationId: string; payload: ServiceUpsertInput };
 
-export function useCreateOrganizationService(
+export function usePostOrganizationService(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<ModelService, Error, CreateServiceVariables>, "mutationFn">,
 ) {

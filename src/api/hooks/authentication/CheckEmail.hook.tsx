@@ -7,9 +7,9 @@ type UseCheckEmailOptions = {
   enabled?: boolean;
 };
 
-export type UseCheckEmailResult = ReturnType<typeof useCheckEmail>;
+export type UseCheckEmailResult = ReturnType<typeof useGetCheckEmail>;
 
-export const useCheckEmail = ({ email, enabled = true }: UseCheckEmailOptions) => {
+export const useGetCheckEmail = ({ email, enabled = true }: UseCheckEmailOptions) => {
   return useQuery<CheckEmailResult>({
     queryKey: ["check-email", email.trim()],
     queryFn: () => checkEmail(email),

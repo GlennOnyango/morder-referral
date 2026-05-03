@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchDashboardMetrics, type DashboardMetrics } from "../../metrics";
 
-export function useDashboardMetrics(
+export function useGetDashboardMetrics(
   accessToken: string | undefined,
   { enabled = true, staleTime }: { enabled?: boolean; staleTime?: number } = {},
 ) {

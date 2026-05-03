@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listReferralPool, type ReferralPoolListQuery } from "../../referrals";
 import type { ModelsReferral } from "../../../types/referrals.generated";
 
-export function useReferralPool(
+export function useGetReferralPool(
   query: ReferralPoolListQuery | undefined,
   accessToken: string | undefined,
   { enabled = true, staleTime }: { enabled?: boolean; staleTime?: number } = {},

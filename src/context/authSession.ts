@@ -24,18 +24,15 @@ export const buildAuthSession = async (): Promise<AuthSession | null> => {
       ...resolveRolesFromClaims(idTokenPayload),
     ]);
 
-    const claimFacilityId =
-      getFacilityIdFromClaims(idTokenPayload) ?? getFacilityIdFromClaims(accessTokenPayload);
-
-    let facilityId = claimFacilityId;
-    if (!facilityId) {
-      try {
-        const orgs = await listUserOrganizations(accessToken);
-        const first = orgs.find((o) => o.organizationId && o.active !== false);
-        facilityId = first?.organizationId?.trim() || undefined;
-      } catch {
-        // swallow — facilityId stays undefined, resolveWorkspace handles it
-      }
+    let facilityId: string | undefined;
+    try {
+      const orgs = await listUserOrganizations(accessToken);
+      const first = orgs.find((o) => o.organizationId && o.active !== false);
+      facilityId = first?.organizationId?.trim() || undefined;
+    } catch {
+      // fall back to JWT claims if the /me/organizations call fails
+      facilityId =
+        getFacilityIdFromClaims(idTokenPayload) ?? getFacilityIdFromClaims(accessTokenPayload);
     }
 
     return {

@@ -10,9 +10,9 @@ import {
   type OrganizationCreateInput,
   type OrganizationUpdateInput,
 } from "../../api/organizations";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useCreateOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
-import { useUpdateOrganization } from "../../api/hooks/organizations/UpdateOrganization.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { usePostOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
+import { usePutOrganization } from "../../api/hooks/organizations/UpdateOrganization.hook";
 import { useDeleteOrganization } from "../../api/hooks/organizations/DeleteOrganization.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
@@ -182,7 +182,7 @@ function OrganizationFormPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: isEdit && canManageOrganizations && Boolean(organizationId),
   });
 
@@ -211,7 +211,7 @@ function OrganizationFormPage() {
     setFormOverrides(typeof updater === "function" ? updater(formState) : updater);
   };
 
-  const createMutation = useCreateOrganization(session?.accessToken, {
+  const createMutation = usePostOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
@@ -219,7 +219,7 @@ function OrganizationFormPage() {
     },
   });
 
-  const updateMutation = useUpdateOrganization(session?.accessToken, {
+  const updateMutation = usePutOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });

@@ -3,11 +3,11 @@ import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import type { AuthGroupName } from "../../api/authAdmin";
-import { useCreateInvite } from "../../api/hooks/authentication/CreateInvite.hook";
-import { useOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
-import { usePendingInvites } from "../../api/hooks/authentication/PendingInvites.hook";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useAttachRoleToUser } from "../../api/hooks/users/AttachRoleToUser.hook";
+import { usePostInvite } from "../../api/hooks/authentication/CreateInvite.hook";
+import { useGetOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
+import { useGetPendingInvites } from "../../api/hooks/authentication/PendingInvites.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { usePostAttachRoleToUser } from "../../api/hooks/users/AttachRoleToUser.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -62,27 +62,27 @@ const OrganizationWorkspacePage = () => {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [assignRoleValues, setAssignRoleValues] = useState<Record<string, string>>({});
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const membersQuery = useOrganizationMembers(organizationId, session?.accessToken, {
+  const membersQuery = useGetOrganizationMembers(organizationId, session?.accessToken, {
     enabled:
       canManageOrganizations &&
       organizationId.length > 0 &&
       canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
   });
 
-  const pendingInvitesQuery = usePendingInvites(organizationId, session?.accessToken, {
+  const pendingInvitesQuery = useGetPendingInvites(organizationId, session?.accessToken, {
     enabled:
       canManageOrganizations &&
       organizationId.length > 0 &&
       canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
   });
 
-  const inviteMutation = useCreateInvite(session?.accessToken, {
+  const inviteMutation = usePostInvite(session?.accessToken, {
     onSuccess: async () => {
       setInviteEmail("");
       setInviteError(null);
@@ -101,7 +101,7 @@ const OrganizationWorkspacePage = () => {
     },
   });
 
-  const assignRoleMutation = useAttachRoleToUser(session?.accessToken, {
+  const assignRoleMutation = usePostAttachRoleToUser(session?.accessToken, {
     onSuccess: async (_, { username }) => {
       setAssignRoleValues((prev) => ({ ...prev, [username]: "" }));
       await queryClient.invalidateQueries({

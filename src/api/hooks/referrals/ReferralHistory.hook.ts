@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getReferralHistoryByCode } from "../../referrals";
 import type { ModelsReferralHistory } from "../../../types/referrals.generated";
 
-export function useReferralHistory(
+export function useGetReferralHistory(
   referralCode: string,
   accessToken: string | undefined,
   { enabled = true, staleTime }: { enabled?: boolean; staleTime?: number } = {},

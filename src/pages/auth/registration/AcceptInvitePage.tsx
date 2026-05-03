@@ -2,8 +2,8 @@ import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { attachRoleFromInvite } from "../../../api/authAdmin";
-import { useAcceptInvite } from "../../../api/hooks/authentication/AcceptInvite.hook";
-import { useCheckEmail } from "../../../api/hooks/authentication/CheckEmail.hook";
+import { useGetAcceptInvite } from "../../../api/hooks/authentication/AcceptInvite.hook";
+import { useGetCheckEmail } from "../../../api/hooks/authentication/CheckEmail.hook";
 import { getAuthTokens } from "../../../auth";
 import Breadcrumbs from "../../../components/Breadcrumbs";
 import { useAuthContext } from "../../../context/useAuthContext";
@@ -42,7 +42,7 @@ export default function AcceptInvitePage() {
   const [attachRoleError, setAttachRoleError] = useState<string | null>(null);
   const roleAttachedRef = useRef(false);
 
-  const acceptInviteQuery = useAcceptInvite({ inviteId });
+  const acceptInviteQuery = useGetAcceptInvite({ inviteId });
 
   const inviteErrorStatus = useMemo(
     () =>
@@ -73,7 +73,7 @@ export default function AcceptInvitePage() {
   // Unified target email used for check-email routing
   const targetEmail = conflictEmail ?? successEmail;
 
-  const checkEmailQuery = useCheckEmail({
+  const checkEmailQuery = useGetCheckEmail({
     email: targetEmail ?? "",
     enabled:
       !!targetEmail &&

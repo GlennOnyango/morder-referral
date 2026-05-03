@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useReferralPool } from "../api/hooks/referrals/ReferralPool.hook";
-import { useSummarizeReferral } from "../api/hooks/referrals/SummarizeReferral.hook";
+import { useGetReferralPool } from "../api/hooks/referrals/ReferralPool.hook";
+import { usePostSummarizeReferral } from "../api/hooks/referrals/SummarizeReferral.hook";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import type { ModelsReferral } from "../types/referrals.generated";
 
@@ -68,7 +68,7 @@ function ReferralPool({
 
   const poolOffset = poolPage * poolPageSize;
 
-  const poolReferralsQuery = useReferralPool(
+  const poolReferralsQuery = useGetReferralPool(
     { query: debouncedPoolSearchTerm || undefined, limit: poolPageSize, offset: poolOffset },
     accessToken,
     { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess && Boolean(accessToken) },
@@ -79,7 +79,7 @@ function ReferralPool({
   const hasNextPoolPage = poolReferrals.length === poolPageSize;
   const isSearchSettling = poolSearchTerm.trim() !== debouncedPoolSearchTerm;
 
-  const summarizeReferralMutation = useSummarizeReferral(accessToken, {
+  const summarizeReferralMutation = usePostSummarizeReferral(accessToken, {
     onMutate: () => { setPoolSummary(""); },
   });
 

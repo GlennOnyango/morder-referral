@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
@@ -36,11 +36,11 @@ function OrganizationServicesPage() {
   const canManageOrganizations = isFacilityManager(roles);
   const queryClient = useQueryClient();
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageOrganizations && organizationId.length > 0,
   });
 
-  const servicesQuery = useOrganizationServices(organizationId, session?.accessToken, {
+  const servicesQuery = useGetOrganizationServices(organizationId, session?.accessToken, {
     enabled:
       canManageOrganizations &&
       organizationId.length > 0 &&

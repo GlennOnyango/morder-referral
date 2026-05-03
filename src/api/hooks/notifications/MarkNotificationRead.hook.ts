@@ -5,7 +5,7 @@ import type { GithubComVaudKKNrsNotificationsInternalModelsNotification as Notif
 
 type MarkReadVariables = { id: string; query?: NotificationReadQuery };
 
-export function useMarkNotificationRead(
+export function usePatchNotificationRead(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<Notification, Error, MarkReadVariables>, "mutationFn">,
 ) {

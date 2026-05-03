@@ -7,8 +7,8 @@ import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { type ReferralCreateInput } from "../../api/referrals";
-import { useOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useCreateReferral } from "../../api/hooks/referrals/CreateReferral.hook";
+import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { usePostReferral } from "../../api/hooks/referrals/CreateReferral.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
@@ -207,13 +207,13 @@ function CreateReferralPage() {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const organizationQuery = useOrganizationById(organizationId, session?.accessToken, {
+  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
     enabled: canManageReferrals && organizationId.length > 0,
   });
 
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
-  const createReferralMutation = useCreateReferral(session?.accessToken, {
+  const createReferralMutation = usePostReferral(session?.accessToken, {
     onSuccess: async () => {
       setValidationError(null);
       await queryClient.invalidateQueries({ queryKey: ["referrals", "pool"] });

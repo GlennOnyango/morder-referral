@@ -3,7 +3,7 @@ import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
-import { useOrganizations } from "../../api/hooks/organizations/Organizations.hook";
+import { useGetOrganizations } from "../../api/hooks/organizations/Organizations.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import {
@@ -115,7 +115,7 @@ function OrganizationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const facilitiesPerPage = 9;
 
-  const organizationsQuery = useOrganizations(session?.accessToken, {
+  const organizationsQuery = useGetOrganizations(session?.accessToken, {
     enabled: isAuthenticated && canManageOrganizations,
   });
   const countyOptionsQuery = useQuery({

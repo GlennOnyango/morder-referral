@@ -5,7 +5,7 @@ import type { ModelOrganization } from "../../../types/organizations.generated";
 
 type UpdateOrganizationVariables = { id: string; payload: OrganizationUpdateInput };
 
-export function useUpdateOrganization(
+export function usePutOrganization(
   accessToken: string | undefined,
   options?: Omit<UseMutationOptions<ModelOrganization, Error, UpdateOrganizationVariables>, "mutationFn">,
 ) {
