@@ -20,4 +20,7 @@ export type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<LoginUserResult>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  impersonatedOrg: ModelOrganization | null;
+  startImpersonation: (org: ModelOrganization) => void;
+  stopImpersonation: () => void;
 };
