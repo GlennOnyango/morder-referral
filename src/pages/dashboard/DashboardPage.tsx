@@ -16,7 +16,6 @@ function DashboardPage() {
   const hasFacility = Boolean(session?.facilityId);
 
   const showSetupOnly = !hasFacility && roles.length === 0;
-  const showRolePending = hasFacility && roles.length === 0;
   const showDashboard = roles.length > 0;
 
   const serviceAdminServicesQuery = useGetOrganizationServices(
@@ -45,12 +44,6 @@ function DashboardPage() {
 
       {showSetupOnly && <SetupActionCards />}
 
-      {showRolePending && (
-        <article className="access-note">
-          <h2>Role pending</h2>
-          <p>Wait for a SUPER_ADMIN to assign your role before accessing restricted modules.</p>
-        </article>
-      )}
 
       {showDashboard && (
         <>

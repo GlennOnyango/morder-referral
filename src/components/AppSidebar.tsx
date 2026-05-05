@@ -21,6 +21,7 @@ type NavItem = {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   allowedRoles?: AppRole[];
   end?: boolean;
+  hideInSystem?: boolean;
   getPath: (workspaceId: string, isSuperAdmin: boolean) => string;
   showWhen?: (opts: { isFacilityOrg: boolean }) => boolean;
 };
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Referrals",
     icon: ArrowLeftRight,
     allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
+    hideInSystem: true,
     end: false,
     getPath: (w) => `/${w}/referrals`,
   },
@@ -43,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Services",
     icon: Activity,
     allowedRoles: ["SERVICE_ADMIN", "SUPER_ADMIN"],
+    hideInSystem: true,
     end: false,
     getPath: (w) => `/${w}/services`,
   },
@@ -50,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Facility Service",
     icon: Stethoscope,
     allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
+    hideInSystem: true,
     end: false,
     getPath: (w) => `/${w}/facility-services`,
     showWhen: ({ isFacilityOrg }) => isFacilityOrg,
@@ -58,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Organization",
     icon: Building2,
     allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
+    hideInSystem: true,
     end: true,
     getPath: (w, isSuperAdmin) =>
       isSuperAdmin ? `/${w}/organizations` : `/${w}/organization`,
@@ -101,9 +106,12 @@ export default function AppSidebar() {
 
   const isFacilityOrg = activeWorkspace?.organization_type !== "service";
 
+  const isSystemWorkspace = workspaceId === "system";
+
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.allowedRoles && !item.allowedRoles.some((r) => roles.includes(r)))
       return false;
+    if (item.hideInSystem && isSystemWorkspace) return false;
     if (item.showWhen && !item.showWhen({ isFacilityOrg })) return false;
     return true;
   });

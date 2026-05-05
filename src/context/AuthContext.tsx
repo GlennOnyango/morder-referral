@@ -11,6 +11,16 @@ import { getOrganizationById } from "../api/organizations";
 
 const WORKSPACE_STORAGE_KEY = "refconnect.active.workspace";
 const WORKSPACE_DETAILS_KEY = "refconnect.active.workspace.details";
+const IMPERSONATION_KEY = "refconnect.impersonation";
+
+const readStoredImpersonation = (): ModelOrganization | null => {
+  try {
+    const raw = window.sessionStorage.getItem(IMPERSONATION_KEY);
+    return raw ? (JSON.parse(raw) as ModelOrganization) : null;
+  } catch {
+    return null;
+  }
+};
 
 function resolveWorkspace(stored: string | undefined, session: AuthSession | null): string | undefined {
   if (stored) return stored;
@@ -50,6 +60,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
   const [activeWorkspace, setActiveWorkspaceDetails] = useState<ModelOrganization | null>(
     () => readStoredWorkspaceDetails(),
+  );
+  const [impersonatedOrg, setImpersonatedOrg] = useState<ModelOrganization | null>(
+    () => readStoredImpersonation(),
   );
 
   const activeWorkspaceId = resolveWorkspace(storedWorkspaceId, session);
@@ -98,6 +111,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return result;
   }, [saveSession]);
 
+  const startImpersonation = useCallback((org: ModelOrganization) => {
+    setImpersonatedOrg(org);
+    try { window.sessionStorage.setItem(IMPERSONATION_KEY, JSON.stringify(org)); } catch { /* ignore */ }
+    setStoredWorkspaceId(String(org.id));
+    setActiveWorkspaceDetails(org);
+    try {
+      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, String(org.id));
+      window.localStorage.setItem(WORKSPACE_DETAILS_KEY, JSON.stringify(org));
+    } catch { /* ignore */ }
+  }, []);
+
+  const stopImpersonation = useCallback(() => {
+    setImpersonatedOrg(null);
+    try { window.sessionStorage.removeItem(IMPERSONATION_KEY); } catch { /* ignore */ }
+    setStoredWorkspaceId("system");
+    setActiveWorkspaceDetails(null);
+    try {
+      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, "system");
+      window.localStorage.removeItem(WORKSPACE_DETAILS_KEY);
+    } catch { /* ignore */ }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await logoutUser();
@@ -105,6 +140,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       saveSession(null);
       setStoredWorkspaceId(undefined);
       setActiveWorkspaceDetails(null);
+      setImpersonatedOrg(null);
+      try { window.sessionStorage.removeItem(IMPERSONATION_KEY); } catch { /* ignore */ }
       clearWorkspaceStorage();
       window.location.replace("/signin");
     }
@@ -160,8 +197,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       logout,
       refreshSession,
+      impersonatedOrg,
+      startImpersonation,
+      stopImpersonation,
     }),
-    [activeWorkspace, activeWorkspaceId, logout, refreshSession, session, setActiveWorkspace, signIn],
+    [activeWorkspace, activeWorkspaceId, impersonatedOrg, logout, refreshSession, session, setActiveWorkspace, signIn, startImpersonation, stopImpersonation],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,7 @@
 import "./App.css";
 import Header from "./components/Header";
 import AppSidebar from "./components/AppSidebar";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import LocalRoutes from "./LocalRoutes";
 import { useAuthContext } from "./context/useAuthContext";
 
@@ -12,6 +13,7 @@ const App = () => {
       <div className="app-layout">
         <AppSidebar />
         <main className="app-main">
+          <ImpersonationBanner />
           <LocalRoutes />
         </main>
       </div>
