@@ -24,6 +24,7 @@ import PoolReferralDetailPage from "./pages/referrals/PoolReferralDetailPage";
 import ReferralsPage from "./pages/referrals/ReferralsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import AdminPage from "./pages/admin/AdminPage";
+import AdminOrgPage from "./pages/admin/AdminOrgPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { WorkspaceLayout } from "./routes/WorkspaceLayout";
 import { useAuthContext } from "./context/useAuthContext";
@@ -212,6 +213,14 @@ export default function LocalRoutes() {
           element={
             <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
               <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="admin/:orgId"
+          element={
+            <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+              <AdminOrgPage />
             </ProtectedRoute>
           }
         />

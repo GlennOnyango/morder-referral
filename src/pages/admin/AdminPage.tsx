@@ -1,4 +1,3 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -12,43 +11,16 @@ import {
 } from "@tanstack/react-table";
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
-import {
-  type ServiceUpsertInput,
-} from "../../api/services";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import type { ModelOrganization } from "../../types/organizations.generated";
 import { useGetOrganizations } from "../../api/hooks/organizations/Organizations.hook";
-import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { usePostOrganization } from "../../api/hooks/organizations/CreateOrganization.hook";
-import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
-import { usePostOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
-import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
-import { useGetPendingInvites } from "../../api/hooks/authentication/PendingInvites.hook";
-import { useGetOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
-import { usePostInvite } from "../../api/hooks/authentication/CreateInvite.hook";
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
 import {
   Table,
   TableBody,
@@ -58,6 +30,8 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { useAuthContext } from "../../context/useAuthContext";
+import CreateFacilityDialog from "../../components/dialogs/CreateFacilityDialog";
+import CreateServiceAccountDialog from "../../components/dialogs/CreateServiceAccountDialog";
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -87,16 +61,6 @@ type OrgRow = {
   transport_available: boolean;
 };
 
-type OrgDetailTab = "details" | "services" | "team";
-
-/* ─────────────────────────────────────────────
-   County data types
-───────────────────────────────────────────── */
-
-type WardOption = { name: string };
-type SubcountyOption = { name: string; wards: WardOption[] };
-type CountyOption = { name: string; code: string; subcounties: SubcountyOption[] };
-
 /* ─────────────────────────────────────────────
    Org type badge
 ───────────────────────────────────────────── */
@@ -115,368 +79,24 @@ function OrgTypeBadge({ type }: { type: string }) {
 }
 
 /* ─────────────────────────────────────────────
-   Create Facility Dialog
-───────────────────────────────────────────── */
-
-type OrgFormState = {
-  name: string;
-  facility_code: string;
-  county: string;
-  subcounty: string;
-  ward: string;
-  transport_available: boolean;
-  level: string;
-  lat: string;
-  lng: string;
-  ownership_type: "public" | "private" | "faith_based";
-};
-
-const defaultOrgForm: OrgFormState = {
-  name: "", facility_code: "", county: "", subcounty: "", ward: "",
-  transport_available: false, level: "", lat: "", lng: "", ownership_type: "public",
-};
-
-function CreateFacilityDialog({
-  open,
-  onClose,
-  countyOptions,
-}: {
-  open: boolean;
-  onClose: () => void;
-  countyOptions: CountyOption[];
-}) {
-  const { session } = useAuthContext();
-  const queryClient = useQueryClient();
-  const [form, setForm] = useState<OrgFormState>(defaultOrgForm);
-  const [validationError, setValidationError] = useState<string | null>(null);
-
-  const createMutation = usePostOrganization(session?.accessToken, {
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations", "list", session?.accessToken] });
-      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard", session?.accessToken] });
-      setForm(defaultOrgForm);
-      setValidationError(null);
-      onClose();
-    },
-  });
-
-  const handleClose = () => {
-    setForm(defaultOrgForm);
-    setValidationError(null);
-    createMutation.reset();
-    onClose();
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setValidationError(null);
-    const county = Number(form.county);
-    const level = Number(form.level);
-    if ([county, level].some(Number.isNaN) || !form.subcounty || !form.ward) {
-      setValidationError("County, sub-county, ward, and level are required.");
-      return;
-    }
-    createMutation.mutate({
-      name: form.name.trim(),
-      facility_code: form.facility_code.trim(),
-      county,
-      sub_county: form.subcounty,
-      ward: form.ward,
-      transport_available: form.transport_available,
-      level,
-      lat: form.lat !== "" ? Number(form.lat) : 0,
-      lng: form.lng !== "" ? Number(form.lng) : 0,
-      ownership_type: form.ownership_type,
-      organization_type: "facility",
-    });
-  };
-
-  const selectedCounty = countyOptions.find((c) => c.code === form.county);
-  const subcountyOptions = selectedCounty?.subcounties ?? [];
-  const selectedSubcounty = subcountyOptions.find((s) => s.name === form.subcounty);
-  const wardOptions = selectedSubcounty?.wards ?? [];
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="min-w-2/4 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Create Facility</DialogTitle>
-          <DialogDescription>
-            Register a new healthcare facility. Fields marked <span className="text-red-500">*</span> are required.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="org-form" onSubmit={handleSubmit}>
-          <div className="org-grid">
-            <label className="field">
-              <span>Facility Name <span className="text-red-500" aria-hidden>*</span></span>
-              <input className="field-input" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
-            </label>
-            <label className="field">
-              <span>Facility Code <span className="text-red-500" aria-hidden>*</span></span>
-              <input className="field-input" value={form.facility_code} onChange={(e) => setForm((p) => ({ ...p, facility_code: e.target.value }))} required />
-            </label>
-          </div>
-          <div className="org-grid">
-            <label className="field">
-              <span>County <span className="text-red-500" aria-hidden>*</span></span>
-              <Select value={form.county || undefined} onValueChange={(v) => setForm((p) => ({ ...p, county: v, subcounty: "", ward: "" }))}>
-                <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
-                <SelectContent>
-                  {countyOptions.map((c) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="field">
-              <span>Level (1–6) <span className="text-red-500" aria-hidden>*</span></span>
-              <input className="field-input" type="number" min={1} max={6} value={form.level} onChange={(e) => setForm((p) => ({ ...p, level: e.target.value }))} required />
-            </label>
-          </div>
-          <div className="org-grid">
-            <label className="field">
-              <span>Sub-county <span className="text-red-500" aria-hidden>*</span></span>
-              <Select value={form.subcounty || undefined} onValueChange={(v) => setForm((p) => ({ ...p, subcounty: v, ward: "" }))} disabled={!form.county}>
-                <SelectTrigger><SelectValue placeholder="Select sub-county" /></SelectTrigger>
-                <SelectContent>
-                  {subcountyOptions.map((s) => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="field">
-              <span>Ward <span className="text-red-500" aria-hidden>*</span></span>
-              <Select value={form.ward || undefined} onValueChange={(v) => setForm((p) => ({ ...p, ward: v }))} disabled={!form.subcounty}>
-                <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
-                <SelectContent>
-                  {wardOptions.map((w) => <SelectItem key={w.name} value={w.name}>{w.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </label>
-          </div>
-          <div className="org-grid">
-            <label className="field">
-              <span>Latitude</span>
-              <input className="field-input" type="number" step="any" value={form.lat} onChange={(e) => setForm((p) => ({ ...p, lat: e.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Longitude</span>
-              <input className="field-input" type="number" step="any" value={form.lng} onChange={(e) => setForm((p) => ({ ...p, lng: e.target.value }))} />
-            </label>
-          </div>
-          <div className="org-grid">
-            <label className="field">
-              <span>Ownership Type</span>
-              <Select value={form.ownership_type} onValueChange={(v) => setForm((p) => ({ ...p, ownership_type: v as OrgFormState["ownership_type"] }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="public">Public</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                  <SelectItem value="faith_based">Faith Based</SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
-            <div className="field">
-              <span>Transportation</span>
-              <label className="field-checkbox">
-                <input type="checkbox" checked={form.transport_available} onChange={(e) => setForm((p) => ({ ...p, transport_available: e.target.checked }))} />
-                <span>Transportation available</span>
-              </label>
-            </div>
-          </div>
-          {validationError && <p className="text-sm text-destructive">{validationError}</p>}
-          {createMutation.isError && <p className="text-sm text-destructive">{formatError(createMutation.error)}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating…" : "Create Facility"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   Create Service Provider Dialog
-───────────────────────────────────────────── */
-
-function CreateServiceProviderDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const { session } = useAuthContext();
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-
-  const createMutation = usePostOrganization(session?.accessToken, {
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations", "list", session?.accessToken] });
-      await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard", session?.accessToken] });
-      setName("");
-      onClose();
-    },
-  });
-
-  const handleClose = () => {
-    setName("");
-    createMutation.reset();
-    onClose();
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    createMutation.mutate({
-      name: name.trim(),
-      organization_type: "service",
-      facility_code: "",
-      county: 0,
-      sub_county: "",
-      ward: "",
-      transport_available: false,
-      level: 0,
-      lat: 0,
-      lng: 0,
-      ownership_type: "public",
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create Service Provider</DialogTitle>
-          <DialogDescription>
-            Register a service provider organisation for referral management.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="org-form" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Name <span className="text-red-500" aria-hidden>*</span></span>
-            <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} required />
-          </label>
-          {createMutation.isError && <p className="text-sm text-destructive">{formatError(createMutation.error)}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating…" : "Create Service Provider"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ─────────────────────────────────────────────
    Main AdminPage
 ───────────────────────────────────────────── */
 
-const defaultAddServiceForm: ServiceUpsertInput = {
-  service_name: "",
-  service_type: "",
-  availability: "available",
-  notes: "",
-};
-
 function AdminPage() {
-  const { session, isAuthenticated } = useAuthContext();
+  const { session, isAuthenticated, startImpersonation, impersonatedOrg } = useAuthContext();
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const navigate = useNavigate();
   const roles = session?.roles ?? [];
   const isSuperAdmin = roles.includes("SUPER_ADMIN");
-  const queryClient = useQueryClient();
 
   const [createModal, setCreateModal] = useState<null | "facility" | "service">(null);
-  const [selectedOrg, setSelectedOrg] = useState<OrgRow | null>(null);
-  const [orgDetailTab, setOrgDetailTab] = useState<OrgDetailTab>("details");
-
-  // ── Services sub-state ──
-  const [showAddService, setShowAddService] = useState(false);
-  const [addServiceForm, setAddServiceForm] = useState<ServiceUpsertInput>(defaultAddServiceForm);
-
-  // ── Team sub-state ──
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("HOSPITAL_ADMIN");
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
-
-  // ── Org DataTable state ──
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  // ── County data ──
-  const countyOptionsQuery = useQuery({
-    queryKey: ["kenya-administrative-units"],
-    queryFn: async (): Promise<CountyOption[]> => {
-      const res = await fetch("/kenya-administrative-units.json", { cache: "no-store" });
-      if (!res.ok) throw new Error("Could not load county data.");
-      return (await res.json()) as CountyOption[];
-    },
-    staleTime: Infinity,
-  });
-
-  // ── Organizations query ──
   const orgsQuery = useGetOrganizations(session?.accessToken, {
     enabled: isAuthenticated && isSuperAdmin,
   });
 
-  // ── Org detail queries ──
-  const orgDetailQuery = useGetOrganizationById(
-    selectedOrg?.id ?? "",
-    session?.accessToken,
-    {
-      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id),
-      staleTime: 5 * 60 * 1000,
-    },
-  );
-
-  const orgServicesQuery = useGetOrganizationServices(
-    selectedOrg?.id ?? "",
-    session?.accessToken,
-    {
-      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id),
-    },
-  );
-
-  const pendingInvitesQuery = useGetPendingInvites(
-    selectedOrg?.id ?? "",
-    session?.accessToken,
-    {
-      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id) && orgDetailTab === "team",
-    },
-  );
-
-  const orgMembersQuery = useGetOrganizationMembers(
-    selectedOrg?.id ?? "",
-    session?.accessToken,
-    {
-      enabled: isAuthenticated && isSuperAdmin && Boolean(selectedOrg?.id) && orgDetailTab === "team",
-    },
-  );
-
-  // ── Org detail mutations ──
-  const addServiceMutation = usePostOrganizationService(session?.accessToken, {
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["services", "list", selectedOrg?.id, session?.accessToken] });
-      setAddServiceForm(defaultAddServiceForm);
-      setShowAddService(false);
-    },
-  });
-
-  const deleteServiceMutation = useDeleteService(session?.accessToken, {
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["services", "list", selectedOrg?.id, session?.accessToken] }),
-  });
-
-  const inviteMutation = usePostInvite(session?.accessToken, {
-    onSuccess: async () => {
-      setInviteSuccess(`Invite sent to ${inviteEmail.trim()}.`);
-      setInviteEmail("");
-      setInviteRole("HOSPITAL_ADMIN");
-      await queryClient.invalidateQueries({ queryKey: ["invites", "pending", selectedOrg?.id, session?.accessToken] });
-    },
-  });
-
-  // ── Table columns ──
   const columns = useMemo<ColumnDef<OrgRow>[]>(
     () => [
       {
@@ -487,7 +107,7 @@ function AdminPage() {
             <button
               type="button"
               className="org-link text-left"
-              onClick={() => { setSelectedOrg(row.original); setOrgDetailTab("details"); }}
+              onClick={() => navigate(`/${workspaceId}/admin/${row.original.id}`)}
             >
               {row.getValue("name")}
             </button>
@@ -533,17 +153,30 @@ function AdminPage() {
         header: "",
         cell: ({ row }) =>
           row.original.id ? (
-            <button
-              type="button"
-              className="btn btn-ghost org-btn"
-              onClick={() => { setSelectedOrg(row.original); setOrgDetailTab("details"); }}
-            >
-              Configure
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="btn btn-ghost org-btn"
+                onClick={() => navigate(`/${workspaceId}/admin/${row.original.id}`)}
+              >
+                Configure
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost org-btn"
+                disabled={impersonatedOrg != null && String(impersonatedOrg.id) === row.original.id}
+                onClick={() => {
+                  startImpersonation(row.original as unknown as ModelOrganization);
+                  navigate(`/${row.original.id}/dashboard`);
+                }}
+              >
+                Impersonate
+              </button>
+            </div>
           ) : null,
       },
     ],
-    [],
+    [navigate, workspaceId, startImpersonation, impersonatedOrg],
   );
 
   const tableData = useMemo<OrgRow[]>(
@@ -587,9 +220,6 @@ function AdminPage() {
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
   if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
 
-  // ── Derive full org for details tab ──
-  const fullOrg = orgDetailQuery.data as Record<string, unknown> | undefined;
-
   return (
     <section className="org-shell reveal delay-1">
       <div className="org-header">
@@ -598,554 +228,134 @@ function AdminPage() {
           <h1>Admin Console</h1>
           <p>Manage organizations, service providers, and user access roles.</p>
         </div>
-        {!selectedOrg && (
-          <div className="org-actions">
-            <button
-              type="button"
-              className="btn btn-ghost org-btn"
-              onClick={() => setCreateModal("service")}
-            >
-              + Service Provider
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary org-btn"
-              onClick={() => setCreateModal("facility")}
-            >
-              + Create Facility
-            </button>
-          </div>
-        )}
+        <div className="org-actions">
+          <button
+            type="button"
+            className="btn btn-ghost org-btn"
+            onClick={() => setCreateModal("service")}
+          >
+            Service Provider
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary org-btn"
+            onClick={() => setCreateModal("facility")}
+          >
+            Create Facility
+          </button>
+        </div>
       </div>
 
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            {selectedOrg ? (
-              <BreadcrumbLink href="#" onClick={(e) => { e.preventDefault(); setSelectedOrg(null); }}>
-                Admin
-              </BreadcrumbLink>
-            ) : (
-              <BreadcrumbPage>Admin</BreadcrumbPage>
-            )}
+            <BreadcrumbPage>Admin</BreadcrumbPage>
           </BreadcrumbItem>
-          {selectedOrg && (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#" onClick={(e) => { e.preventDefault(); setSelectedOrg(null); }}>
-                  Organizations
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{selectedOrg.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </>
-          )}
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* ══════════════════════════════════════
-          CONFIGURE ORGANISATION (tabbed detail)
-      ══════════════════════════════════════ */}
-      {selectedOrg && (
-        <article className="org-table-card">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800">{selectedOrg.name}</h2>
-              <OrgTypeBadge type={selectedOrg.organization_type} />
-            </div>
-          </div>
-
-          {/* Tab bar */}
-          <div className="inline-flex gap-1 rounded-xl border border-[rgba(10,45,55,0.13)] bg-[rgba(255,255,255,0.7)] p-1 mb-5">
-            {(["details", "services", "team"] as OrgDetailTab[]).map((tab) => (
+      <article className="org-table-card">
+        <div className="org-table-tools referrals-table-tools mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#375163]">Filter by type</span>
+            {["", "facility", "service"].map((type) => (
               <button
-                key={tab}
+                key={type || "all"}
                 type="button"
-                onClick={() => setOrgDetailTab(tab)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold capitalize transition-all ${
-                  orgDetailTab === tab
-                    ? "bg-white shadow-sm text-[#0a5240]"
-                    : "text-[#4a6373] hover:text-[#0a5240]"
+                onClick={() => setOrgTypeFilter(type)}
+                className={`rounded-full border px-3 py-1 text-xs font-bold transition-all ${
+                  activeOrgTypeFilter === type
+                    ? "border-[#117a65] bg-[rgba(17,122,101,0.1)] text-[#0a5240]"
+                    : "border-[rgba(10,45,55,0.15)] bg-white text-[#375163] hover:border-[#117a65]/40"
                 }`}
               >
-                {tab === "details" ? "Organisation Details" : tab === "services" ? "Services" : "Team"}
+                {type === "" ? "All" : type === "facility" ? "Facility" : "Service Provider"}
               </button>
             ))}
           </div>
+        </div>
 
-          {/* ── DETAILS TAB ── */}
-          {orgDetailTab === "details" && (
-            <div>
-              {orgDetailQuery.isLoading && <p className="org-empty text-sm">Loading details…</p>}
-              {orgDetailQuery.isError && <p className="text-sm text-destructive">{formatError(orgDetailQuery.error)}</p>}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</span>
-                  <p className="text-sm text-slate-800 mt-0.5">{String(fullOrg?.name ?? selectedOrg.name)}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Facility Code</span>
-                  <p className="text-sm font-mono text-slate-800 mt-0.5">{String(fullOrg?.facility_code ?? selectedOrg.facility_code) || "—"}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</span>
-                  <p className="text-sm text-slate-800 mt-0.5 capitalize">
-                    {String(fullOrg?.organization_type ?? selectedOrg.organization_type).replace("_", " ")}
-                  </p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ownership</span>
-                  <p className="text-sm text-slate-800 capitalize mt-0.5">
-                    {String((fullOrg?.ownership_type ?? selectedOrg.ownership_type) || "—").replace("_", " ")}
-                  </p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">County</span>
-                  <p className="text-sm text-slate-800 mt-0.5">{String((fullOrg?.county ?? selectedOrg.county) || "—")}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sub-county</span>
-                  <p className="text-sm text-slate-800 mt-0.5">{String(fullOrg?.sub_county ?? "—")}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ward</span>
-                  <p className="text-sm text-slate-800 mt-0.5">{String(fullOrg?.ward ?? "—")}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Level</span>
-                  <p className="text-sm text-slate-800 mt-0.5">{String((fullOrg?.level ?? selectedOrg.level) || "—")}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transport</span>
-                  <p className={`text-sm mt-0.5 font-semibold ${(fullOrg?.transport_available ?? selectedOrg.transport_available) ? "text-emerald-700" : "text-slate-400"}`}>
-                    {(fullOrg?.transport_available ?? selectedOrg.transport_available) ? "✓ Available" : "—"}
-                  </p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latitude</span>
-                  <p className="text-sm font-mono text-slate-800 mt-0.5">{fullOrg?.lat != null ? String(fullOrg.lat) : "—"}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Longitude</span>
-                  <p className="text-sm font-mono text-slate-800 mt-0.5">{fullOrg?.lng != null ? String(fullOrg.lng) : "—"}</p>
-                </div>
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">ID</span>
-                  <p className="text-xs font-mono text-slate-400 mt-0.5 break-all">{selectedOrg.id}</p>
-                </div>
-              </div>
-            </div>
-          )}
+        {orgsQuery.isLoading && <p className="org-empty">Loading organizations…</p>}
+        {orgsQuery.isError && <p className="text-sm text-destructive">{formatError(orgsQuery.error)}</p>}
 
-          {/* ── SERVICES TAB ── */}
-          {orgDetailTab === "services" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">Services</h3>
-                {!showAddService && (
-                  <Button type="button" size="sm" onClick={() => setShowAddService(true)}>
-                    + Add Service
-                  </Button>
-                )}
-              </div>
-
-              {showAddService && (
-                <form
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 grid gap-3"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    addServiceMutation.mutate({
-                      organizationId: selectedOrg!.id,
-                      payload: {
-                        service_name: addServiceForm.service_name?.trim() ?? "",
-                        service_type: addServiceForm.service_type?.trim() ?? "",
-                        availability: addServiceForm.availability,
-                        notes: addServiceForm.notes?.trim() ?? "",
-                      },
-                    });
-                  }}
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="field">
-                      <span>Service Name <span className="text-red-500">*</span></span>
-                      <input
-                        className="field-input"
-                        required
-                        value={addServiceForm.service_name ?? ""}
-                        onChange={(e) => setAddServiceForm((p) => ({ ...p, service_name: e.target.value }))}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Service Type <span className="text-red-500">*</span></span>
-                      <input
-                        className="field-input"
-                        required
-                        value={addServiceForm.service_type ?? ""}
-                        onChange={(e) => setAddServiceForm((p) => ({ ...p, service_type: e.target.value }))}
-                      />
-                    </label>
-                  </div>
-                  <label className="field">
-                    <span>Notes</span>
-                    <input
-                      className="field-input"
-                      value={addServiceForm.notes ?? ""}
-                      onChange={(e) => setAddServiceForm((p) => ({ ...p, notes: e.target.value }))}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Availability</span>
-                    <Select
-                      value={addServiceForm.availability ?? "available"}
-                      onValueChange={(v) =>
-                        setAddServiceForm((p) => ({
-                          ...p,
-                          availability: v as "available" | "limited" | "unavailable",
-                        }))
-                      }
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="limited">Limited</SelectItem>
-                        <SelectItem value="unavailable">Unavailable</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  {addServiceMutation.isError && (
-                    <p className="text-sm text-destructive">{formatError(addServiceMutation.error)}</p>
-                  )}
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setShowAddService(false); addServiceMutation.reset(); }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" size="sm" disabled={addServiceMutation.isPending}>
-                      {addServiceMutation.isPending ? "Adding…" : "Add Service"}
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              {orgServicesQuery.isLoading && <p className="org-empty text-sm">Loading services…</p>}
-              {orgServicesQuery.isError && (
-                <p className="text-sm text-destructive">{formatError(orgServicesQuery.error)}</p>
-              )}
-              {orgServicesQuery.data && orgServicesQuery.data.length === 0 && !showAddService && (
-                <p className="org-empty text-sm">No services registered yet.</p>
-              )}
-              {orgServicesQuery.data && orgServicesQuery.data.length > 0 && (
-                <div className="org-table-wrap">
-                  <table className="org-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Notes</th>
-                        <th>Available</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orgServicesQuery.data.map((svc) => (
-                        <tr key={svc.id ?? svc.service_name}>
-                          <td className="font-medium">{svc.service_name ?? "—"}</td>
-                          <td>{svc.service_type ?? "—"}</td>
-                          <td className="text-slate-500">{svc.notes ?? "—"}</td>
-                          <td>
-                            {svc.availability ? (
-                              <span className="text-emerald-700 font-semibold">✓ Yes</span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={deleteServiceMutation.isPending}
-                              onClick={() => svc.id && deleteServiceMutation.mutate(String(svc.id))}
-                              className="text-red-600 hover:text-red-700 hover:border-red-200"
-                            >
-                              Remove
-                            </Button>
-                          </td>
-                        </tr>
+        {orgsQuery.data && (
+          <>
+            <div className="org-table-wrap">
+              <Table className="org-table">
+                <TableHeader>
+                  {table.getHeaderGroups().map((hg) => (
+                    <TableRow key={hg.id}>
+                      {hg.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          onClick={header.column.getToggleSortingHandler()}
+                          className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
+                        </TableHead>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── TEAM TAB ── */}
-          {orgDetailTab === "team" && (
-            <div className="space-y-8">
-              {/* Invite form */}
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Invite User</h3>
-                <form
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 grid grid-cols-3 gap-3 w-full"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setInviteSuccess(null);
-                    inviteMutation.mutate({
-                      organizationId: selectedOrg!.id,
-                      organizationName: selectedOrg!.name,
-                      roleName: inviteRole,
-                      targetEmail: inviteEmail.trim(),
-                    });
-                  }}
-                >
-                  <label className="field">
-                    <span>Email address <span className="text-red-500">*</span></span>
-                    <input
-                      className="field-input"
-                      type="email"
-                      required
-                      placeholder="user@facility.go.ke"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Role</span>
-                    <Select value={inviteRole} onValueChange={setInviteRole}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="HOSPITAL_ADMIN">Hospital Admin</SelectItem>
-                        <SelectItem value="DOCTOR">Doctor</SelectItem>
-                        <SelectItem value="NURSE">Nurse</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  <div className="flex items-end">
-                    <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
-                      {inviteMutation.isPending ? "Sending…" : "Send Invite"}
-                    </Button>
-                  </div>
-                  {inviteMutation.isError && (
-                    <p className="text-sm text-destructive">{formatError(inviteMutation.error)}</p>
-                  )}
-                  {inviteSuccess && (
-                    <p className="text-sm font-semibold text-emerald-700">{inviteSuccess}</p>
-                  )}
-                </form>
-              </div>
-
-              {/* Pending invites */}
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Pending Invites</h3>
-                {pendingInvitesQuery.isLoading && <p className="org-empty text-sm">Loading invites…</p>}
-                {pendingInvitesQuery.isError && (
-                  <p className="text-sm text-destructive">{formatError(pendingInvitesQuery.error)}</p>
-                )}
-                {pendingInvitesQuery.data && pendingInvitesQuery.data.length === 0 && (
-                  <p className="org-empty text-sm">No pending invites.</p>
-                )}
-                {pendingInvitesQuery.data && pendingInvitesQuery.data.length > 0 && (
-                  <div className="org-table-wrap">
-                    <table className="org-table">
-                      <thead>
-                        <tr>
-                          <th>Email</th>
-                          <th>Role</th>
-                          <th>Sent</th>
-                          <th>Accepted</th>
-                          <th>Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pendingInvitesQuery.data.map((invite) => (
-                          <tr key={invite.id}>
-                            <td>{invite.targetEmail ?? "—"}</td>
-                            <td className="capitalize">{invite.roleName ?? "—"}</td>
-                            <td>
-                              {invite.sent
-                                ? <span className="text-emerald-700 font-semibold">✓ Yes</span>
-                                : <span className="text-slate-400">—</span>}
-                            </td>
-                            <td>
-                              {invite.accepted
-                                ? <span className="text-emerald-700 font-semibold">✓ Yes</span>
-                                : <span className="text-slate-400">No</span>}
-                            </td>
-                            <td className="text-slate-500 text-xs">
-                              {invite.createdAt ? new Date(invite.createdAt).toLocaleDateString() : "—"}
-                            </td>
-                          </tr>
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length > 0 ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id} className="org-table-row-clickable">
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Members */}
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Members</h3>
-                {orgMembersQuery.isLoading && <p className="org-empty text-sm">Loading members…</p>}
-                {orgMembersQuery.isError && (
-                  <p className="text-sm text-destructive">{formatError(orgMembersQuery.error)}</p>
-                )}
-                {orgMembersQuery.data && orgMembersQuery.data.length === 0 && (
-                  <p className="org-empty text-sm">No members yet.</p>
-                )}
-                {orgMembersQuery.data && orgMembersQuery.data.length > 0 && (
-                  <div className="org-table-wrap">
-                    <table className="org-table">
-                      <thead>
-                        <tr>
-                          <th>Email</th>
-                          <th>Role</th>
-                          <th>Status</th>
-                          <th>Since</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orgMembersQuery.data.map((member) => (
-                          <tr key={member.id}>
-                            <td>{member.userEmail ?? "—"}</td>
-                            <td className="capitalize">{member.roleName ?? "—"}</td>
-                            <td>
-                              {member.active
-                                ? <span className="text-emerald-700 font-semibold">✓ Active</span>
-                                : <span className="text-slate-400">Inactive</span>}
-                            </td>
-                            <td className="text-slate-500 text-xs">
-                              {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="text-center py-8">
+                        <p className="org-empty">No organizations found.</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </article>
-      )}
 
-      {/* ══════════════════════════════════════
-          ORGANIZATIONS TABLE
-      ══════════════════════════════════════ */}
-      {!selectedOrg && (
-        <article className="org-table-card">
-          <div className="org-table-tools referrals-table-tools mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[#375163]">Filter by type</span>
-              {["", "facility", "service"].map((type) => (
-                <button
-                  key={type || "all"}
+            <div className="facilities-pagination mt-3">
+              <p className="facilities-page-indicator">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {Math.max(1, table.getPageCount())} &nbsp;·&nbsp;{" "}
+                {table.getFilteredRowModel().rows.length} total
+              </p>
+              <div className="facilities-pagination-actions">
+                <Button
                   type="button"
-                  onClick={() => setOrgTypeFilter(type)}
-                  className={`rounded-full border px-3 py-1 text-xs font-bold transition-all ${
-                    activeOrgTypeFilter === type
-                      ? "border-[#117a65] bg-[rgba(17,122,101,0.1)] text-[#0a5240]"
-                      : "border-[rgba(10,45,55,0.15)] bg-white text-[#375163] hover:border-[#117a65]/40"
-                  }`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
                 >
-                  {type === "" ? "All" : type === "facility" ? "Facility" : "Service Provider"}
-                </button>
-              ))}
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          </div>
+          </>
+        )}
+      </article>
 
-          {orgsQuery.isLoading && <p className="org-empty">Loading organizations…</p>}
-          {orgsQuery.isError && <p className="text-sm text-destructive">{formatError(orgsQuery.error)}</p>}
-
-          {orgsQuery.data && (
-            <>
-              <div className="org-table-wrap">
-                <Table className="org-table">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((hg) => (
-                      <TableRow key={hg.id}>
-                        {hg.headers.map((header) => (
-                          <TableHead
-                            key={header.id}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.length > 0 ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id} className="org-table-row-clickable">
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="text-center py-8">
-                          <p className="org-empty">No organizations found.</p>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="facilities-pagination mt-3">
-                <p className="facilities-page-indicator">
-                  Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {Math.max(1, table.getPageCount())} &nbsp;·&nbsp;{" "}
-                  {table.getFilteredRowModel().rows.length} total
-                </p>
-                <div className="facilities-pagination-actions">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </article>
-      )}
-
-      {/* Dialogs */}
       <CreateFacilityDialog
         open={createModal === "facility"}
         onClose={() => setCreateModal(null)}
-        countyOptions={countyOptionsQuery.data ?? []}
       />
-      <CreateServiceProviderDialog
+      <CreateServiceAccountDialog
         open={createModal === "service"}
         onClose={() => setCreateModal(null)}
       />
