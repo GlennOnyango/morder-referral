@@ -1,3 +1,6 @@
+import {
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,9 +11,16 @@ import { useGetOrganizationById } from "../../api/hooks/organizations/Organizati
 import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
+import DataTable from "../../components/DataTable";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
+type OrganizationServiceRow = {
+  id: string;
+  serviceName: string;
+  availability: string;
+  notes: string;
+};
 
 function OrganizationServicesPage() {
   const { workspaceId: organizationId } = useWorkspace();
@@ -68,6 +78,57 @@ function OrganizationServicesPage() {
 
   const facilityName =
     organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
+  const services = Array.isArray(servicesQuery.data) ? servicesQuery.data : [];
+
+  const serviceRows: OrganizationServiceRow[] = services.map((service) => ({
+    id: String(service.id ?? service.service_name ?? ""),
+    serviceName: service.service_name ?? "Unnamed service",
+    availability: service.availability ?? "-",
+    notes: service.notes ?? "-",
+  }));
+
+  const columns: ColumnDef<OrganizationServiceRow>[] = [
+    {
+      accessorKey: "serviceName",
+      header: "Service Name",
+    },
+    {
+      accessorKey: "availability",
+      header: "Availability",
+    },
+    {
+      accessorKey: "notes",
+      header: "Notes",
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const serviceId = row.original.id;
+        const serviceName = row.original.serviceName;
+        return (
+          <div className="org-actions">
+            {serviceId ? (
+              <Link
+                className="btn btn-ghost org-btn"
+                to={`/${organizationId}/services/${serviceId}/edit`}
+              >
+                Edit
+              </Link>
+            ) : null}
+            <Button
+              type="button"
+              className="btn btn-outline org-btn"
+              disabled={!serviceId || deleteMutation.isPending}
+              onClick={() => handleDelete(serviceId, serviceName)}
+            >
+              Delete
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <section className="org-shell reveal delay-1">
@@ -120,52 +181,12 @@ function OrganizationServicesPage() {
           {servicesQuery.data.length === 0 ? (
             <p className="org-empty">No services found for this facility.</p>
           ) : (
-            <div className="org-table-wrap">
-              <table className="org-table">
-                <thead>
-                  <tr>
-                    <th>Service Name</th>
-                    <th>Availability</th>
-                    <th>Notes</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(Array.isArray(servicesQuery.data) ? servicesQuery.data : []).map((service) => {
-                    const serviceId = service.id ?? "";
-                    const serviceName = service.service_name ?? "Unnamed service";
-
-                    return (
-                      <tr key={serviceId || serviceName}>
-                        <td>{serviceName}</td>
-                        <td>{service.availability ?? "-"}</td>
-                        <td>{service.notes ?? "-"}</td>
-                        <td>
-                          <div className="org-actions">
-                            {serviceId ? (
-                              <Link
-                                className="btn btn-ghost org-btn"
-                                to={`/${organizationId}/services/${serviceId}/edit`}
-                              >
-                                Edit
-                              </Link>
-                            ) : null}
-                            <Button
-                              type="button"
-                              className="btn btn-outline org-btn"
-                              disabled={!serviceId || deleteMutation.isPending}
-                              onClick={() => handleDelete(serviceId, serviceName)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={serviceRows}
+              columns={columns}
+              emptyMessage="No services found for this facility."
+              resultLabel="service"
+            />
           )}
         </article>
       ) : null}

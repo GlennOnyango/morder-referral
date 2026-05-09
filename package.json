@@ -8,11 +8,18 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "commit": "cz",
     "start": "serve -s dist -l $PORT",
     "generate:notifactions:types": "npx swagger-typescript-api generate --path https://nrs-notifications-production.up.railway.app/swagger/doc.json --output src/types --name notifications.generated.ts",
     "generate:organizations:types": "npx swagger-typescript-api generate --path https://nrs-organizations-production.up.railway.app/swagger/doc.json --output src/types --name organizations.generated.ts",
     "generate:referral:types": "npx swagger-typescript-api generate --path https://nrs-referrals-production.up.railway.app/swagger/doc.json --output src/types --name referrals.generated.ts",
-    "generate:auth:types": "npx swagger-typescript-api generate --path https://nrs-authentication-production.up.railway.app/swagger/doc.json --output src/types --name auth.generated.ts"
+    "generate:auth:types": "npx swagger-typescript-api generate --path https://nrs-authentication-production.up.railway.app/swagger/doc.json --output src/types --name auth.generated.ts",
+    "prepare": "husky"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git"
+    }
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.2",
@@ -44,15 +51,20 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
+    "commitizen": "^4.3.1",
+    "cz-git": "^1.13.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "husky": "^9.1.7",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0"

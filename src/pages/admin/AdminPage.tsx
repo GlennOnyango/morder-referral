@@ -1,16 +1,10 @@
 import {
   type ColumnDef,
   type ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type SortingState,
-  useReactTable,
 } from "@tanstack/react-table";
 import { formatError } from "../../utils/format";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import type { ModelOrganization } from "../../types/organizations.generated";
 import { useGetOrganizations } from "../../api/hooks/organizations/Organizations.hook";
@@ -20,16 +14,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "../../components/ui/breadcrumb";
-import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import DataTable from "../../components/DataTable";
 import { useAuthContext } from "../../context/useAuthContext";
 import CreateFacilityDialog from "../../components/dialogs/CreateFacilityDialog";
 import CreateServiceAccountDialog from "../../components/dialogs/CreateServiceAccountDialog";
@@ -81,8 +67,7 @@ function AdminPage() {
     enabled: isAuthenticated && isSuperAdmin,
   });
 
-  const columns = useMemo<ColumnDef<OrgRow>[]>(
-    () => [
+  const columns: ColumnDef<OrgRow>[] = [
       {
         accessorKey: "name",
         header: "Name",
@@ -159,37 +144,18 @@ function AdminPage() {
             </div>
           ) : null,
       },
-    ],
-    [navigate, workspaceId, startImpersonation, impersonatedOrg],
-  );
+    ];
 
-  const tableData = useMemo<OrgRow[]>(
-    () =>
-      (orgsQuery.data ?? []).map((o) => ({
-        id: String(o.id ?? ""),
-        name: String(o.name ?? ""),
-        facility_code: String(o.facility_code ?? ""),
-        county: o.county ?? "",
-        level: o.level ?? "",
-        ownership_type: String(o.ownership_type ?? ""),
-        organization_type: String((o as Record<string, unknown>).organization_type ?? "facility"),
-        transport_available: Boolean((o as Record<string, unknown>).transport_available ?? false),
-      })),
-    [orgsQuery.data],
-  );
-
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    state: { sorting, columnFilters },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
-  });
+  const tableData: OrgRow[] = (orgsQuery.data ?? []).map((o) => ({
+    id: String(o.id ?? ""),
+    name: String(o.name ?? ""),
+    facility_code: String(o.facility_code ?? ""),
+    county: o.county ?? "",
+    level: o.level ?? "",
+    ownership_type: String(o.ownership_type ?? ""),
+    organization_type: String((o as Record<string, unknown>).organization_type ?? "facility"),
+    transport_available: Boolean((o as Record<string, unknown>).transport_available ?? false),
+  }));
 
   const activeOrgTypeFilter =
     (columnFilters.find((f) => f.id === "organization_type")?.value as string) ?? "";
@@ -266,73 +232,18 @@ function AdminPage() {
 
         {orgsQuery.data && (
           <>
-            <div className="org-table-wrap">
-              <Table className="org-table">
-                <TableHeader>
-                  {table.getHeaderGroups().map((hg) => (
-                    <TableRow key={hg.id}>
-                      {hg.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length > 0 ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id} className="org-table-row-clickable">
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="text-center py-8">
-                        <p className="org-empty">No organizations found.</p>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="facilities-pagination mt-3">
-              <p className="facilities-page-indicator">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {Math.max(1, table.getPageCount())} &nbsp;·&nbsp;{" "}
-                {table.getFilteredRowModel().rows.length} total
-              </p>
-              <div className="facilities-pagination-actions">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  Previous
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            <DataTable
+              data={tableData}
+              columns={columns}
+              emptyMessage="No organizations found."
+              resultLabel="organization"
+              sorting={sorting}
+              onSortingChange={setSorting}
+              columnFilters={columnFilters}
+              onColumnFiltersChange={setColumnFilters}
+              sortableHeaders
+              getRowClassName={() => "org-table-row-clickable"}
+            />
           </>
         )}
       </article>
