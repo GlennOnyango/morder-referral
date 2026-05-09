@@ -24,15 +24,26 @@ function authHeaders(accessToken?: string) {
 
 export type ServiceUpsertInput = ApiCreateServiceRequest;
 
+function normalizeServiceList(payload: Service[] | ApiPaginatedResponse | undefined): Service[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return Array.isArray(payload?.data) ? (payload.data as Service[]) : [];
+}
+
 export async function listOrganizationServices(
   organizationId: string,
   accessToken?: string,
 ): Promise<Service[]> {
-  const response = await servicesApi.get<Service[]>(`/organizations/${organizationId}/services`, {
+  const response = await servicesApi.get<Service[] | ApiPaginatedResponse>(
+    `/organizations/${organizationId}/services`,
+    {
     headers: authHeaders(accessToken),
-  });
+    },
+  );
 
-  return response.data;
+  return normalizeServiceList(response.data);
 }
 
 export async function createOrganizationService(
@@ -77,5 +88,5 @@ export async function listFacilityServicesByCode(
     `/organizations/facility/${facilityCode}/services`,
     { headers: authHeaders(accessToken) },
   );
-  return (response.data?.data as Service[]) ?? [];
+  return normalizeServiceList(response.data);
 }

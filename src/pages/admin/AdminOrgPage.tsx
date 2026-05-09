@@ -144,8 +144,9 @@ function AdminOrgPage() {
   const org = orgDetailQuery.data as Record<string, unknown> | undefined;
   const orgName = org ? String(org.name ?? orgId) : orgId;
   const orgType = org ? String((org as Record<string, unknown>).organization_type ?? "") : "";
+  const services = Array.isArray(orgServicesQuery.data) ? orgServicesQuery.data : [];
 
-  const serviceRows: AdminOrgServiceRow[] = (orgServicesQuery.data ?? []).map((svc) => ({
+  const serviceRows: AdminOrgServiceRow[] = services.map((svc) => ({
     id: String(svc.id ?? svc.service_name ?? ""),
     name: svc.service_name ?? "—",
     type: svc.service_type ?? "—",
@@ -422,10 +423,10 @@ function AdminOrgPage() {
             {orgServicesQuery.isError && (
               <p className="text-sm text-destructive">{formatError(orgServicesQuery.error)}</p>
             )}
-            {orgServicesQuery.data?.length === 0 && !showAddService && (
+            {services.length === 0 && !showAddService && (
               <p className="org-empty text-sm">No services registered yet.</p>
             )}
-            {orgServicesQuery.data && orgServicesQuery.data.length > 0 && (
+            {services.length > 0 && (
               <DataTable
                 data={serviceRows}
                 columns={serviceColumns}
