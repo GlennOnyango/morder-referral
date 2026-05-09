@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
@@ -28,19 +28,6 @@ import {
 import { useAuthContext } from "../../context/useAuthContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { isFacilityManager } from "../../utils/facilityAccess";
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const v = (payload as { message?: unknown }).message;
-      if (typeof v === "string") return v;
-    }
-    return error.message;
-  }
-  if (error instanceof Error) return error.message;
-  return "Request failed. Please try again.";
-}
 
 type Availability = "available" | "limited" | "unavailable";
 

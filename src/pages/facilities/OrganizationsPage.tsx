@@ -1,5 +1,6 @@
 import { Button } from "../../components/ui/button";
-import { isAxiosError } from "axios";
+import { Card, CardContent } from "../../components/ui/card";
+import { formatError } from "../../utils/format";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
@@ -12,24 +13,6 @@ import {
   isOrganizationOwnedBySessionFacility,
 } from "../../utils/facilityAccess";
 
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
 
 type WardOption = {
   name: string;
@@ -211,18 +194,20 @@ function OrganizationsPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Facilities</p>
-          <h1>Manage facilities</h1>
-          <p>View and update facilities, then open each facility workspace for services, users, and referrals.</p>
-        </div>
-        {canManageCatalog ? (
-          <Link className="btn btn-primary" to={`/${activeWorkspaceId}/organization/new`}>
-            Create Facility
-          </Link>
-        ) : null}
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Facilities</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">Manage facilities</h1>
+            <p className="text-sm text-slate-500">View and update facilities, then open each facility workspace for services, users, and referrals.</p>
+          </div>
+          {canManageCatalog ? (
+            <Link className="btn btn-primary" to={`/${activeWorkspaceId}/organization/new`}>
+              Create Facility
+            </Link>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Breadcrumbs items={[{ label: "Organizations" }]} />
 
