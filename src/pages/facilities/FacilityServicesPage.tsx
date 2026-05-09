@@ -1,3 +1,6 @@
+import {
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
 import { useState } from "react";
@@ -7,6 +10,7 @@ import { useGetFacilityServices } from "../../api/hooks/services/FacilityService
 import { usePostOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
+import DataTable from "../../components/DataTable";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -17,14 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
 import { useAuthContext } from "../../context/useAuthContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { isFacilityManager } from "../../utils/facilityAccess";
@@ -35,6 +31,14 @@ const AVAILABILITY_LABELS: Record<Availability, string> = {
   available: "Available",
   limited: "Limited",
   unavailable: "Unavailable",
+};
+
+type FacilityServiceRow = {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  availability: string;
+  notes: string;
 };
 
 function availabilityBadgeClass(a?: string) {
@@ -76,7 +80,10 @@ function FacilityServicesPage() {
       setTimeout(() => setAddSuccess(false), 2000);
       await queryClient.invalidateQueries({ queryKey: ["services", "facility", facilityCode] });
     },
-    onError: (err) => setAddError(formatError(err)),
+    onError: (err) => {
+      setAddSuccess(false);
+      setAddError(formatError(err));
+    },
   });
 
   const deleteServiceMutation = useDeleteService(session?.accessToken, {
@@ -92,6 +99,57 @@ function FacilityServicesPage() {
     orgQuery.data?.name ?? orgQuery.data?.facility_code ?? "Facility";
 
   const services = Array.isArray(servicesQuery.data) ? servicesQuery.data : [];
+  const serviceRows: FacilityServiceRow[] = services.map((svc, index) => ({
+    id: String(svc.id ?? `${svc.service_name ?? "service"}-${index}`),
+    serviceId: String(svc.id ?? ""),
+    serviceName: svc.service_name ?? "—",
+    availability: svc.availability ?? "—",
+    notes: svc.notes ?? "—",
+  }));
+
+  const columns: ColumnDef<FacilityServiceRow>[] = [
+    {
+      accessorKey: "serviceName",
+      header: "Service",
+      cell: ({ row }) => <span className="font-medium">{row.original.serviceName}</span>,
+    },
+    {
+      accessorKey: "availability",
+      header: "Availability",
+      cell: ({ row }) => (
+        <span className={availabilityBadgeClass(row.original.availability)}>
+          {row.original.availability}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "notes",
+      header: "Notes",
+      cell: ({ row }) => <span className="text-slate-500">{row.original.notes}</span>,
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => {
+        return (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={() => {
+              if (row.original.serviceId && window.confirm(`Delete "${row.original.serviceName}"?`)) {
+                deleteServiceMutation.mutate(row.original.serviceId);
+              }
+            }}
+            disabled={deleteServiceMutation.isPending || !row.original.serviceId}
+          >
+            Remove
+          </Button>
+        );
+      },
+    },
+  ];
 
   const handleAddService = (e: { preventDefault: () => void }) => {
     e.preventDefault();
@@ -100,6 +158,7 @@ function FacilityServicesPage() {
       return;
     }
     setAddError(null);
+    setAddSuccess(false);
     addServiceMutation.mutate({
       organizationId,
       payload: { service_name: serviceName.trim(), availability, notes: notes.trim() || undefined },
@@ -107,25 +166,41 @@ function FacilityServicesPage() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Facility Service
-          </p>
-          <h1 className="text-2xl font-bold text-slate-900">{facilityName}</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage services offered by this facility.
-          </p>
-        </div>
-      </div>
+    <section className="org-shell reveal delay-1">
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Facility Services</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              {facilityName}
+            </h1>
+            <p className="text-sm text-slate-500">
+              Manage services offered by this facility.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={[
           { label: facilityName, to: `/${organizationId}/organization` },
-          { label: "Facility Service" },
+          { label: "Facility Services" },
         ]}
       />
+
+      {orgQuery.isError && (
+        <article className="access-note error-block">
+          <h2>Could not load facility</h2>
+          <p>{formatError(orgQuery.error)}</p>
+        </article>
+      )}
+
+      {orgQuery.data && !facilityCode && (
+        <article className="access-note error-block">
+          <h2>Missing facility code</h2>
+          <p>This facility does not have a facility code, so services cannot be loaded yet.</p>
+        </article>
+      )}
 
       {/* ── Add Service ── */}
       <Card>
@@ -136,12 +211,12 @@ function FacilityServicesPage() {
               placeholder="Service name"
               value={serviceName}
               onChange={(e) => setServiceName(e.target.value)}
-              disabled={addServiceMutation.isPending}
+              disabled={addServiceMutation.isPending || !facilityCode}
             />
             <Select
               value={availability}
               onValueChange={(val) => setAvailability(val as Availability)}
-              disabled={addServiceMutation.isPending}
+              disabled={addServiceMutation.isPending || !facilityCode}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -158,13 +233,18 @@ function FacilityServicesPage() {
               placeholder="Notes (optional)"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              disabled={addServiceMutation.isPending}
+              disabled={addServiceMutation.isPending || !facilityCode}
               className="sm:col-span-1"
             />
-            <Button type="submit" disabled={addServiceMutation.isPending}>
+            <Button type="submit" disabled={addServiceMutation.isPending || !facilityCode}>
               {addServiceMutation.isPending ? "Adding…" : "Add Service"}
             </Button>
           </form>
+          {!facilityCode && !orgQuery.isLoading && (
+            <p className="mt-2 text-sm text-amber-700">
+              Facility code not available. Add or fix the facility code before managing services.
+            </p>
+          )}
           {addError && <p className="mt-2 text-sm font-medium text-red-600">{addError}</p>}
           {addSuccess && <p className="mt-2 text-sm font-medium text-emerald-700">Service added.</p>}
         </CardContent>
@@ -176,53 +256,21 @@ function FacilityServicesPage() {
           <h2 className="text-base font-bold text-slate-800 mb-1">Our Services</h2>
           <p className="text-sm text-slate-500 mb-4">Services configured for this facility.</p>
 
+          {orgQuery.isLoading && <p className="text-sm text-slate-500">Loading facility…</p>}
           {servicesQuery.isLoading && <p className="text-sm text-slate-500">Loading services…</p>}
           {servicesQuery.isError && (
             <p className="text-sm text-red-600">{formatError(servicesQuery.error)}</p>
           )}
-          {!servicesQuery.isLoading && !servicesQuery.isError && (
+          {!orgQuery.isLoading && !servicesQuery.isLoading && !servicesQuery.isError && facilityCode && (
             services.length === 0 ? (
               <p className="text-sm text-slate-500">No services added yet.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Availability</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead className="w-20" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {services?.map((svc) => (
-                    <TableRow key={svc.id ?? svc.service_name}>
-                      <TableCell className="font-medium">{svc.service_name ?? "—"}</TableCell>
-                      <TableCell>
-                        <span className={availabilityBadgeClass(svc.availability)}>
-                          {svc.availability ?? "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-slate-500">{svc.notes ?? "—"}</TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            if (svc.id && window.confirm(`Delete "${svc.service_name}"?`)) {
-                              deleteServiceMutation.mutate(svc.id);
-                            }
-                          }}
-                          disabled={deleteServiceMutation.isPending}
-                        >
-                          Remove
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable
+                data={serviceRows}
+                columns={columns}
+                emptyMessage="No services added yet."
+                resultLabel="service"
+              />
             )
           )}
         </CardContent>

@@ -92,6 +92,25 @@ pnpm preview
 | `pnpm generate:types` | Regenerate `src/types/api.generated.ts` from `swagger-doc.json` |
 | `pnpm generate:referral:types` | Regenerate `src/types/referrals.generated.ts` from the referrals API |
 
+## Commit Convention
+
+This project uses Conventional Commits.
+
+Format:
+
+```text
+type(scope): description
+```
+
+Examples:
+
+```text
+feat(auth): add Auth0 callback handling
+fix(playwright): wait for organization redirect
+test(e2e): add Gleap widget visibility test
+ci(github): cache Playwright browsers
+```
+
 ## Project Structure
 
 ```

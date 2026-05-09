@@ -33,6 +33,25 @@ pnpm generate:referral:types # generate src/types/referrals.generated.ts from re
 
 > Always run `pnpm build` after non-trivial changes to confirm the project still compiles.
 
+## Commit Convention
+
+This project uses Conventional Commits.
+
+Format:
+
+```text
+type(scope): description
+```
+
+Examples:
+
+```text
+feat(auth): add Auth0 callback handling
+fix(playwright): wait for organization redirect
+test(e2e): add Gleap widget visibility test
+ci(github): cache Playwright browsers
+```
+
 ## Environment Variables
 
 The app reads several `VITE_` variables from environment files/runtime:

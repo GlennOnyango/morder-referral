@@ -1,33 +1,20 @@
 import {
   type ColumnDef,
   type ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type SortingState,
-  useReactTable,
 } from "@tanstack/react-table";
 import { ArrowUpDown, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useWorkspace } from "../../../context/WorkspaceContext";
 import { useGetOrganizationById } from "../../../api/hooks/organizations/OrganizationById.hook";
 import { useGetFacilityReferrals } from "../../../api/hooks/referrals/FacilityReferrals.hook";
 import Breadcrumbs from "../../../components/Breadcrumbs";
+import DataTable from "../../../components/DataTable";
 import { PriorityBadge, StatusBadge } from "../../../components/ReferralBadges";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
 import { useAuthContext } from "../../../context/useAuthContext";
 import type { ModelsReferral, ModelsReferralStatus } from "../../../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../../../utils/facilityAccess";
@@ -88,8 +75,7 @@ function FacilityReferralsPage() {
     { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess },
   );
 
-  const columns = useMemo<ColumnDef<ModelsReferral>[]>(
-    () => [
+  const columns: ColumnDef<ModelsReferral>[] = [
       {
         accessorKey: "referralCode",
         header: ({ column }) => <SortableHeader label="Code" column={column} />,
@@ -172,28 +158,9 @@ function FacilityReferralsPage() {
           );
         },
       },
-    ],
-    [navigate, organizationId],
-  );
+    ];
 
-  const tableData = useMemo<ModelsReferral[]>(
-    () => facilityReferralsQuery.data ?? [],
-    [facilityReferralsQuery.data],
-  );
-
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    state: { sorting, columnFilters, globalFilter },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
-  });
+  const tableData: ModelsReferral[] = facilityReferralsQuery.data ?? [];
 
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
   if (!canManageReferrals) return <Navigate to="/dashboard" replace />;
@@ -287,83 +254,30 @@ function FacilityReferralsPage() {
 
           {facilityReferralsQuery.data !== undefined && (
             <>
-              <div className="org-table-wrap">
-                <Table className="org-table">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((hg) => (
-                      <TableRow key={hg.id}>
-                        {hg.headers.map((header) => (
-                          <TableHead key={header.id} className="whitespace-nowrap">
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.length > 0 ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          className="org-table-row-clickable cursor-pointer"
-                          onClick={() => {
-                            const code = row.original.referralCode?.trim() ?? "";
-                            if (code) navigate(`/${organizationId}/referrals/facility/${encodeURIComponent(code)}`);
-                          }}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell
-                              key={cell.id}
-                              onClick={(e) => {
-                                if ((e.target as HTMLElement).closest("button")) e.stopPropagation();
-                              }}
-                            >
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="py-10 text-center">
-                          <p className="org-empty">
-                            {globalFilter
-                              ? `No referrals matching "${globalFilter}".`
-                              : "No referrals found for this filter."}
-                          </p>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="facilities-pagination">
-                <p className="facilities-page-indicator text-xs text-slate-500">
-                  Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {Math.max(1, table.getPageCount())} &nbsp;·&nbsp;{" "}
-                  {table.getFilteredRowModel().rows.length} referral
-                  {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
-                </p>
-                <div className="facilities-pagination-actions">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              <DataTable
+                data={tableData}
+                columns={columns}
+                resultLabel="referral"
+                emptyMessage="No referrals found for this filter."
+                filteredEmptyMessage={
+                  globalFilter
+                    ? `No referrals matching "${globalFilter}".`
+                    : "No referrals found for this filter."
+                }
+                sorting={sorting}
+                onSortingChange={setSorting}
+                columnFilters={columnFilters}
+                onColumnFiltersChange={setColumnFilters}
+                globalFilter={globalFilter}
+                onGlobalFilterChange={setGlobalFilter}
+                onRowClick={(row) => {
+                  const code = row.original.referralCode?.trim() ?? "";
+                  if (code) {
+                    navigate(`/${organizationId}/referrals/facility/${encodeURIComponent(code)}`);
+                  }
+                }}
+                getRowClassName={() => "org-table-row-clickable"}
+              />
             </>
           )}
         </CardContent>
