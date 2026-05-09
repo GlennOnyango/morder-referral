@@ -29,7 +29,7 @@ function ReferralPoolPage() {
 
       <Breadcrumbs
         items={[
-          { label: facilityName, to: `/${organizationId}/dashboard` },
+          { label: facilityName, to: `/${organizationId}/organization` },
           { label: "Referral Pool" },
         ]}
       />

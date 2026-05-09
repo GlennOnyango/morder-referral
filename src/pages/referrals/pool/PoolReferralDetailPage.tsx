@@ -114,6 +114,9 @@ function PoolReferralDetailPage() {
   if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data))
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
 
+  const facilityName =
+    organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
+
   const referral = referralDetailQuery.data;
   const patient = referral?.patient;
   const isSameFacilityReferral =
@@ -187,6 +190,7 @@ function PoolReferralDetailPage() {
 
       <Breadcrumbs
         items={[
+          { label: facilityName, to: `/${organizationId}/organization` },
           { label: "Referral Pool", to: `/${organizationId}/referral-pool` },
           { label: referralCode },
         ]}
