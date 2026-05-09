@@ -1,3 +1,6 @@
+import {
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
@@ -11,6 +14,7 @@ import { usePostAttachRoleToUser } from "../../api/hooks/users/AttachRoleToUser.
 import { useGetOrganizationMembers } from "../../api/hooks/authentication/OrganizationMembers.hook";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
+import DataTable from "../../components/DataTable";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 import type { DtoUserOrganizationMappingResponse } from "../../types/auth.generated";
@@ -20,6 +24,14 @@ const ROLE_OPTIONS: { value: AuthGroupName; label: string }[] = [
   { value: "DOCTOR", label: "Doctor" },
   { value: "NURSE", label: "Nurse" },
 ];
+
+type OrganizationUserRow = {
+  id: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  source: DtoUserOrganizationMappingResponse;
+};
 
 function inferDefaultRole(member: DtoUserOrganizationMappingResponse): AuthGroupName {
   const role = member.roleName?.trim().toUpperCase() ?? "";
@@ -63,6 +75,13 @@ function OrganizationUsersPage() {
   });
 
   const members = membersQuery.data ?? [];
+  const memberRows: OrganizationUserRow[] = members.map((member) => ({
+    id: String(member.id ?? member.userEmail ?? ""),
+    email: member.userEmail ?? "—",
+    role: member.roleName ?? "—",
+    isActive: member.active !== false,
+    source: member,
+  }));
 
   const resolveRole = (member: DtoUserOrganizationMappingResponse): AuthGroupName =>
     selectedRoleByEmail[member.userEmail ?? ""] ?? inferDefaultRole(member);
@@ -84,6 +103,64 @@ function OrganizationUsersPage() {
   if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
   }
+
+  const columns: ColumnDef<OrganizationUserRow>[] = [
+    {
+      accessorKey: "email",
+      header: "Email",
+    },
+    {
+      accessorKey: "role",
+      header: "Role",
+    },
+    {
+      accessorKey: "isActive",
+      header: "Status",
+      cell: ({ row }) => (row.original.isActive ? "Active" : "Inactive"),
+    },
+    ...(canAttachRoles
+      ? [
+          {
+            id: "assignRole",
+            header: "Assign Role",
+            cell: ({ row }: { row: { original: OrganizationUserRow } }) => (
+              <Select
+                value={resolveRole(row.original.source)}
+                onValueChange={(v) =>
+                  setSelectedRoleByEmail((prev) => ({
+                    ...prev,
+                    [row.original.email]: v as AuthGroupName,
+                  }))
+                }
+              >
+                <SelectTrigger className="user-role-select" data-stop-row-click>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ),
+          },
+          {
+            id: "action",
+            header: "Action",
+            cell: ({ row }: { row: { original: OrganizationUserRow } }) => (
+              <Button
+                type="button"
+                className="btn btn-primary org-btn"
+                disabled={attachRoleMutation.isPending || row.original.email === "—"}
+                onClick={() => handleAttachRole(row.original.source)}
+              >
+                Attach
+              </Button>
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <section className="org-shell reveal delay-1">
@@ -133,65 +210,12 @@ function OrganizationUsersPage() {
           {members.length === 0 ? (
             <p className="org-empty">No members found for this organisation.</p>
           ) : (
-            <div className="org-table-wrap">
-              <table className="org-table">
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    {canAttachRoles && <th>Assign Role</th>}
-                    {canAttachRoles && <th>Action</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((member) => {
-                    const email = member.userEmail ?? "—";
-                    const isActive = member.active !== false;
-
-                    return (
-                      <tr key={member.id ?? email}>
-                        <td>{email}</td>
-                        <td>{member.roleName ?? "—"}</td>
-                        <td>{isActive ? "Active" : "Inactive"}</td>
-                        {canAttachRoles && (
-                          <td>
-                            <Select
-                              value={resolveRole(member)}
-                              onValueChange={(v) =>
-                                setSelectedRoleByEmail((prev) => ({
-                                  ...prev,
-                                  [email]: v as AuthGroupName,
-                                }))
-                              }
-                            >
-                              <SelectTrigger className="user-role-select"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {ROLE_OPTIONS.map(({ value, label }) => (
-                                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                        )}
-                        {canAttachRoles && (
-                          <td>
-                            <Button
-                              type="button"
-                              className="btn btn-primary org-btn"
-                              disabled={attachRoleMutation.isPending || email === "—"}
-                              onClick={() => handleAttachRole(member)}
-                            >
-                              Attach
-                            </Button>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={memberRows}
+              columns={columns}
+              emptyMessage="No members found for this organisation."
+              resultLabel="member"
+            />
           )}
         </article>
       )}

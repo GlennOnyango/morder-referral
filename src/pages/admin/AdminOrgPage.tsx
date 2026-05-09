@@ -1,3 +1,6 @@
+import {
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
 import { Card, CardContent } from "../../components/ui/card";
@@ -20,6 +23,7 @@ import {
   BreadcrumbSeparator,
 } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
+import DataTable from "../../components/DataTable";
 import {
   Select,
   SelectContent,
@@ -36,6 +40,31 @@ const defaultAddServiceForm: ServiceUpsertInput = {
   service_type: "",
   availability: "available",
   notes: "",
+};
+
+type AdminOrgServiceRow = {
+  id: string;
+  name: string;
+  type: string;
+  notes: string;
+  availability: string;
+};
+
+type AdminPendingInviteRow = {
+  id: string;
+  email: string;
+  role: string;
+  sent: boolean;
+  accepted: boolean;
+  date: string;
+};
+
+type AdminMemberRow = {
+  id: string;
+  email: string;
+  role: string;
+  active: boolean;
+  since: string;
 };
 
 function OrgTypeBadge({ type }: { type: string }) {
@@ -115,6 +144,97 @@ function AdminOrgPage() {
   const org = orgDetailQuery.data as Record<string, unknown> | undefined;
   const orgName = org ? String(org.name ?? orgId) : orgId;
   const orgType = org ? String((org as Record<string, unknown>).organization_type ?? "") : "";
+
+  const serviceRows: AdminOrgServiceRow[] = (orgServicesQuery.data ?? []).map((svc) => ({
+    id: String(svc.id ?? svc.service_name ?? ""),
+    name: svc.service_name ?? "—",
+    type: svc.service_type ?? "—",
+    notes: svc.notes ?? "—",
+    availability: svc.availability ?? "—",
+  }));
+
+  const pendingInviteRows: AdminPendingInviteRow[] = (pendingInvitesQuery.data ?? []).map((invite) => ({
+    id: String(invite.id ?? `${invite.organizationId}-${invite.targetEmail}`),
+    email: invite.targetEmail ?? "—",
+    role: invite.roleName ?? "—",
+    sent: Boolean(invite.sent),
+    accepted: Boolean(invite.accepted),
+    date: invite.createdAt ? new Date(invite.createdAt).toLocaleDateString() : "—",
+  }));
+
+  const memberRows: AdminMemberRow[] = (orgMembersQuery.data ?? []).map((member) => ({
+    id: String(member.id ?? `${member.organizationId}-${member.userEmail}`),
+    email: member.userEmail ?? "—",
+    role: member.roleName ?? "—",
+    active: Boolean(member.active),
+    since: member.createdAt ? new Date(member.createdAt).toLocaleDateString() : "—",
+  }));
+
+  const serviceColumns: ColumnDef<AdminOrgServiceRow>[] = [
+      { accessorKey: "name", header: "Name", cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+      { accessorKey: "type", header: "Type" },
+      { accessorKey: "notes", header: "Notes", cell: ({ row }) => <span className="text-slate-500">{row.original.notes}</span> },
+      {
+        accessorKey: "availability",
+        header: "Available",
+        cell: ({ row }) =>
+          row.original.availability && row.original.availability !== "unavailable" ? (
+            <span className="font-semibold text-emerald-700">Yes</span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={deleteServiceMutation.isPending || !row.original.id}
+            onClick={() => row.original.id && deleteServiceMutation.mutate(row.original.id)}
+            className="text-red-600 hover:text-red-700 hover:border-red-200"
+          >
+            Remove
+          </Button>
+        ),
+      },
+    ];
+
+  const pendingInviteColumns: ColumnDef<AdminPendingInviteRow>[] = [
+      { accessorKey: "email", header: "Email" },
+      { accessorKey: "role", header: "Role", cell: ({ row }) => <span className="capitalize">{row.original.role}</span> },
+      {
+        accessorKey: "sent",
+        header: "Sent",
+        cell: ({ row }) =>
+          row.original.sent ? <span className="font-semibold text-emerald-700">Yes</span> : <span className="text-slate-400">—</span>,
+      },
+      {
+        accessorKey: "accepted",
+        header: "Accepted",
+        cell: ({ row }) =>
+          row.original.accepted ? <span className="font-semibold text-emerald-700">Yes</span> : <span className="text-slate-400">No</span>,
+      },
+      { accessorKey: "date", header: "Date", cell: ({ row }) => <span className="text-xs text-slate-500">{row.original.date}</span> },
+    ];
+
+  const memberColumns: ColumnDef<AdminMemberRow>[] = [
+      { accessorKey: "email", header: "Email" },
+      { accessorKey: "role", header: "Role", cell: ({ row }) => <span className="capitalize">{row.original.role}</span> },
+      {
+        accessorKey: "active",
+        header: "Status",
+        cell: ({ row }) =>
+          row.original.active ? (
+            <span className="font-semibold text-emerald-700">Active</span>
+          ) : (
+            <span className="text-slate-400">Inactive</span>
+          ),
+      },
+      { accessorKey: "since", header: "Since", cell: ({ row }) => <span className="text-xs text-slate-500">{row.original.since}</span> },
+    ];
 
   return (
     <section className="org-shell reveal delay-1">
@@ -306,41 +426,12 @@ function AdminOrgPage() {
               <p className="org-empty text-sm">No services registered yet.</p>
             )}
             {orgServicesQuery.data && orgServicesQuery.data.length > 0 && (
-              <div className="org-table-wrap">
-                <table className="org-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th><th>Type</th><th>Notes</th><th>Available</th><th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orgServicesQuery.data.map((svc) => (
-                      <tr key={svc.id ?? svc.service_name}>
-                        <td className="font-medium">{svc.service_name ?? "—"}</td>
-                        <td>{svc.service_type ?? "—"}</td>
-                        <td className="text-slate-500">{svc.notes ?? "—"}</td>
-                        <td>
-                          {svc.availability
-                            ? <span className="text-emerald-700 font-semibold">✓ Yes</span>
-                            : <span className="text-slate-400">—</span>}
-                        </td>
-                        <td>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={deleteServiceMutation.isPending}
-                            onClick={() => svc.id && deleteServiceMutation.mutate(String(svc.id))}
-                            className="text-red-600 hover:text-red-700 hover:border-red-200"
-                          >
-                            Remove
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={serviceRows}
+                columns={serviceColumns}
+                emptyMessage="No services registered yet."
+                resultLabel="service"
+              />
             )}
           </div>
         )}
@@ -407,26 +498,12 @@ function AdminOrgPage() {
               )}
               {pendingInvitesQuery.data?.length === 0 && <p className="org-empty text-sm">No pending invites.</p>}
               {pendingInvitesQuery.data && pendingInvitesQuery.data.length > 0 && (
-                <div className="org-table-wrap">
-                  <table className="org-table">
-                    <thead>
-                      <tr><th>Email</th><th>Role</th><th>Sent</th><th>Accepted</th><th>Date</th></tr>
-                    </thead>
-                    <tbody>
-                      {pendingInvitesQuery.data.map((invite) => (
-                        <tr key={invite.id}>
-                          <td>{invite.targetEmail ?? "—"}</td>
-                          <td className="capitalize">{invite.roleName ?? "—"}</td>
-                          <td>{invite.sent ? <span className="text-emerald-700 font-semibold">✓ Yes</span> : <span className="text-slate-400">—</span>}</td>
-                          <td>{invite.accepted ? <span className="text-emerald-700 font-semibold">✓ Yes</span> : <span className="text-slate-400">No</span>}</td>
-                          <td className="text-slate-500 text-xs">
-                            {invite.createdAt ? new Date(invite.createdAt).toLocaleDateString() : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  data={pendingInviteRows}
+                  columns={pendingInviteColumns}
+                  emptyMessage="No pending invites."
+                  resultLabel="invite"
+                />
               )}
             </div>
 
@@ -438,29 +515,12 @@ function AdminOrgPage() {
               )}
               {orgMembersQuery.data?.length === 0 && <p className="org-empty text-sm">No members yet.</p>}
               {orgMembersQuery.data && orgMembersQuery.data.length > 0 && (
-                <div className="org-table-wrap">
-                  <table className="org-table">
-                    <thead>
-                      <tr><th>Email</th><th>Role</th><th>Status</th><th>Since</th></tr>
-                    </thead>
-                    <tbody>
-                      {orgMembersQuery.data.map((member) => (
-                        <tr key={member.id}>
-                          <td>{member.userEmail ?? "—"}</td>
-                          <td className="capitalize">{member.roleName ?? "—"}</td>
-                          <td>
-                            {member.active
-                              ? <span className="text-emerald-700 font-semibold">✓ Active</span>
-                              : <span className="text-slate-400">Inactive</span>}
-                          </td>
-                          <td className="text-slate-500 text-xs">
-                            {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  data={memberRows}
+                  columns={memberColumns}
+                  emptyMessage="No members yet."
+                  resultLabel="member"
+                />
               )}
             </div>
           </div>

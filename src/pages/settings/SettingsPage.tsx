@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
+import { Card, CardContent } from "../../components/ui/card";
 import type { AppRole } from "../../context/authTypes";
 import { useAuthContext } from "../../context/useAuthContext";
 import { cn } from "../../lib/utils";
@@ -64,14 +64,20 @@ const SettingsPage = () => {
   if (!canAccessSettings) return <Navigate to="/dashboard" replace />;
 
   return (
-    <section className="space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Settings</p>
-        <h1 className="text-2xl font-bold text-slate-900">System permissions and controls</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Configure referral permissions, approval behaviour, and AI controls.
-        </p>
-      </div>
+    <section className="org-shell reveal delay-1">
+      <Card>
+        <CardContent className="flex flex-col gap-1 px-5 py-4">
+          <p className="eyebrow">Settings</p>
+          <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+            System permissions and controls
+          </h1>
+          <p className="text-sm text-slate-500">
+            Configure referral permissions, approval behaviour, and AI controls.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Breadcrumbs items={[{ label: "Settings" }]} />
 
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <Card className="h-fit p-3">
@@ -99,8 +105,6 @@ const SettingsPage = () => {
         </Card>
 
         <Card className="space-y-4 p-5">
-          <Breadcrumbs items={[{ label: "Settings" }]} />
-
           {settingsSaved && (
             <p className="text-sm font-medium text-emerald-700">Settings saved.</p>
           )}
