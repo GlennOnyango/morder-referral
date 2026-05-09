@@ -1,6 +1,5 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { isAxiosError } from "axios";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
@@ -12,41 +11,9 @@ import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
+import { formatError, formatDateTime } from "../../utils/format";
 
 type FacilityStatusFilter = "all" | ModelsReferralStatus;
-// type FacilityRoleFilter = "all" | "origin" | "accepted";
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
-
-function formatDateTime(value?: string): string {
-  if (!value) {
-    return "-";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleString();
-}
 
 function FacilityReferralsPage() {
   const { workspaceId: organizationId } = useWorkspace();
@@ -111,9 +78,6 @@ function FacilityReferralsPage() {
           <p>View referrals created by or accepted by this facility.</p>
         </div>
         <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
-            Back to Referrals
-          </Link>
           <Link className="btn btn-primary org-btn" to={`/${organizationId}/referrals/create`}>
             Create Referral
           </Link>
@@ -123,7 +87,6 @@ function FacilityReferralsPage() {
       <Breadcrumbs
         items={[
           { label: facilityName, to: `/${organizationId}/organization` },
-          { label: "Referrals", to: `/${organizationId}/referrals` },
           { label: "Facility Referrals" },
         ]}
       />

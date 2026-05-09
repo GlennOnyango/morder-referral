@@ -21,6 +21,7 @@ import FacilityServicesPage from "./pages/facilities/FacilityServicesPage";
 import CreateReferralPage from "./pages/referrals/CreateReferralPage";
 import FacilityReferralsPage from "./pages/referrals/FacilityReferralsPage";
 import PoolReferralDetailPage from "./pages/referrals/PoolReferralDetailPage";
+import ReferralPoolPage from "./pages/referrals/pool/ReferralPoolPage";
 import ReferralsPage from "./pages/referrals/ReferralsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import AdminPage from "./pages/admin/AdminPage";
@@ -100,6 +101,15 @@ export default function LocalRoutes() {
         />
 
         <Route
+          path="referral-pool"
+          element={
+            <ProtectedRoute fallbackPath="/signin">
+              <ReferralPoolPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="referrals"
           element={
             <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
@@ -118,7 +128,7 @@ export default function LocalRoutes() {
         <Route
           path="referrals/pool/:referralCode"
           element={
-            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+            <ProtectedRoute fallbackPath="/signin">
               <PoolReferralDetailPage />
             </ProtectedRoute>
           }

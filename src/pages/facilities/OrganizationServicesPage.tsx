@@ -1,6 +1,6 @@
 import { Button } from "../../components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
@@ -10,24 +10,6 @@ import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
 
 function OrganizationServicesPage() {
   const { workspaceId: organizationId } = useWorkspace();

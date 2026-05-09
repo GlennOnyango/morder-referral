@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Inbox,
   Activity,
   Building2,
   ShieldCheck,
@@ -34,12 +35,18 @@ const NAV_ITEMS: NavItem[] = [
     getPath: (w) => `/${w}/dashboard`,
   },
   {
-    label: "Referrals",
+    label: "Referral Pool",
+    icon: Inbox,
+    end: false,
+    getPath: (w) => `/${w}/referral-pool`,
+  },
+  {
+    label: "Facility Referrals",
     icon: ArrowLeftRight,
     allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
     hideInSystem: true,
     end: false,
-    getPath: (w) => `/${w}/referrals`,
+    getPath: (w) => `/${w}/referrals/facility`,
   },
   {
     label: "Services",

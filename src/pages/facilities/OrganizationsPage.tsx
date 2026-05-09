@@ -1,5 +1,5 @@
 import { Button } from "../../components/ui/button";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
@@ -12,24 +12,6 @@ import {
   isOrganizationOwnedBySessionFacility,
 } from "../../utils/facilityAccess";
 
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
 
 type WardOption = {
   name: string;

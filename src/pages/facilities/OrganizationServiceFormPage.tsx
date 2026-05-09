@@ -1,7 +1,7 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useMemo, useState } from "react";
 import type { SetStateAction, SubmitEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
@@ -32,25 +32,6 @@ const defaultServiceFormState: ServiceFormState = {
   availability: "available",
   notes: "",
 };
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
 
 function serviceToFormState(service: Service): ServiceFormState {
   return {

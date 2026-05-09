@@ -9,7 +9,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import type { ModelOrganization } from "../../types/organizations.generated";
@@ -32,23 +32,6 @@ import {
 import { useAuthContext } from "../../context/useAuthContext";
 import CreateFacilityDialog from "../../components/dialogs/CreateFacilityDialog";
 import CreateServiceAccountDialog from "../../components/dialogs/CreateServiceAccountDialog";
-
-/* ─────────────────────────────────────────────
-   Helpers
-───────────────────────────────────────────── */
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const v = (payload as { message?: unknown }).message;
-      if (typeof v === "string") return v;
-    }
-    return error.message;
-  }
-  if (error instanceof Error) return error.message;
-  return "Request failed. Please try again.";
-}
 
 type OrgRow = {
   id: string;

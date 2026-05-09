@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { type ServiceUpsertInput } from "../../api/services";
@@ -36,19 +36,6 @@ const defaultAddServiceForm: ServiceUpsertInput = {
   availability: "available",
   notes: "",
 };
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const v = (payload as { message?: unknown }).message;
-      if (typeof v === "string") return v;
-    }
-    return error.message;
-  }
-  if (error instanceof Error) return error.message;
-  return "Request failed. Please try again.";
-}
 
 function OrgTypeBadge({ type }: { type: string }) {
   const label = type === "facility" ? "Facility" : type === "service" ? "Service Provider" : type;

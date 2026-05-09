@@ -1,7 +1,7 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
@@ -13,19 +13,6 @@ import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 import type { DtoUserOrganizationMappingResponse } from "../../types/auth.generated";
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") return value;
-    }
-    return error.message;
-  }
-  if (error instanceof Error) return error.message;
-  return "Request failed. Please try again.";
-}
 
 const ROLE_OPTIONS: { value: AuthGroupName; label: string }[] = [
   { value: "HOSPITAL_ADMIN", label: "Hospital Admin" },

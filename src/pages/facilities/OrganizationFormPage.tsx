@@ -1,7 +1,7 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
@@ -61,25 +61,6 @@ const defaultFormState: OrganizationFormState = {
   ownership_type: "public",
   organization_type: "facility",
 };
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
 
 function readOptionalString(source: unknown, keys: string[]): string {
   if (!source || typeof source !== "object") {

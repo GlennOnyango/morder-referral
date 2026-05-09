@@ -1,7 +1,7 @@
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
@@ -122,25 +122,6 @@ function getStepValidationError(stepIndex: number, formState: ReferralFormState)
   }
 
   return null;
-}
-
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
 }
 
 function trimToOptional(value: string): string | undefined {
