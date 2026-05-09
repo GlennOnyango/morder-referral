@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -71,18 +72,18 @@ function FacilityReferralsPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Referrals</p>
-          <h1>Facility Referrals</h1>
-          <p>View referrals created by or accepted by this facility.</p>
-        </div>
-        <div className="org-actions">
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Referrals</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">Facility Referrals</h1>
+            <p className="text-sm text-slate-500">View referrals created by or accepted by this facility.</p>
+          </div>
           <Link className="btn btn-primary org-btn" to={`/${organizationId}/referrals/create`}>
             Create Referral
           </Link>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={[

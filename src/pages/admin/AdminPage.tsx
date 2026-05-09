@@ -21,6 +21,7 @@ import {
   BreadcrumbPage,
 } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import {
   Table,
   TableBody,
@@ -205,29 +206,31 @@ function AdminPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">System Administration</p>
-          <h1>Admin Console</h1>
-          <p>Manage organizations, service providers, and user access roles.</p>
-        </div>
-        <div className="org-actions">
-          <button
-            type="button"
-            className="btn btn-ghost org-btn"
-            onClick={() => setCreateModal("service")}
-          >
-            Service Provider
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary org-btn"
-            onClick={() => setCreateModal("facility")}
-          >
-            Create Facility
-          </button>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">System Administration</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">Admin Console</h1>
+            <p className="text-sm text-slate-500">Manage organizations, service providers, and user access roles.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-ghost org-btn"
+              onClick={() => setCreateModal("service")}
+            >
+              Service Provider
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary org-btn"
+              onClick={() => setCreateModal("facility")}
+            >
+              Create Facility
+            </button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumb>
         <BreadcrumbList>

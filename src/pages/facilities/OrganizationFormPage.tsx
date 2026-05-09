@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
@@ -266,16 +267,22 @@ function OrganizationFormPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Facilities</p>
-          <h1>{isEdit ? "Update facility" : "Create facility"}</h1>
-          <p>{isEdit ? "Edit facility details and save updates." : "Register a new facility."}</p>
-        </div>
-        <Link className="btn btn-ghost" to={isEdit && organizationId ? `/${organizationId}/organization` : "../organizations"}>
-          {isEdit ? "Back to Facility Workspace" : "Back to Facilities"}
-        </Link>
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Facilities</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              {isEdit ? "Update facility" : "Create facility"}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {isEdit ? "Edit facility details and save updates." : "Register a new facility."}
+            </p>
+          </div>
+          <Link className="btn btn-ghost" to={isEdit && organizationId ? `/${organizationId}/organization` : "../organizations"}>
+            {isEdit ? "Back to Facility Workspace" : "Back to Facilities"}
+          </Link>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={

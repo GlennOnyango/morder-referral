@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
@@ -86,16 +87,18 @@ function OrganizationUsersPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Facilities</p>
-          <h1>
-            Facility users:{" "}
-            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
-          </h1>
-          <p>View members registered under this organisation.</p>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Facilities</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              Facility users:{" "}
+              {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
+            </h1>
+            <p className="text-sm text-slate-500">View members registered under this organisation.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={[

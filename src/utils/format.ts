@@ -19,3 +19,25 @@ export function formatDateTime(value?: string): string {
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleString();
 }
+
+export function formatFieldValue(value?: string | number): string {
+  if (typeof value === "number") return value.toString();
+  return value ?? "";
+}
+
+export function formatDateOfBirthEpoch(value?: number): string {
+  if (typeof value !== "number" || Number.isNaN(value) || value <= 0) return "-";
+  if (value >= 1900 && value <= 2100) return value.toString();
+  const ms = value < 1_000_000_000_000 ? value * 1000 : value;
+  const parsed = new Date(ms);
+  if (Number.isNaN(parsed.getTime())) return value.toString();
+  return parsed.toLocaleDateString();
+}
+
+export function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}

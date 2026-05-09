@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
+import { Card, CardContent } from "../../components/ui/card";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { type ServiceUpsertInput } from "../../api/services";
@@ -117,13 +118,17 @@ function AdminOrgPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">System Administration</p>
-          <h1>{orgDetailQuery.isLoading ? "Loading…" : orgName}</h1>
-          {orgType && <OrgTypeBadge type={orgType} />}
-        </div>
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">System Administration</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              {orgDetailQuery.isLoading ? "Loading…" : orgName}
+            </h1>
+            {orgType && <OrgTypeBadge type={orgType} />}
+          </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumb>
         <BreadcrumbList>

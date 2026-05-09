@@ -12,40 +12,9 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
 import { formatError, formatDateTime } from "../utils/format";
+import { PriorityBadge, StatusBadge } from "./ReferralBadges";
 
 const DEFAULT_POOL_PAGE_SIZE = 10;
-
-function PriorityBadge({ priority }: { priority?: string }) {
-  if (!priority) return null;
-  const normalized = priority.toLowerCase();
-  const classes =
-    normalized === "emergency"
-      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-      : normalized === "urgent"
-        ? "bg-amber-100 text-amber-700 ring-1 ring-amber-200"
-        : "bg-slate-100 text-slate-600 ring-1 ring-slate-200";
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${classes}`}>
-      {priority}
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-  const normalized = status.toLowerCase();
-  const classes =
-    normalized === "open"
-      ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
-      : normalized === "accepted"
-        ? "bg-sky-100 text-sky-700 ring-1 ring-sky-200"
-        : "bg-slate-100 text-slate-600 ring-1 ring-slate-200";
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${classes}`}>
-      {status}
-    </span>
-  );
-}
 
 interface ReferralPoolProps {
   organizationId: string;
@@ -242,7 +211,8 @@ function ReferralPool({
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="min-h-50 max-h-[calc(100dvh-26rem)] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {poolReferrals.map((referral) => {
                 const referralCode = referral.referralCode ?? "";
                 const normalizedPriority = (referral.priority ?? "").toLowerCase();
@@ -320,6 +290,7 @@ function ReferralPool({
                   </Card>
                 );
               })}
+              </div>
             </div>
           )
         )}

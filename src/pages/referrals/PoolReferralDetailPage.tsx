@@ -1,8 +1,11 @@
+import { Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { validateOrganizationFacilityCode } from "../../api/organizations";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
@@ -11,49 +14,39 @@ import { usePostAcceptReferral } from "../../api/hooks/referrals/AcceptReferral.
 import { usePostReferralInfoRequest } from "../../api/hooks/referrals/CreateReferralInfoRequest.hook";
 import { usePostSummarizeReferral } from "../../api/hooks/referrals/SummarizeReferral.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
+import { PriorityBadge, StatusBadge } from "../../components/ReferralBadges";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { useAuthContext } from "../../context/useAuthContext";
 import { ModelsReferralStatus } from "../../types/referrals.generated";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
-import { formatError, formatDateTime } from "../../utils/format";
-
-function readOnlyValue(value?: string | number): string {
-  if (typeof value === "number") {
-    return value.toString();
-  }
-
-  return value ?? "";
-}
-
-function formatDateOfBirthEpoch(value?: number): string {
-  if (typeof value !== "number" || Number.isNaN(value) || value <= 0) {
-    return "-";
-  }
-
-  // The API may return year-of-birth (e.g. 1988) or unix time.
-  if (value >= 1900 && value <= 2100) {
-    return value.toString();
-  }
-
-  const milliseconds = value < 1_000_000_000_000 ? value * 1000 : value;
-  const parsed = new Date(milliseconds);
-  if (Number.isNaN(parsed.getTime())) {
-    return value.toString();
-  }
-
-  return parsed.toLocaleDateString();
-}
+import {
+  formatError,
+  formatDateTime,
+  formatFieldValue,
+  formatDateOfBirthEpoch,
+  safeDecode,
+} from "../../utils/format";
 
 function normalizeCode(value?: string): string {
   return value?.trim().toLowerCase() ?? "";
 }
 
-function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
+      <dd className="text-sm font-medium text-slate-800 wrap-break-word">{value || "—"}</dd>
+    </div>
+  );
+}
+
+function InfoFieldLong({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
+      <dd className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap wrap-break-word">{value || "—"}</dd>
+    </div>
+  );
 }
 
 function PoolReferralDetailPage() {
@@ -64,6 +57,7 @@ function PoolReferralDetailPage() {
   const roles = session?.roles ?? [];
   const canManageReferrals = isFacilityManager(roles);
   const queryClient = useQueryClient();
+
   const [acceptSuccessMessage, setAcceptSuccessMessage] = useState<string | null>(null);
   const [isRequestInfoDialogOpen, setIsRequestInfoDialogOpen] = useState(false);
   const [requestInfoTitle, setRequestInfoTitle] = useState("");
@@ -111,31 +105,15 @@ function PoolReferralDetailPage() {
     },
   });
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (!canManageReferrals) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (!organizationId) {
-    return <Navigate to="/facilities" replace />;
-  }
-
-  if (!referralCode) {
-    return <Navigate to={`/${organizationId}/referrals`} replace />;
-  }
-
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+  if (!isAuthenticated) return <Navigate to="/signin" replace />;
+  if (!canManageReferrals) return <Navigate to="/dashboard" replace />;
+  if (!organizationId) return <Navigate to="/facilities" replace />;
+  if (!referralCode) return <Navigate to={`/${organizationId}/referrals`} replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId)
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data))
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
 
-  const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
   const referral = referralDetailQuery.data;
   const patient = referral?.patient;
   const isSameFacilityReferral =
@@ -154,382 +132,346 @@ function PoolReferralDetailPage() {
     setIsRequestInfoDialogOpen(true);
   };
 
-  const handleCloseRequestInfoDialog = () => {
-    setIsRequestInfoDialogOpen(false);
-  };
-
   const handleRequestInfoSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!requestInfoTitle.trim() || !requestInfoDescription.trim()) {
-      return;
-    }
-
+    if (!requestInfoTitle.trim() || !requestInfoDescription.trim()) return;
     const referralId = referralDetailQuery.data?.id?.trim() ?? "";
     if (!referralId) return;
     const originFacilityCode = referralDetailQuery.data?.originFacilityCode?.trim() ?? "";
     if (!originFacilityCode) return;
-    validateOrganizationFacilityCode(originFacilityCode).then((validation) => {
-      const originFacilityId = validation.facilityId?.trim() ?? "";
-      if (!validation.exists || !originFacilityId) return;
-      requestInfoMutation.mutate({
-        referralId,
-        payload: {
-          facilityId: originFacilityId,
-          title: requestInfoTitle.trim(),
-          additionalInformation: requestInfoDescription.trim(),
-        },
-      });
-    }).catch(() => {});
+    validateOrganizationFacilityCode(originFacilityCode)
+      .then((validation) => {
+        const originFacilityId = validation.facilityId?.trim() ?? "";
+        if (!validation.exists || !originFacilityId) return;
+        requestInfoMutation.mutate({
+          referralId,
+          payload: {
+            facilityId: originFacilityId,
+            title: requestInfoTitle.trim(),
+            additionalInformation: requestInfoDescription.trim(),
+          },
+        });
+      })
+      .catch(() => {});
+  };
+
+  const handleGenerateSummary = () => {
+    setAcceptSuccessMessage(null);
+    setRequestInfoSuccessMessage(null);
+    summarizeCaseMutation.mutate({
+      referralCode,
+      onChunk: (chunk) => setAiSummary((s) => `${s}${chunk}`),
+    });
   };
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Referrals</p>
-          <h1>Open Referral Detail</h1>
-          <p>Review all details before taking a referral action.</p>
-        </div>
-        <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
-            Back to Open Referrals
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
-            View Facility Referrals
-          </Link>
-        </div>
-      </div>
+      {/* Page header */}
+      <Card>
+        <CardContent className="flex items-start justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Referral Pool</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              {referralCode || "Referral Detail"}
+            </h1>
+            <p className="text-sm text-slate-500">Review all details before taking action on this referral.</p>
+          </div>
+          {referral && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 shrink-0">
+              <StatusBadge status={referral.status} />
+              <PriorityBadge priority={referral.priority} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={[
-          { label: facilityName, to: `/${organizationId}/organization` },
-          { label: "Referrals", to: `/${organizationId}/referrals` },
+          { label: "Referral Pool", to: `/${organizationId}/referrals` },
           { label: referralCode },
         ]}
       />
 
-      {organizationQuery.isError ? (
+      {/* Facility error states */}
+      {organizationQuery.isError && (
         <article className="access-note error-block">
           <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
-      ) : null}
-
-      {organizationQuery.data && !facilityCode ? (
+      )}
+      {organizationQuery.data && !facilityCode && (
         <article className="access-note error-block">
           <h2>Missing facility code</h2>
-          <p>This facility does not have a facility code, so referral acceptance is unavailable.</p>
+          <p>This facility does not have a facility code — referral acceptance is unavailable.</p>
         </article>
-      ) : null}
+      )}
 
-      {referralDetailQuery.isLoading ? <p className="org-empty">Loading referral details...</p> : null}
-      {referralDetailQuery.isError ? (
-        <p className="result-note error-note">{formatError(referralDetailQuery.error)}</p>
-      ) : null}
-
-      {referral ? (
-        <article className="org-form-card">
-          <div className="referral-detail-card-header">
-            <h2>Referral Details</h2>
-            <Button
-              type="button"
-              className="btn btn-ghost org-btn referral-ai-action-btn"
-              onClick={() => {
-                setAcceptSuccessMessage(null);
-                setRequestInfoSuccessMessage(null);
-                summarizeCaseMutation.mutate({ referralCode, onChunk: (chunk) => setAiSummary((s) => `${s}${chunk}`) });
-              }}
-              disabled={summarizeCaseMutation.isPending}
-            >
-              <span className="referral-ai-action-content">
-                <span className="referral-ai-action-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" role="presentation" focusable="false">
-                    <path
-                      d="M12 2.5l1.9 5.2 5.6 1.9-5.6 1.9L12 16.7l-1.9-5.2-5.6-1.9 5.6-1.9L12 2.5Zm7.2 11.8.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4ZM6 15.6l.8 2.1 2.1.8-2.1.8L6 21.4l-.8-2.1-2.1-.8 2.1-.8.8-2.1Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </span>
-                <span className="referral-ai-action-copy">
-                  <span className="referral-ai-action-label">
-                    {summarizeCaseMutation.isPending ? "Summarising with AI..." : "Generate Summary with AI"}
-                  </span>
-                  <span className="referral-ai-action-subtitle">Clinical highlights and risks</span>
-                </span>
-              </span>
-            </Button>
-          </div>
-
-          {aiSummaryRequested ? (
-            <section className="referral-ai-summary-card" aria-live="polite">
-              <div className="referral-ai-summary-head">
-                <p>AI Summary</p>
-                {summarizeCaseMutation.isPending ? <span className="referral-ai-summary-chip">Generating</span> : null}
-              </div>
-              {summarizeCaseMutation.isError ? (
-                <p className="result-note error-note referral-ai-summary-note">{formatError(summarizeCaseMutation.error)}</p>
-              ) : null}
-              {aiSummary ? (
-                <p className="referral-ai-summary-content">{aiSummary}</p>
-              ) : summarizeCaseMutation.isPending ? (
-                <p className="referral-ai-summary-placeholder">Preparing a concise clinical summary from this referral...</p>
-              ) : (
-                <p className="referral-ai-summary-placeholder">No summary was returned. Try again in a moment.</p>
-              )}
-            </section>
-          ) : null}
-
-          <div className="org-form">
-            <div className="org-grid">
-              <label className="field">
-                <span>Referral Code</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(referral.referralCode)} readOnly />
-              </label>
-              <label className="field">
-                <span>Status</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(referral.status)} readOnly />
-              </label>
-            </div>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Service Type</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(referral.serviceType)} readOnly />
-              </label>
-              <label className="field">
-                <span>Priority</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(referral.priority)} readOnly />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Reason for Referral</span>
-              <textarea
-                className="field-input service-notes referral-readonly-input"
-                rows={3}
-                value={readOnlyValue(referral.reasonForReferral)}
-                readOnly
-              />
-            </label>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Clinical Summary</span>
-                <textarea
-                  className="field-input service-notes referral-readonly-input"
-                  rows={3}
-                  value={readOnlyValue(referral.clinicalSummary)}
-                  readOnly
-                />
-              </label>
-              <label className="field">
-                <span>Referral Notes</span>
-                <textarea
-                  className="field-input service-notes referral-readonly-input"
-                  rows={3}
-                  value={readOnlyValue(referral.notes)}
-                  readOnly
-                />
-              </label>
-            </div>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Origin Facility</span>
-                <input
-                  className="field-input referral-readonly-input"
-                  value={readOnlyValue(referral.originFacilityCode)}
-                  readOnly
-                />
-              </label>
-              <label className="field">
-                <span>Accepted Facility</span>
-                <input
-                  className="field-input referral-readonly-input"
-                  value={readOnlyValue(referral.acceptedByFacilityCode)}
-                  readOnly
-                />
-              </label>
-            </div>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Raised By</span>
-                <input
-                  className="field-input referral-readonly-input"
-                  value={readOnlyValue(referral.raisedByUsername ?? referral.raisedBySub)}
-                  readOnly
-                />
-              </label>
-              <label className="field">
-                <span>Accepted At</span>
-                <input className="field-input referral-readonly-input" value={formatDateTime(referral.acceptedAt)} readOnly />
-              </label>
-            </div>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Created At</span>
-                <input className="field-input referral-readonly-input" value={formatDateTime(referral.createdAt)} readOnly />
-              </label>
-              <label className="field">
-                <span>Updated At</span>
-                <input className="field-input referral-readonly-input" value={formatDateTime(referral.updatedAt)} readOnly />
-              </label>
-            </div>
-
-            <h3>Patient Details</h3>
-            <div className="org-grid">
-              <label className="field">
-                <span>Full Name</span>
-                <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.fullName)} readOnly />
-              </label>
-              <label className="field">
-                <span>Date of Birth</span>
-                <input
-                  className="field-input referral-readonly-input"
-                  value={formatDateOfBirthEpoch(patient?.dateOfBirth)}
-                  readOnly
-                />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Gender</span>
-              <input className="field-input referral-readonly-input" value={readOnlyValue(patient?.gender)} readOnly />
-            </label>
-
-            <label className="field">
-              <span>Diagnosis</span>
-              <textarea
-                className="field-input service-notes referral-readonly-input"
-                rows={2}
-                value={readOnlyValue(patient?.diagnosis)}
-                readOnly
-              />
-            </label>
-
-            <div className="org-grid">
-              <label className="field">
-                <span>Allergies</span>
-                <textarea
-                  className="field-input service-notes referral-readonly-input"
-                  rows={2}
-                  value={readOnlyValue(patient?.allergies)}
-                  readOnly
-                />
-              </label>
-              <label className="field">
-                <span>Vital Summary</span>
-                <textarea
-                  className="field-input service-notes referral-readonly-input"
-                  rows={2}
-                  value={readOnlyValue(patient?.vitalSummary)}
-                  readOnly
-                />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Additional Notes</span>
-              <textarea
-                className="field-input service-notes referral-readonly-input"
-                rows={2}
-                value={readOnlyValue(patient?.additionalNotes)}
-                readOnly
-              />
-            </label>
-          </div>
-
-          <div className="service-form-actions referral-detail-actions">
-            <Button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setAcceptSuccessMessage(null);
-                setRequestInfoSuccessMessage(null);
-                acceptReferralMutation.mutate({ referralCode, payload: { facilityCode } });
-              }}
-              disabled={!canAcceptReferral || acceptReferralMutation.isPending}
-            >
-              {acceptReferralMutation.isPending ? "Accepting..." : "Accept Referral"}
-            </Button>
-            <Button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setAcceptSuccessMessage(null);
-                handleOpenRequestInfoDialog();
-              }}
-              disabled={!canRequestInformation}
-            >
-              Request More Information
-            </Button>
-          </div>
-
-          {isSameFacilityReferral ? (
-            <p className="org-section-note">
-              Action unavailable because this referral belongs to the same facility.
-            </p>
-          ) : null}
-
-          {referral.status !== ModelsReferralStatus.ReferralStatusOpen ? (
-            <p className="org-section-note">
-              This referral is currently <strong>{referral.status ?? "unavailable"}</strong> and cannot be accepted.
-            </p>
-          ) : null}
+      {/* Referral loading / error */}
+      {referralDetailQuery.isLoading && (
+        <article className="access-note">
+          <h2>Loading referral</h2>
+          <p>Fetching referral details…</p>
         </article>
-      ) : null}
+      )}
+      {referralDetailQuery.isError && (
+        <article className="access-note error-block">
+          <h2>Could not load referral</h2>
+          <p>{formatError(referralDetailQuery.error)}</p>
+        </article>
+      )}
 
-      {acceptReferralMutation.isError ? (
-        <p className="result-note error-note">{formatError(acceptReferralMutation.error)}</p>
-      ) : null}
-      {requestInfoMutation.isError ? (
-        <p className="result-note error-note">{formatError(requestInfoMutation.error)}</p>
-      ) : null}
-      {acceptSuccessMessage ? <p className="result-note success-note">{acceptSuccessMessage}</p> : null}
-      {requestInfoSuccessMessage ? <p className="result-note success-note">{requestInfoSuccessMessage}</p> : null}
+      {referral && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* ── Left column: detail cards ── */}
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            {/* Referral Information */}
+            <Card>
+              <CardContent className="flex flex-col gap-4 px-5 py-5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Referral Information
+                </p>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <InfoField label="Referral Code" value={formatFieldValue(referral.referralCode)} />
+                  <InfoField label="Status" value={formatFieldValue(referral.status)} />
+                  <InfoField label="Service Type" value={formatFieldValue(referral.serviceType)} />
+                  <InfoField label="Priority" value={formatFieldValue(referral.priority)} />
+                  <InfoField label="Origin Facility" value={formatFieldValue(referral.originFacilityCode)} />
+                  <InfoField label="Accepted Facility" value={formatFieldValue(referral.acceptedByFacilityCode)} />
+                  <InfoField
+                    label="Raised By"
+                    value={formatFieldValue(referral.raisedByUsername ?? referral.raisedBySub)}
+                  />
+                  <InfoField label="Accepted At" value={formatDateTime(referral.acceptedAt)} />
+                  <InfoField label="Created At" value={formatDateTime(referral.createdAt)} />
+                  <InfoField label="Updated At" value={formatDateTime(referral.updatedAt)} />
+                </dl>
+              </CardContent>
+            </Card>
 
-      <Dialog open={isRequestInfoDialogOpen} onOpenChange={(open) => { if (!open) handleCloseRequestInfoDialog(); }}>
-        <DialogContent className="sm:max-w-140">
+            {/* Clinical Details */}
+            <Card>
+              <CardContent className="flex flex-col gap-4 px-5 py-5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Clinical Details
+                </p>
+                <dl className="flex flex-col gap-4">
+                  <InfoFieldLong
+                    label="Reason for Referral"
+                    value={formatFieldValue(referral.reasonForReferral)}
+                  />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <InfoFieldLong label="Clinical Summary" value={formatFieldValue(referral.clinicalSummary)} />
+                    <InfoFieldLong label="Referral Notes" value={formatFieldValue(referral.notes)} />
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+
+            {/* Patient Details */}
+            <Card>
+              <CardContent className="flex flex-col gap-4 px-5 py-5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Patient Details
+                </p>
+                <dl className="flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <InfoField label="Full Name" value={formatFieldValue(patient?.fullName)} />
+                    <InfoField label="Date of Birth" value={formatDateOfBirthEpoch(patient?.dateOfBirth)} />
+                    <InfoField label="Gender" value={formatFieldValue(patient?.gender)} />
+                  </div>
+                  <InfoFieldLong label="Diagnosis" value={formatFieldValue(patient?.diagnosis)} />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <InfoFieldLong label="Allergies" value={formatFieldValue(patient?.allergies)} />
+                    <InfoFieldLong label="Vital Summary" value={formatFieldValue(patient?.vitalSummary)} />
+                  </div>
+                  <InfoFieldLong label="Additional Notes" value={formatFieldValue(patient?.additionalNotes)} />
+                </dl>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Right column: actions + AI ── */}
+          <div className="flex flex-col gap-4">
+            <Card>
+              <CardContent className="flex flex-col gap-3 px-5 py-5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Actions</p>
+
+                {/* Constraint notices */}
+                {isSameFacilityReferral && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    This referral originates from your facility and cannot be accepted.
+                  </p>
+                )}
+                {!isSameFacilityReferral &&
+                  referral.status !== ModelsReferralStatus.ReferralStatusOpen && (
+                    <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      This referral is{" "}
+                      <strong>{referral.status ?? "unavailable"}</strong> and cannot be accepted.
+                    </p>
+                  )}
+
+                {/* Success notices */}
+                {acceptSuccessMessage && (
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    {acceptSuccessMessage}
+                  </p>
+                )}
+                {requestInfoSuccessMessage && (
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    {requestInfoSuccessMessage}
+                  </p>
+                )}
+
+                {/* Error notices */}
+                {acceptReferralMutation.isError && (
+                  <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                    {formatError(acceptReferralMutation.error)}
+                  </p>
+                )}
+                {requestInfoMutation.isError && (
+                  <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                    {formatError(requestInfoMutation.error)}
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-2 pt-1">
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => {
+                      setAcceptSuccessMessage(null);
+                      setRequestInfoSuccessMessage(null);
+                      acceptReferralMutation.mutate({ referralCode, payload: { facilityCode } });
+                    }}
+                    disabled={!canAcceptReferral || acceptReferralMutation.isPending}
+                  >
+                    {acceptReferralMutation.isPending ? "Accepting…" : "Accept Referral"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setAcceptSuccessMessage(null);
+                      handleOpenRequestInfoDialog();
+                    }}
+                    disabled={!canRequestInformation}
+                  >
+                    Request More Information
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full gap-2"
+                    onClick={handleGenerateSummary}
+                    disabled={summarizeCaseMutation.isPending}
+                  >
+                    <Sparkles className="size-4" />
+                    {summarizeCaseMutation.isPending ? "Summarising…" : "Generate AI Summary"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Summary Card */}
+            {aiSummaryRequested && (
+              <Card>
+                <CardContent className="flex flex-col gap-3 px-5 py-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      AI Summary
+                    </p>
+                    {summarizeCaseMutation.isPending && (
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                        Generating
+                      </span>
+                    )}
+                  </div>
+                  {summarizeCaseMutation.isError && (
+                    <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                      {formatError(summarizeCaseMutation.error)}
+                    </p>
+                  )}
+                  {aiSummary ? (
+                    <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">{aiSummary}</p>
+                  ) : summarizeCaseMutation.isPending ? (
+                    <p className="text-sm italic text-slate-400">
+                      Preparing a concise clinical summary…
+                    </p>
+                  ) : (
+                    <p className="text-sm italic text-slate-400">
+                      No summary was returned. Try again.
+                    </p>
+                  )}
+                  {!summarizeCaseMutation.isPending && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="self-start gap-1.5"
+                      onClick={handleGenerateSummary}
+                    >
+                      <Sparkles className="size-3.5" />
+                      Regenerate
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Request More Information Dialog */}
+      <Dialog
+        open={isRequestInfoDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) setIsRequestInfoDialogOpen(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
+            <p className="eyebrow">Referral {referralCode}</p>
             <DialogTitle>Request More Information</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Add a title and description for the information you need from the originating facility.
+            Describe the information you need from the originating facility.
           </p>
-          <form className="org-form" onSubmit={handleRequestInfoSubmit}>
-            <label className="field" htmlFor="request-info-dialog-title">
-              <span>Title</span>
-              <input
-                id="request-info-dialog-title"
-                className="field-input"
+          <form className="flex flex-col gap-4" onSubmit={handleRequestInfoSubmit}>
+            <label
+              className="flex flex-col gap-1.5 text-sm font-medium text-slate-700"
+              htmlFor="request-info-title"
+            >
+              Title
+              <Input
+                id="request-info-title"
                 value={requestInfoTitle}
-                onChange={(event) => setRequestInfoTitle(event.target.value)}
+                onChange={(e) => setRequestInfoTitle(e.target.value)}
                 placeholder="e.g. Missing lab results"
                 required
               />
             </label>
-
-            <label className="field" htmlFor="request-info-dialog-description">
-              <span>Description</span>
+            <label
+              className="flex flex-col gap-1.5 text-sm font-medium text-slate-700"
+              htmlFor="request-info-description"
+            >
+              Description
               <textarea
-                id="request-info-dialog-description"
-                className="field-input service-notes"
+                id="request-info-description"
+                className="w-full resize-none rounded-xl border border-teal-900/19 bg-white/95 px-3.5 py-2.5 font-[inherit] text-[0.95rem] text-[#0d2230] placeholder:text-[#506071]/60 focus:border-emerald-700/70 focus:outline-none focus:shadow-[0_0_0_3px_rgba(17,122,101,0.13)]"
                 rows={4}
                 value={requestInfoDescription}
-                onChange={(event) => setRequestInfoDescription(event.target.value)}
+                onChange={(e) => setRequestInfoDescription(e.target.value)}
                 placeholder="Describe the additional details or documents required."
                 required
               />
             </label>
-
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseRequestInfoDialog}>
+              <Button type="button" variant="outline" onClick={() => setIsRequestInfoDialogOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={requestInfoMutation.isPending}>
-                {requestInfoMutation.isPending ? "Sending..." : "Send Request"}
+                {requestInfoMutation.isPending ? "Sending…" : "Send Request"}
               </Button>
             </DialogFooter>
           </form>

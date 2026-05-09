@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
@@ -276,21 +277,23 @@ function CreateReferralPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Referrals</p>
-          <h1>Create Referral</h1>
-          <p>Raise a new referral for this facility.</p>
-        </div>
-        <div className="org-actions">
-          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
-            Back to Referrals
-          </Link>
-          <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
-            View Facility Referrals
-          </Link>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Referrals</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">Create Referral</h1>
+            <p className="text-sm text-slate-500">Raise a new referral for this facility.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
+              Back to Referrals
+            </Link>
+            <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
+              View Facility Referrals
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={[
