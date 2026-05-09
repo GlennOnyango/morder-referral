@@ -1,31 +1,31 @@
 import { Sparkles } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Input } from "../../../components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { useWorkspace } from "../../context/WorkspaceContext";
-import { validateOrganizationFacilityCode } from "../../api/organizations";
-import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { useGetReferralByCode } from "../../api/hooks/referrals/ReferralByCode.hook";
-import { usePostAcceptReferral } from "../../api/hooks/referrals/AcceptReferral.hook";
-import { usePostReferralInfoRequest } from "../../api/hooks/referrals/CreateReferralInfoRequest.hook";
-import { usePostSummarizeReferral } from "../../api/hooks/referrals/SummarizeReferral.hook";
-import Breadcrumbs from "../../components/Breadcrumbs";
-import { PriorityBadge, StatusBadge } from "../../components/ReferralBadges";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { useAuthContext } from "../../context/useAuthContext";
-import { ModelsReferralStatus } from "../../types/referrals.generated";
-import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
+import { useWorkspace } from "../../../context/WorkspaceContext";
+import { validateOrganizationFacilityCode } from "../../../api/organizations";
+import { useGetOrganizationById } from "../../../api/hooks/organizations/OrganizationById.hook";
+import { useGetReferralByCode } from "../../../api/hooks/referrals/ReferralByCode.hook";
+import { usePostAcceptReferral } from "../../../api/hooks/referrals/AcceptReferral.hook";
+import { usePostReferralInfoRequest } from "../../../api/hooks/referrals/CreateReferralInfoRequest.hook";
+import { usePostSummarizeReferral } from "../../../api/hooks/referrals/SummarizeReferral.hook";
+import Breadcrumbs from "../../../components/Breadcrumbs";
+import { PriorityBadge, StatusBadge } from "../../../components/ReferralBadges";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { useAuthContext } from "../../../context/useAuthContext";
+import { ModelsReferralStatus } from "../../../types/referrals.generated";
+import { canAccessOrganization, isFacilityManager } from "../../../utils/facilityAccess";
 import {
   formatError,
   formatDateTime,
   formatFieldValue,
   formatDateOfBirthEpoch,
   safeDecode,
-} from "../../utils/format";
+} from "../../../utils/format";
 
 function normalizeCode(value?: string): string {
   return value?.trim().toLowerCase() ?? "";
@@ -108,7 +108,7 @@ function PoolReferralDetailPage() {
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
   if (!canManageReferrals) return <Navigate to="/dashboard" replace />;
   if (!organizationId) return <Navigate to="/facilities" replace />;
-  if (!referralCode) return <Navigate to={`/${organizationId}/referrals`} replace />;
+  if (!referralCode) return <Navigate to={`/${organizationId}/referral-pool`} replace />;
   if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId)
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
   if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data))
@@ -187,12 +187,11 @@ function PoolReferralDetailPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Referral Pool", to: `/${organizationId}/referrals` },
+          { label: "Referral Pool", to: `/${organizationId}/referral-pool` },
           { label: referralCode },
         ]}
       />
 
-      {/* Facility error states */}
       {organizationQuery.isError && (
         <article className="access-note error-block">
           <h2>Could not load facility</h2>
@@ -206,7 +205,6 @@ function PoolReferralDetailPage() {
         </article>
       )}
 
-      {/* Referral loading / error */}
       {referralDetailQuery.isLoading && (
         <article className="access-note">
           <h2>Loading referral</h2>
@@ -224,7 +222,6 @@ function PoolReferralDetailPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* ── Left column: detail cards ── */}
           <div className="flex flex-col gap-4 lg:col-span-2">
-            {/* Referral Information */}
             <Card>
               <CardContent className="flex flex-col gap-4 px-5 py-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -248,7 +245,6 @@ function PoolReferralDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Clinical Details */}
             <Card>
               <CardContent className="flex flex-col gap-4 px-5 py-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -267,7 +263,6 @@ function PoolReferralDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Patient Details */}
             <Card>
               <CardContent className="flex flex-col gap-4 px-5 py-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -296,7 +291,6 @@ function PoolReferralDetailPage() {
               <CardContent className="flex flex-col gap-3 px-5 py-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Actions</p>
 
-                {/* Constraint notices */}
                 {isSameFacilityReferral && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                     This referral originates from your facility and cannot be accepted.
@@ -310,7 +304,6 @@ function PoolReferralDetailPage() {
                     </p>
                   )}
 
-                {/* Success notices */}
                 {acceptSuccessMessage && (
                   <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
                     {acceptSuccessMessage}
@@ -322,7 +315,6 @@ function PoolReferralDetailPage() {
                   </p>
                 )}
 
-                {/* Error notices */}
                 {acceptReferralMutation.isError && (
                   <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
                     {formatError(acceptReferralMutation.error)}
@@ -373,14 +365,11 @@ function PoolReferralDetailPage() {
               </CardContent>
             </Card>
 
-            {/* AI Summary Card */}
             {aiSummaryRequested && (
               <Card>
                 <CardContent className="flex flex-col gap-3 px-5 py-5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      AI Summary
-                    </p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">AI Summary</p>
                     {summarizeCaseMutation.isPending && (
                       <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700">
                         Generating
@@ -395,13 +384,9 @@ function PoolReferralDetailPage() {
                   {aiSummary ? (
                     <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">{aiSummary}</p>
                   ) : summarizeCaseMutation.isPending ? (
-                    <p className="text-sm italic text-slate-400">
-                      Preparing a concise clinical summary…
-                    </p>
+                    <p className="text-sm italic text-slate-400">Preparing a concise clinical summary…</p>
                   ) : (
-                    <p className="text-sm italic text-slate-400">
-                      No summary was returned. Try again.
-                    </p>
+                    <p className="text-sm italic text-slate-400">No summary was returned. Try again.</p>
                   )}
                   {!summarizeCaseMutation.isPending && (
                     <Button
@@ -422,7 +407,6 @@ function PoolReferralDetailPage() {
         </div>
       )}
 
-      {/* Request More Information Dialog */}
       <Dialog
         open={isRequestInfoDialogOpen}
         onOpenChange={(open) => {

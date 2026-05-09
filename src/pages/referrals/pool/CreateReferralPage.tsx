@@ -1,18 +1,18 @@
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatError } from "../../utils/format";
+import { formatError } from "../../../utils/format";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useWorkspace } from "../../context/WorkspaceContext";
-import { type ReferralCreateInput } from "../../api/referrals";
-import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
-import { usePostReferral } from "../../api/hooks/referrals/CreateReferral.hook";
-import Breadcrumbs from "../../components/Breadcrumbs";
-import { useAuthContext } from "../../context/useAuthContext";
-import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useWorkspace } from "../../../context/WorkspaceContext";
+import { type ReferralCreateInput } from "../../../api/referrals";
+import { useGetOrganizationById } from "../../../api/hooks/organizations/OrganizationById.hook";
+import { usePostReferral } from "../../../api/hooks/referrals/CreateReferral.hook";
+import Breadcrumbs from "../../../components/Breadcrumbs";
+import { useAuthContext } from "../../../context/useAuthContext";
+import { canAccessOrganization, isFacilityManager } from "../../../utils/facilityAccess";
 
 type ReferralFormState = {
   serviceType: string;
@@ -90,36 +90,21 @@ function getStepValidationError(stepIndex: number, formState: ReferralFormState)
     Number.isInteger(patientYearOfBirth) && patientYearOfBirth >= 1900 && patientYearOfBirth <= currentYear;
 
   if (stepIndex === 0) {
-    if (!formState.patientFullName.trim()) {
-      return "Patient full name is required.";
-    }
-    if (!isYearOfBirthValid) {
-      return "Please enter a valid year of birth.";
-    }
-    if (!formState.patientGender.trim()) {
-      return "Patient gender is required.";
-    }
+    if (!formState.patientFullName.trim()) return "Patient full name is required.";
+    if (!isYearOfBirthValid) return "Please enter a valid year of birth.";
+    if (!formState.patientGender.trim()) return "Patient gender is required.";
   }
 
   if (stepIndex === 1) {
-    if (!formState.modeOfPayment.trim()) {
-      return "Mode of payment is required.";
-    }
-    if (formState.modeOfPayment.trim() === "insurance" && !formState.insuranceProvider.trim()) {
+    if (!formState.modeOfPayment.trim()) return "Mode of payment is required.";
+    if (formState.modeOfPayment.trim() === "insurance" && !formState.insuranceProvider.trim())
       return "Please select an insurance provider.";
-    }
   }
 
   if (stepIndex === 2) {
-    if (!formState.serviceType.trim()) {
-      return "Service type is required.";
-    }
-    if (!formState.priority.trim()) {
-      return "Priority is required.";
-    }
-    if (!formState.reasonForReferral.trim()) {
-      return "Reason for referral is required.";
-    }
+    if (!formState.serviceType.trim()) return "Service type is required.";
+    if (!formState.priority.trim()) return "Priority is required.";
+    if (!formState.reasonForReferral.trim()) return "Reason for referral is required.";
   }
 
   return null;
@@ -139,8 +124,7 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
   const patientYearOfBirth = Number(formState.patientYearOfBirth);
   const patientGender = formState.patientGender.trim();
   const reasonForReferral = formState.reasonForReferral.trim();
-  const insuranceProvider =
-    modeOfPayment === "insurance" ? formState.insuranceProvider.trim() : "";
+  const insuranceProvider = modeOfPayment === "insurance" ? formState.insuranceProvider.trim() : "";
   const currentYear = new Date().getFullYear();
   const isYearOfBirthValid =
     Number.isInteger(patientYearOfBirth) && patientYearOfBirth >= 1900 && patientYearOfBirth <= currentYear;
@@ -200,7 +184,7 @@ function CreateReferralPage() {
       setValidationError(null);
       await queryClient.invalidateQueries({ queryKey: ["referrals", "pool"] });
       await queryClient.invalidateQueries({ queryKey: ["referrals", "facility"] });
-      navigate(`/${organizationId}/referrals`, { replace: true });
+      navigate(`/${organizationId}/referral-pool`, { replace: true });
     },
   });
 
@@ -225,34 +209,20 @@ function CreateReferralPage() {
     createReferralMutation.mutate(payload);
   };
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (!canManageReferrals) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (!organizationId) {
-    return <Navigate to="/facilities" replace />;
-  }
-
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
+  if (!isAuthenticated) return <Navigate to="/signin" replace />;
+  if (!canManageReferrals) return <Navigate to="/dashboard" replace />;
+  if (!organizationId) return <Navigate to="/facilities" replace />;
+  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId)
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
+  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data))
     return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
 
   const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === referralSteps.length - 1;
 
   const handlePreviousStep = () => {
-    if (isFirstStep) {
-      return;
-    }
+    if (isFirstStep) return;
     setValidationError(null);
     setCurrentStep((previous) => Math.max(0, previous - 1));
   };
@@ -281,16 +251,10 @@ function CreateReferralPage() {
         <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
           <div className="flex flex-col gap-1">
             <p className="eyebrow">Referrals</p>
-            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">Create Referral</h1>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              Create Referral
+            </h1>
             <p className="text-sm text-slate-500">Raise a new referral for this facility.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals`}>
-              Back to Referrals
-            </Link>
-            <Link className="btn btn-ghost org-btn" to={`/${organizationId}/referrals/facility`}>
-              View Facility Referrals
-            </Link>
           </div>
         </CardContent>
       </Card>
@@ -298,24 +262,24 @@ function CreateReferralPage() {
       <Breadcrumbs
         items={[
           { label: facilityName, to: `/${organizationId}/organization` },
-          { label: "Referrals", to: `/${organizationId}/referrals` },
+          { label: "Referral Pool", to: `/${organizationId}/referral-pool` },
           { label: "Create" },
         ]}
       />
 
-      {organizationQuery.isError ? (
+      {organizationQuery.isError && (
         <article className="access-note error-block">
           <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
-      ) : null}
+      )}
 
-      {organizationQuery.data && !facilityCode ? (
+      {organizationQuery.data && !facilityCode && (
         <article className="access-note error-block">
           <h2>Missing facility code</h2>
           <p>This facility does not have a facility code, so a referral cannot be created.</p>
         </article>
-      ) : null}
+      )}
 
       <article className="org-form-card">
         <form className="org-form" onSubmit={handleSubmit}>
@@ -347,7 +311,7 @@ function CreateReferralPage() {
             <h2>{referralSteps[currentStep]?.label}</h2>
           </div>
 
-          {currentStep === 0 ? (
+          {currentStep === 0 && (
             <div className="org-grid">
               <label className="field">
                 <span>Patient Full Name *</span>
@@ -377,11 +341,15 @@ function CreateReferralPage() {
                   required
                 />
               </label>
-
               <label className="field">
                 <span>Gender *</span>
-                <Select value={formState.patientGender} onValueChange={(v) => setFormState((previous) => ({ ...previous, patientGender: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={formState.patientGender}
+                  onValueChange={(v) => setFormState((previous) => ({ ...previous, patientGender: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="male">male</SelectItem>
                     <SelectItem value="female">female</SelectItem>
@@ -389,14 +357,16 @@ function CreateReferralPage() {
                 </Select>
               </label>
             </div>
-          ) : null}
+          )}
 
-          {currentStep === 1 ? (
+          {currentStep === 1 && (
             <div className="org-grid">
               <label className="field">
                 <span>Mode of Payment *</span>
                 <Select value={formState.modeOfPayment} onValueChange={(v) => handleModeOfPaymentChange(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cash">cash</SelectItem>
                     <SelectItem value="mpesa">mpesa</SelectItem>
@@ -406,8 +376,14 @@ function CreateReferralPage() {
               </label>
               <label className="field">
                 <span>Insurance Provider {formState.modeOfPayment === "insurance" ? "*" : ""}</span>
-                <Select value={formState.insuranceProvider || undefined} onValueChange={(v) => setFormState((previous) => ({ ...previous, insuranceProvider: v }))} disabled={formState.modeOfPayment !== "insurance"}>
-                  <SelectTrigger><SelectValue placeholder="Select insurance provider" /></SelectTrigger>
+                <Select
+                  value={formState.insuranceProvider || undefined}
+                  onValueChange={(v) => setFormState((previous) => ({ ...previous, insuranceProvider: v }))}
+                  disabled={formState.modeOfPayment !== "insurance"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select insurance provider" />
+                  </SelectTrigger>
                   <SelectContent>
                     {kenyaInsuranceFirms.map((insurer) => (
                       <SelectItem key={insurer} value={insurer}>
@@ -418,9 +394,9 @@ function CreateReferralPage() {
                 </Select>
               </label>
             </div>
-          ) : null}
+          )}
 
-          {currentStep === 2 ? (
+          {currentStep === 2 && (
             <>
               <div className="org-grid">
                 <label className="field">
@@ -428,15 +404,22 @@ function CreateReferralPage() {
                   <input
                     className="field-input"
                     value={formState.serviceType}
-                    onChange={(event) => setFormState((previous) => ({ ...previous, serviceType: event.target.value }))}
+                    onChange={(event) =>
+                      setFormState((previous) => ({ ...previous, serviceType: event.target.value }))
+                    }
                     placeholder="e.g. radiology"
                     required
                   />
                 </label>
                 <label className="field">
                   <span>Priority *</span>
-                  <Select value={formState.priority} onValueChange={(v) => setFormState((previous) => ({ ...previous, priority: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={formState.priority}
+                    onValueChange={(v) => setFormState((previous) => ({ ...previous, priority: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="routine">routine</SelectItem>
                       <SelectItem value="urgent">urgent</SelectItem>
@@ -451,7 +434,9 @@ function CreateReferralPage() {
                 <input
                   className="field-input"
                   value={formState.patientDiagnosis}
-                  onChange={(event) => setFormState((previous) => ({ ...previous, patientDiagnosis: event.target.value }))}
+                  onChange={(event) =>
+                    setFormState((previous) => ({ ...previous, patientDiagnosis: event.target.value }))
+                  }
                   placeholder="e.g. Suspected appendicitis"
                 />
               </label>
@@ -489,24 +474,40 @@ function CreateReferralPage() {
                     className="field-input service-notes"
                     rows={3}
                     value={formState.notes}
-                    onChange={(event) => setFormState((previous) => ({ ...previous, notes: event.target.value }))}
+                    onChange={(event) =>
+                      setFormState((previous) => ({ ...previous, notes: event.target.value }))
+                    }
                     placeholder="Any additional notes for receiving facility"
                   />
                 </label>
               </div>
             </>
-          ) : null}
+          )}
 
           <div className="service-form-actions referral-step-actions">
-            <Button type="button" className="btn btn-ghost" onClick={handlePreviousStep} disabled={isFirstStep || createReferralMutation.isPending}>
+            <Button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handlePreviousStep}
+              disabled={isFirstStep || createReferralMutation.isPending}
+            >
               Back
             </Button>
             {!isLastStep ? (
-              <Button type="button" className="btn btn-primary" onClick={handleNextStep} disabled={createReferralMutation.isPending}>
+              <Button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleNextStep}
+                disabled={createReferralMutation.isPending}
+              >
                 Next
               </Button>
             ) : (
-              <Button type="submit" className="btn btn-primary" disabled={createReferralMutation.isPending || !facilityCode}>
+              <Button
+                type="submit"
+                className="btn btn-primary"
+                disabled={createReferralMutation.isPending || !facilityCode}
+              >
                 {createReferralMutation.isPending ? "Creating..." : "Create Referral"}
               </Button>
             )}
@@ -514,10 +515,10 @@ function CreateReferralPage() {
         </form>
       </article>
 
-      {validationError ? <p className="result-note error-note">{validationError}</p> : null}
-      {createReferralMutation.isError ? (
+      {validationError && <p className="result-note error-note">{validationError}</p>}
+      {createReferralMutation.isError && (
         <p className="result-note error-note">{formatError(createReferralMutation.error)}</p>
-      ) : null}
+      )}
     </section>
   );
 }

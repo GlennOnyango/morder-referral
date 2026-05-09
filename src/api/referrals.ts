@@ -76,6 +76,23 @@ export type ReferralSummaryChunkHandler = (chunk: string) => void;
 export type ReferralCreateInput = ServiceCreateReferralInput;
 export type CreateReferralInformationRequestInput = ServiceCreateAdditionalInformationRequestInput;
 
+export type ReferralUpdateInput = {
+  serviceType?: string;
+  priority?: string;
+  reasonForReferral?: string;
+  clinicalSummary?: string;
+  notes?: string;
+  patient?: {
+    fullName?: string;
+    dateOfBirth?: number;
+    gender?: string;
+    diagnosis?: string;
+    allergies?: string;
+    vitalSummary?: string;
+    additionalNotes?: string;
+  };
+};
+
 function parseSummaryStreamEventData(rawData: string): string {
   const trimmed = rawData.trim();
   if (!trimmed || trimmed === "[DONE]") {
@@ -169,6 +186,19 @@ export async function createReferral(
     headers: authHeaders(accessToken),
   });
 
+  return normalizeReferral(response.data);
+}
+
+export async function patchReferral(
+  referralCode: string,
+  payload: ReferralUpdateInput,
+  accessToken?: string,
+): Promise<ModelsReferral> {
+  const response = await referralsApi.patch<HandlerReferralResponse>(
+    `/referrals/${encodeURIComponent(referralCode)}`,
+    payload,
+    { headers: authHeaders(accessToken) },
+  );
   return normalizeReferral(response.data);
 }
 

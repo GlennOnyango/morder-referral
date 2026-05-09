@@ -18,11 +18,11 @@ import OrganizationUsersPage from "./pages/facilities/OrganizationUsersPage";
 import OrganizationsPage from "./pages/facilities/OrganizationsPage";
 import OrganizationWorkspacePage from "./pages/organization/OrganizationWorkspacePage";
 import FacilityServicesPage from "./pages/facilities/FacilityServicesPage";
-import CreateReferralPage from "./pages/referrals/CreateReferralPage";
-import FacilityReferralsPage from "./pages/referrals/FacilityReferralsPage";
-import PoolReferralDetailPage from "./pages/referrals/PoolReferralDetailPage";
+import CreateReferralPage from "./pages/referrals/pool/CreateReferralPage";
+import FacilityReferralsPage from "./pages/referrals/facility/FacilityReferralsPage";
+import FacilityReferralDetailPage from "./pages/referrals/facility/FacilityReferralDetailPage";
+import PoolReferralDetailPage from "./pages/referrals/pool/PoolReferralDetailPage";
 import ReferralPoolPage from "./pages/referrals/pool/ReferralPoolPage";
-import ReferralsPage from "./pages/referrals/ReferralsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import AdminPage from "./pages/admin/AdminPage";
 import AdminOrgPage from "./pages/admin/AdminOrgPage";
@@ -109,14 +109,7 @@ export default function LocalRoutes() {
           }
         />
 
-        <Route
-          path="referrals"
-          element={
-            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
-              <ReferralsPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="referrals" element={<Navigate to="referral-pool" replace />} />
         <Route
           path="referrals/create"
           element={
@@ -138,6 +131,14 @@ export default function LocalRoutes() {
           element={
             <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
               <FacilityReferralsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="referrals/facility/:referralCode"
+          element={
+            <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+              <FacilityReferralDetailPage />
             </ProtectedRoute>
           }
         />
