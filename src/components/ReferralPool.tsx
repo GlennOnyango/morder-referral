@@ -1,38 +1,24 @@
-import { Button } from "./ui/button";
+import { Sparkles, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGetReferralPool } from "../api/hooks/referrals/ReferralPool.hook";
 import { usePostSummarizeReferral } from "../api/hooks/referrals/SummarizeReferral.hook";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import type { ModelsReferral } from "../types/referrals.generated";
+import ReferralSummarizeDialog from "./dialogs/ReferralSummarizeDialog";
+import ReferralAiSearchDialog from "./dialogs/ReferralAiSearchDialog";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Card, CardContent } from "./ui/card";
+import { formatError, formatDateTime } from "../utils/format";
+import { PriorityBadge, StatusBadge } from "./ReferralBadges";
 
 const DEFAULT_POOL_PAGE_SIZE = 10;
 
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") return value;
-    }
-    return error.message;
-  }
-  if (error instanceof Error) return error.message;
-  return "Request failed. Please try again.";
-}
-
-function formatDateTime(value?: string): string {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
-}
-
 interface ReferralPoolProps {
   organizationId: string;
-  facilityCode: string;
+  facilityCode?: string;
   hasFacilityAccess: boolean;
   accessToken: string | undefined;
   canManageReferrals: boolean;
@@ -40,7 +26,6 @@ interface ReferralPoolProps {
 
 function ReferralPool({
   organizationId,
-  facilityCode,
   hasFacilityAccess,
   accessToken,
   canManageReferrals,
@@ -71,11 +56,10 @@ function ReferralPool({
   const poolReferralsQuery = useGetReferralPool(
     { query: debouncedPoolSearchTerm || undefined, limit: poolPageSize, offset: poolOffset },
     accessToken,
-    { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess && Boolean(accessToken) },
+    { enabled: canManageReferrals && hasFacilityAccess && Boolean(accessToken) },
   );
 
   const poolReferrals = poolReferralsQuery?.data ?? [];
-
   const hasNextPoolPage = poolReferrals.length === poolPageSize;
   const isSearchSettling = poolSearchTerm.trim() !== debouncedPoolSearchTerm;
 
@@ -109,16 +93,12 @@ function ReferralPool({
     setIsAiSearchDialogOpen(true);
   };
 
-  const closeAiSearchDialog = () => {
-    setIsAiSearchDialogOpen(false);
-  };
-
   const submitAiSearch = async () => {
     const normalizedQuery = aiSearchPrompt.trim();
     setPoolPage(0);
     setPoolSearchTerm(normalizedQuery);
     setDebouncedPoolSearchTerm(normalizedQuery);
-    closeAiSearchDialog();
+    setIsAiSearchDialogOpen(false);
     setIsAiSearchSubmitting(true);
     try {
       await queryClient.invalidateQueries({
@@ -130,318 +110,250 @@ function ReferralPool({
     }
   };
 
+  const clearSearch = () => {
+    setPoolSearchTerm("");
+    setDebouncedPoolSearchTerm("");
+    setPoolPage(0);
+  };
+
   return (
     <>
-      <article className="org-table-card">
-        <h2 className="referrals-pool-title">Referral Pool</h2>
-        <p className="org-section-note referrals-pool-subtext">
-          Review referrals and open one to view full details and actions.
-        </p>
-        <div className="org-table-tools referrals-table-tools">
-          <div className="referrals-search-control">
-            <div className="referrals-search-bar">
-              <input
-                id="pool-search-input"
-                className="field-input org-filter-select referrals-search-input"
-                aria-label="Search referrals"
-                value={poolSearchTerm}
-                onChange={(event) => {
-                  setPoolPage(0);
-                  setPoolSearchTerm(event.target.value);
-                }}
-                placeholder="Search referrals by service, patient, or origin facility"
-              />
-              <Button
-                type="button"
-                className="btn btn-ghost org-btn referrals-clear-icon-btn"
-                onClick={() => {
-                  setPoolSearchTerm("");
-                  setDebouncedPoolSearchTerm("");
-                  setPoolPage(0);
-                }}
-                disabled={poolSearchTerm.length === 0 && debouncedPoolSearchTerm.length === 0}
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                ×
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {poolReferralsQuery.isLoading ? <p className="org-empty">Loading referral pool...</p> : null}
-        {isAiSearchSubmitting ? <p className="org-section-note referrals-search-summary">Searching with AI...</p> : null}
-        {isSearchSettling ? <p className="org-section-note referrals-search-summary">Updating search...</p> : null}
-
-        {poolReferralsQuery.isError ? (
-          isAxiosError(poolReferralsQuery.error) && poolReferralsQuery.error.response?.status === 401 ? (
-            <article className="access-note error-block">
-              <h2>Unauthorized</h2>
-              <p>You do not have permission to access the referral pool.</p>
-            </article>
-          ) : (
-            <p className="result-note error-note">{formatError(poolReferralsQuery.error)}</p>
-          )
-        ) : null}
-
-        {poolReferralsQuery.data ? (
-          poolReferrals.length === 0 ? (
-            <p className="org-empty">
-              {debouncedPoolSearchTerm
-                ? `No open referrals found for "${debouncedPoolSearchTerm}".`
-                : "No open referrals found in the pool."}
-            </p>
-          ) : (
-            <div className="referral-pool-grid">
-              {poolReferrals.map((referral) => {
-                const referralCode = referral.referralCode ?? "";
-                const normalizedPriority = (referral.priority ?? "").toLowerCase();
-                const isUrgent = normalizedPriority === "urgent";
-                const isEmergency = normalizedPriority === "emergency";
-
-                return (
-                  <article
-                    key={referral.id ?? referralCode}
-                    className={`referral-pool-card${isUrgent ? " urgent" : ""}${isEmergency ? " emergency" : ""}`}
+      <div className="flex flex-col gap-5">
+        {/* Search toolbar */}
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex flex-1 items-center gap-2">
+                <Input
+                  id="pool-search-input"
+                  aria-label="Search referrals"
+                  value={poolSearchTerm}
+                  onChange={(e) => {
+                    setPoolPage(0);
+                    setPoolSearchTerm(e.target.value);
+                  }}
+                  placeholder="Search by service, patient, or origin facility"
+                />
+                {poolSearchTerm.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    aria-label="Clear search"
+                    className="absolute right-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    <div className="referral-pool-card-header">
-                      <strong>{referralCode || "Referral"}</strong>
-                      <span>{referral.status ?? "-"}</span>
-                    </div>
-
-                    <dl className="referral-pool-card-meta">
-                      <div>
-                        <dt>Service Type</dt>
-                        <dd>{referral.serviceType ?? "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>Priority</dt>
-                        <dd>{referral.priority ?? "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>Origin Facility</dt>
-                        <dd>{referral.originFacilityCode ?? "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>Patient</dt>
-                        <dd>{referral.patient?.fullName ?? "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>Updated</dt>
-                        <dd>{formatDateTime(referral.updatedAt)}</dd>
-                      </div>
-                    </dl>
-
-                    <div className="referral-pool-card-actions">
-                      <Button
-                        type="button"
-                        className="btn btn-ghost org-btn referral-pool-ai-btn"
-                        onClick={() => openSummaryDialog(referral)}
-                        disabled={!referralCode || summarizeReferralMutation.isPending}
-                      >
-                        <span className="referral-pool-ai-btn-content">
-                          <span className="referral-pool-ai-btn-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" role="presentation" focusable="false">
-                              <path
-                                d="M12 2.5l1.9 5.2 5.6 1.9-5.6 1.9L12 16.7l-1.9-5.2-5.6-1.9 5.6-1.9L12 2.5Zm7.2 11.8.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4ZM6 15.6l.8 2.1 2.1.8-2.1.8L6 21.4l-.8-2.1-2.1-.8 2.1-.8.8-2.1Z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          </span>
-                          <span>{summarizeReferralMutation.isPending ? "Summarizing..." : "Summarize with AI"}</span>
-                        </span>
-                      </Button>
-                      <Button
-                        type="button"
-                        className="btn btn-ghost org-btn"
-                        onClick={() => { if (referralCode) openReferralDetail(referralCode); }}
-                        disabled={!referralCode}
-                      >
-                        View More
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )
-        ) : null}
-
-        <div className="referrals-pagination">
-          <p className="org-section-note referrals-page-indicator">
-            Page <strong>{poolPage + 1}</strong>
-          </p>
-          <div className="referrals-pagination-actions">
-            <Button
-              type="button"
-              className="btn btn-ghost org-btn referrals-pagination-btn"
-              onClick={() => setPoolPage((current) => Math.max(current - 1, 0))}
-              disabled={poolPage === 0 || poolReferralsQuery.isLoading}
-            >
-              Previous
-            </Button>
-            <Button
-              type="button"
-              className="btn btn-ghost org-btn referrals-pagination-btn"
-              onClick={() => setPoolPage((current) => current + 1)}
-              disabled={!hasNextPoolPage || poolReferralsQuery.isLoading}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      </article>
-
-      <Dialog open={!!summaryDialogReferral} onOpenChange={(open) => { if (!open) closeSummaryDialog(); }}>
-        <DialogContent className="referral-summary-dialog sm:max-w-190" showCloseButton={false}>
-          <div className="referral-summary-dialog-header">
-            <div>
-              <p className="eyebrow">AI Assistant</p>
-              <DialogTitle>Referral Summary</DialogTitle>
-            </div>
-            <div className="referral-summary-dialog-controls">
-              <Button
-                type="button"
-                className="btn btn-ghost org-btn"
-                onClick={() => setSummaryDialogCollapsed((current) => !current)}
-              >
-                {summaryDialogCollapsed ? "Expand" : "Collapse"}
-              </Button>
-              <Button type="button" className="btn btn-ghost org-btn" onClick={closeSummaryDialog}>
-                Close
-              </Button>
-            </div>
-          </div>
-
-          {!summaryDialogCollapsed ? (
-            <div className="referral-summary-dialog-body">
-              <dl className="referral-summary-snapshot">
-                <div><dt>Referral</dt><dd>{summaryDialogReferral?.referralCode ?? "-"}</dd></div>
-                <div><dt>Status</dt><dd>{summaryDialogReferral?.status ?? "-"}</dd></div>
-                <div><dt>Service</dt><dd>{summaryDialogReferral?.serviceType ?? "-"}</dd></div>
-                <div><dt>Priority</dt><dd>{summaryDialogReferral?.priority ?? "-"}</dd></div>
-                <div><dt>Origin</dt><dd>{summaryDialogReferral?.originFacilityCode ?? "-"}</dd></div>
-                <div><dt>Patient</dt><dd>{summaryDialogReferral?.patient?.fullName ?? "-"}</dd></div>
-                <div><dt>Updated</dt><dd>{formatDateTime(summaryDialogReferral?.updatedAt)}</dd></div>
-              </dl>
-
-              <section className="referral-summary-output" aria-live="polite">
-                <div className="referral-summary-output-head">
-                  <p>AI Narrative</p>
-                  {summarizeReferralMutation.isPending ? <span className="referral-ai-summary-chip">Generating</span> : null}
-                </div>
-                {summarizeReferralMutation.isError ? (
-                  <p className="result-note error-note referral-ai-summary-note">{formatError(summarizeReferralMutation.error)}</p>
-                ) : null}
-                {poolSummary ? (
-                  <p className="referral-ai-summary-content">{poolSummary}</p>
-                ) : summarizeReferralMutation.isPending ? (
-                  <p className="referral-ai-summary-placeholder">Generating a concise review from the referral details...</p>
-                ) : (
-                  <p className="referral-ai-summary-placeholder">No summary was returned. Try again in a moment.</p>
+                    <X className="size-4" />
+                  </button>
                 )}
-              </section>
-
-              <DialogFooter className="mt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    const code = summaryDialogReferral?.referralCode?.trim() ?? "";
-                    if (code) summarizeReferralMutation.mutate({ referralCode: code, onChunk: (chunk) => setPoolSummary((s) => `${s}${chunk}`) });
-                  }}
-                  disabled={summarizeReferralMutation.isPending || !summaryDialogReferral?.referralCode}
-                >
-                  {summarizeReferralMutation.isPending ? "Regenerating..." : "Regenerate"}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    const code = summaryDialogReferral?.referralCode?.trim() ?? "";
-                    if (code) { closeSummaryDialog(); openReferralDetail(code); }
-                  }}
-                  disabled={!summaryDialogReferral?.referralCode}
-                >
-                  Open Full Referral
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <p className="referral-summary-collapsed-note">
-              Summary collapsed. Select <strong>Expand</strong> to continue reviewing this referral.
-            </p>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Button
-        type="button"
-        className="btn referral-ai-search-fab"
-        aria-label="Open AI search"
-        aria-haspopup="dialog"
-        onClick={openAiSearchDialog}
-      >
-        <span className="referral-ai-search-fab-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="presentation" focusable="false">
-            <path
-              d="M12 2.5l1.9 5.2 5.6 1.9-5.6 1.9L12 16.7l-1.9-5.2-5.6-1.9 5.6-1.9L12 2.5Zm7.2 11.8.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4ZM6 15.6l.8 2.1 2.1.8-2.1.8L6 21.4l-.8-2.1-2.1-.8 2.1-.8.8-2.1Z"
-              fill="currentColor"
-            />
-          </svg>
-        </span>
-        <span className="referral-ai-search-fab-copy">
-          <span>Search with AI</span>
-          <small>Natural language</small>
-        </span>
-      </Button>
-
-      <Dialog open={isAiSearchDialogOpen} onOpenChange={(open) => { if (!open) closeAiSearchDialog(); }}>
-        <DialogContent className="referral-ai-search-dialog sm:max-w-160">
-          <DialogHeader>
-            <p className="eyebrow">AI Search</p>
-            <DialogTitle>Search Referrals with Natural Language</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Describe what you are looking for. We will pass your exact prompt to semantic search.
-          </p>
-          <form
-            className="referral-ai-search-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submitAiSearch();
-            }}
-          >
-            <label className="field" htmlFor="referral-ai-search-input">
-              <span>Your search prompt</span>
-              <textarea
-                id="referral-ai-search-input"
-                className="field-input referral-ai-search-input"
-                value={aiSearchPrompt}
-                onChange={(event) => setAiSearchPrompt(event.target.value)}
-                rows={4}
-                placeholder="Example: urgent cardiology referrals for elderly patients from county referral hospitals"
-                autoFocus
-              />
-            </label>
-            <DialogFooter className="referral-ai-search-actions">
+              </div>
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setAiSearchPrompt("")}
-                disabled={aiSearchPrompt.length === 0 || isAiSearchSubmitting}
+                onClick={openAiSearchDialog}
+                className="shrink-0 gap-2"
               >
-                Clear
+                <Sparkles className="size-4" />
+                Search with AI
               </Button>
-              <Button type="button" variant="ghost" onClick={closeAiSearchDialog} disabled={isAiSearchSubmitting}>
-                Cancel
+            </div>
+
+            {(isSearchSettling || isAiSearchSubmitting || poolReferralsQuery.isLoading) && (
+              <p className="mt-2 text-xs text-slate-500">
+                {isAiSearchSubmitting ? "Running AI search…" : isSearchSettling ? "Updating results…" : "Loading…"}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Active search indicator */}
+        {debouncedPoolSearchTerm && !isSearchSettling && (
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <span>
+              Showing results for <strong>&ldquo;{debouncedPoolSearchTerm}&rdquo;</strong>
+            </span>
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <X className="size-3" /> Clear
+            </button>
+          </div>
+        )}
+
+        {/* Error state */}
+        {poolReferralsQuery.isError && (
+          isAxiosError(poolReferralsQuery.error) && poolReferralsQuery.error.response?.status === 401 ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="font-semibold text-slate-800">Unauthorized</p>
+                <p className="mt-1 text-sm text-slate-500">You do not have permission to access the referral pool.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-rose-600">{formatError(poolReferralsQuery.error)}</p>
+              </CardContent>
+            </Card>
+          )
+        )}
+
+        {/* Referral cards grid */}
+        {poolReferralsQuery.data && (
+          poolReferrals.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-sm text-slate-500">
+                  {debouncedPoolSearchTerm
+                    ? `No open referrals found for "${debouncedPoolSearchTerm}".`
+                    : "No open referrals in the pool."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="min-h-50 max-h-[calc(100dvh-26rem)] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {poolReferrals.map((referral) => {
+                const referralCode = referral.referralCode ?? "";
+                const normalizedPriority = (referral.priority ?? "").toLowerCase();
+                const isEmergency = normalizedPriority === "emergency";
+                const isUrgent = normalizedPriority === "urgent";
+
+                return (
+                  <Card
+                    key={referral.id ?? referralCode}
+                    className={
+                      isEmergency
+                        ? "border-l-4 border-l-rose-500"
+                        : isUrgent
+                          ? "border-l-4 border-l-amber-400"
+                          : ""
+                    }
+                  >
+                    <CardContent className="flex flex-col gap-3 p-4">
+                      {/* Card header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Referral</p>
+                          <p className="font-semibold text-slate-900">{referralCode || "—"}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          <PriorityBadge priority={referral.priority} />
+                          <StatusBadge status={referral.status} />
+                        </div>
+                      </div>
+
+                      {/* Meta grid */}
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div>
+                          <dt className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">Service</dt>
+                          <dd className="text-sm font-medium text-slate-800">{referral.serviceType ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">Origin</dt>
+                          <dd className="text-sm font-medium text-slate-800">{referral.originFacilityCode ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">Patient</dt>
+                          <dd className="text-sm font-medium text-slate-800">{referral.patient?.fullName ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">Updated</dt>
+                          <dd className="text-sm font-medium text-slate-800">{formatDateTime(referral.updatedAt)}</dd>
+                        </div>
+                      </dl>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 border-t border-slate-100 pt-3">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 gap-1.5"
+                          onClick={() => openSummaryDialog(referral)}
+                          disabled={!referralCode || summarizeReferralMutation.isPending}
+                        >
+                          <Sparkles className="size-3.5" />
+                          {summarizeReferralMutation.isPending ? "Summarizing…" : "Summarize"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => { if (referralCode) openReferralDetail(referralCode); }}
+                          disabled={!referralCode}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Pagination */}
+        {poolReferralsQuery.data && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Page <strong>{poolPage + 1}</strong>
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setPoolPage((p) => Math.max(p - 1, 0))}
+                disabled={poolPage === 0 || poolReferralsQuery.isLoading}
+              >
+                Previous
               </Button>
-              <Button type="submit" disabled={isAiSearchSubmitting}>
-                {isAiSearchSubmitting ? "Searching..." : "Search"}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setPoolPage((p) => p + 1)}
+                disabled={!hasNextPoolPage || poolReferralsQuery.isLoading}
+              >
+                Next
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ReferralSummarizeDialog
+        referral={summaryDialogReferral}
+        summary={poolSummary}
+        isCollapsed={summaryDialogCollapsed}
+        isPending={summarizeReferralMutation.isPending}
+        isError={summarizeReferralMutation.isError}
+        error={summarizeReferralMutation.error}
+        onCollapsedChange={setSummaryDialogCollapsed}
+        onClose={closeSummaryDialog}
+        onOpenDetail={openReferralDetail}
+        onRegenerate={() => {
+          const code = summaryDialogReferral?.referralCode?.trim() ?? "";
+          if (code) {
+            summarizeReferralMutation.mutate({
+              referralCode: code,
+              onChunk: (chunk) => setPoolSummary((s) => `${s}${chunk}`),
+            });
+          }
+        }}
+      />
+
+      <ReferralAiSearchDialog
+        open={isAiSearchDialogOpen}
+        onOpenChange={(open) => { if (!open) setIsAiSearchDialogOpen(false); }}
+        prompt={aiSearchPrompt}
+        onPromptChange={setAiSearchPrompt}
+        onSubmit={() => { void submitAiSearch(); }}
+        isSubmitting={isAiSearchSubmitting}
+      />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { formatError } from "../../utils/format";
 import { Link, Navigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
@@ -10,24 +11,6 @@ import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
-function formatError(error: unknown): string {
-  if (isAxiosError(error)) {
-    const payload = error.response?.data;
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const value = (payload as { message?: unknown }).message;
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Request failed. Please try again.";
-}
 
 function OrganizationServicesPage() {
   const { workspaceId: organizationId } = useWorkspace();
@@ -88,19 +71,21 @@ function OrganizationServicesPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Services</p>
-          <h1>
-            Manage Services:{" "}
-            {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
-          </h1>
-          <p>View facility services and open a dedicated page to create or update them.</p>
-        </div>
-        <Link className="btn btn-primary" to={`/${organizationId}/services/create`}>
-          Create Service
-        </Link>
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Services</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">
+              Manage Services:{" "}
+              {organizationQuery.data?.name ?? (organizationQuery.isLoading ? "Loading..." : "Facility")}
+            </h1>
+            <p className="text-sm text-slate-500">View facility services and open a dedicated page to create or update them.</p>
+          </div>
+          <Link className="btn btn-primary" to={`/${organizationId}/services/create`}>
+            Create Service
+          </Link>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs
         items={[

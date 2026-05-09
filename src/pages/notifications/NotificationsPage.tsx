@@ -6,7 +6,7 @@ import { useGetNotifications } from "../../api/hooks/notifications/Notifications
 import { usePatchNotificationRead } from "../../api/hooks/notifications/MarkNotificationRead.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
+import { Card, CardContent } from "../../components/ui/card";
 import { useAuthContext } from "../../context/useAuthContext";
 import type { GithubComVaudKKNrsNotificationsInternalModelsNotification as Notification } from "../../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
@@ -124,30 +124,32 @@ function NotificationsPage() {
 
   return (
     <div className="org-shell reveal delay-1">
-      <div className="org-header">
-        <div>
-          <p className="eyebrow">Notifications</p>
-          <h1>Activity Feed</h1>
-          <p>Real-time referral events and workflow updates for your facility.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={unreadOnly ? "default" : "outline"}
-            size="sm"
-            onClick={handleToggleUnreadOnly}
-          >
-            {unreadOnly ? "Unread only" : "All notifications"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={notificationsQuery.isFetching}
-            onClick={() => void notificationsQuery.refetch()}
-          >
-            {notificationsQuery.isFetching ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="flex items-end justify-between gap-3 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow">Notifications</p>
+            <h1 className="font-heading text-2xl font-semibold -tracking-[0.03em] text-slate-900 sm:text-3xl">Activity Feed</h1>
+            <p className="text-sm text-slate-500">Real-time referral events and workflow updates for your facility.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={unreadOnly ? "default" : "outline"}
+              size="sm"
+              onClick={handleToggleUnreadOnly}
+            >
+              {unreadOnly ? "Unread only" : "All notifications"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={notificationsQuery.isFetching}
+              onClick={() => void notificationsQuery.refetch()}
+            >
+              {notificationsQuery.isFetching ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Breadcrumbs items={[{ label: "Notifications" }]} />
 
