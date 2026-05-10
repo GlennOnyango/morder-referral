@@ -185,14 +185,14 @@ function AdminPage() {
               className="btn btn-ghost org-btn"
               onClick={() => setCreateModal("service")}
             >
-              Service Provider
+              Create Service Provider
             </button>
             <button
               type="button"
               className="btn btn-primary org-btn"
               onClick={() => setCreateModal("facility")}
             >
-              Create Facility
+              Create Facility Organization
             </button>
           </div>
         </CardContent>
