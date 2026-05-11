@@ -1,7 +1,7 @@
 import type { LoginUserResult } from "../auth";
 import type { ModelOrganization } from "../types/organizations.generated";
 
-export type AppRole = "SUPER_ADMIN" | "HOSPITAL_ADMIN" | "DOCTOR" | "NURSE" | "SERVICE_ADMIN";
+export type AppRole = "SUPER_ADMIN" | "HOSPITAL_ADMIN" | "HOSPITAL_MEMBER" | "SERVICE_ADMIN";
 
 export type AuthSession = {
   accessToken: string;

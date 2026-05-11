@@ -43,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Facility Referrals",
     icon: ArrowLeftRight,
-    allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
+    allowedRoles: ["HOSPITAL_ADMIN", "HOSPITAL_MEMBER", "SUPER_ADMIN"],
     hideInSystem: true,
     end: false,
     getPath: (w) => `/${w}/referrals/facility`,

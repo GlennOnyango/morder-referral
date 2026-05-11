@@ -2,12 +2,11 @@ import type { AppRole } from "./authTypes";
 
 const ROLE_ALIASES: Record<string, AppRole> = {
   ADMIN: "HOSPITAL_ADMIN",
-  DOCTOR: "DOCTOR",
   HOSPITAL_ADMIN: "HOSPITAL_ADMIN",
-  NURSE: "NURSE",
+  HOSPITAL_MEMBER: "HOSPITAL_MEMBER",
   SUPER_ADMIN: "SUPER_ADMIN",
-  USER: "NURSE",
-  SERVICE_ADMIN:"SERVICE_ADMIN"
+  USER: "HOSPITAL_MEMBER",
+  SERVICE_ADMIN: "SERVICE_ADMIN",
 };
 
 const normalizeRoleKey = (input: string): string => input.trim().toUpperCase().replace(/[\s-]+/g, "_");

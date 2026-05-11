@@ -21,8 +21,7 @@ import type { DtoUserOrganizationMappingResponse } from "../../types/auth.genera
 
 const ROLE_OPTIONS: { value: AuthGroupName; label: string }[] = [
   { value: "HOSPITAL_ADMIN", label: "Hospital Admin" },
-  { value: "DOCTOR", label: "Doctor" },
-  { value: "NURSE", label: "Nurse" },
+  { value: "HOSPITAL_MEMBER", label: "Hospital Member" },
 ];
 
 type OrganizationUserRow = {
@@ -36,8 +35,7 @@ type OrganizationUserRow = {
 function inferDefaultRole(member: DtoUserOrganizationMappingResponse): AuthGroupName {
   const role = member.roleName?.trim().toUpperCase() ?? "";
   if (role === "HOSPITAL_ADMIN") return "HOSPITAL_ADMIN";
-  if (role === "DOCTOR") return "DOCTOR";
-  return "NURSE";
+  return "HOSPITAL_MEMBER";
 }
 
 function OrganizationUsersPage() {

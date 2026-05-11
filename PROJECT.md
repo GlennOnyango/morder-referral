@@ -83,13 +83,16 @@ The app recognizes these roles (`AppRole` in `src/context/authTypes.ts`):
 
 - `SUPER_ADMIN` — platform-level access; can manage all facilities and user-role administration.
 - `HOSPITAL_ADMIN` — facility manager; can manage and operate within their assigned facility.
+- `HOSPITAL_MEMBER` — facility member; can create referrals but has no management access.
 - `SERVICE_ADMIN` — service provider manager; operates within their assigned service organisation.
-- `DOCTOR` — clinical role; limited direct management access in protected routes.
-- `NURSE` — clinical role; limited direct management access in protected routes.
 
 Role normalization maps:
 - `ADMIN` → `HOSPITAL_ADMIN`
-- `USER` → `NURSE`
+- `USER` → `HOSPITAL_MEMBER`
+
+Assignable roles by organisation type:
+- Facility organisations: `HOSPITAL_ADMIN`, `HOSPITAL_MEMBER`
+- Service organisations: `SERVICE_ADMIN`
 
 Role resolution order: Cognito groups → access token claims (`custom:role`, `role`, `roles`, `cognito:groups`) → ID token claims.
 

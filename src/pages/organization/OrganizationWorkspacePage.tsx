@@ -40,8 +40,7 @@ const formatError = (error: unknown): string => {
 
 const ROLE_OPTIONS: { value: AuthGroupName; label: string }[] = [
   { value: "HOSPITAL_ADMIN", label: "Hospital Admin" },
-  { value: "DOCTOR", label: "Doctor" },
-  { value: "NURSE", label: "Nurse" },
+  { value: "HOSPITAL_MEMBER", label: "Hospital Member" },
 ];
 
 type MemberRow = {
@@ -71,7 +70,7 @@ const OrganizationWorkspacePage = () => {
   const canEditFacility = canManageFacilityCatalog(roles);
 
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<AuthGroupName>("DOCTOR");
+  const [inviteRole, setInviteRole] = useState<AuthGroupName>("HOSPITAL_ADMIN");
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [assignRoleValues, setAssignRoleValues] = useState<Record<string, string>>({});

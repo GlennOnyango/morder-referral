@@ -4,13 +4,13 @@ import { PERMISSION_ROWS, SETTINGS_STORAGE_KEY, type PermissionKey, type Setting
 
 export const defaultSettings = (): SettingsState => ({
   permissions: {
-    createReferrals: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "NURSE"],
+    createReferrals: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "HOSPITAL_MEMBER"],
     approveReferrals: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
     directReferrals: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
     manageStaff: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
     manageSettings: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
-    aiSearch: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR"],
-    aiReview: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR"],
+    aiSearch: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+    aiReview: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
   },
   requireApprovalAfterCreation: true,
   allowDirectReferrals: false,
@@ -22,8 +22,8 @@ export const defaultSettings = (): SettingsState => ({
 export const isRole = (value: unknown): value is AppRole =>
   value === "SUPER_ADMIN" ||
   value === "HOSPITAL_ADMIN" ||
-  value === "DOCTOR" ||
-  value === "NURSE";
+  value === "HOSPITAL_MEMBER" ||
+  value === "SERVICE_ADMIN";
 
 export const readStoredSettings = (): SettingsState => {
   if (typeof window === "undefined") return defaultSettings();
