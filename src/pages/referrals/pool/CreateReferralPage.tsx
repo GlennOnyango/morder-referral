@@ -164,8 +164,8 @@ function toPayload(formState: ReferralFormState, facilityCode: string): Referral
 function CreateReferralPage() {
   const { workspaceId: organizationId } = useWorkspace();
   const navigate = useNavigate();
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
+  const { session, isAuthenticated, workspaceRoles } = useAuthContext();
+  const roles = workspaceRoles;
   const canManageReferrals = isFacilityManager(roles);
   const queryClient = useQueryClient();
 

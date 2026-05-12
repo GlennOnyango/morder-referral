@@ -7,7 +7,7 @@ export function SettingsRoutes() {
     <Route
       path="settings"
       element={
-        <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+        <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN", "SERVICE_ADMIN"]}>
           <SettingsPage />
         </ProtectedRoute>
       }

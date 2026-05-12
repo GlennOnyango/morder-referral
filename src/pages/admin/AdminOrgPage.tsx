@@ -176,11 +176,8 @@ function OrgTypeBadge({ type }: { type: string }) {
 function AdminOrgPage() {
   const { orgId, workspaceId } = useParams<{ orgId: string; workspaceId: string }>();
   const navigate = useNavigate();
-  const { session, isAuthenticated } = useAuthContext();
+  const { session } = useAuthContext();
   const queryClient = useQueryClient();
-
-  const roles = session?.roles ?? [];
-  const isSuperAdmin = roles.includes("SUPER_ADMIN");
 
   const [activeTab, setActiveTab] = useState<OrgDetailTab>("details");
   const [showAddService, setShowAddService] = useState(false);
@@ -194,20 +191,20 @@ function AdminOrgPage() {
   const [editValidationError, setEditValidationError] = useState<string | null>(null);
 
   const orgDetailQuery = useGetOrganizationById(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId),
+    enabled: Boolean(orgId),
     staleTime: 5 * 60 * 1000,
   });
 
   const orgServicesQuery = useGetOrganizationServices(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId),
+    enabled: Boolean(orgId),
   });
 
   const pendingInvitesQuery = useGetPendingInvites(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId) && activeTab === "team",
+    enabled: Boolean(orgId) && activeTab === "team",
   });
 
   const orgMembersQuery = useGetOrganizationMembers(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId) && activeTab === "team",
+    enabled: Boolean(orgId) && activeTab === "team",
   });
 
   const addServiceMutation = usePostOrganizationService(session?.accessToken, {
@@ -265,8 +262,6 @@ function AdminOrgPage() {
     },
   });
 
-  if (!isAuthenticated) return <Navigate to="/signin" replace />;
-  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
   if (!orgId) return <Navigate to={`/${workspaceId}/admin`} replace />;
 
   const org = orgDetailQuery.data as Record<string, unknown> | undefined;

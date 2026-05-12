@@ -1,4 +1,4 @@
-import { Navigate, Route } from "react-router-dom";
+import {  Route } from "react-router-dom";
 import ProtectedRoute from "../../routes/ProtectedRoute";
 import ReferralPoolPage from "./pool/ReferralPoolPage";
 import CreateReferralPage from "./pool/CreateReferralPage";
@@ -17,9 +17,18 @@ export function ReferralRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="referrals" element={<Navigate to="referral-pool" replace />} />
+
       <Route
-        path="referrals/create"
+        path="referral-pool/:referralCode"
+        element={
+          <ProtectedRoute fallbackPath="/signin">
+            <PoolReferralDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="referrals-facility/create"
         element={
           <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
             <CreateReferralPage />
@@ -27,15 +36,7 @@ export function ReferralRoutes() {
         }
       />
       <Route
-        path="referrals/pool/:referralCode"
-        element={
-          <ProtectedRoute fallbackPath="/signin">
-            <PoolReferralDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="referrals/facility"
+        path="referrals-facility/"
         element={
           <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "HOSPITAL_MEMBER", "SUPER_ADMIN"]}>
             <FacilityReferralsPage />
@@ -43,7 +44,7 @@ export function ReferralRoutes() {
         }
       />
       <Route
-        path="referrals/facility/:referralCode"
+        path="referrals-facility/:referralCode"
         element={
           <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "HOSPITAL_MEMBER", "SUPER_ADMIN"]}>
             <FacilityReferralDetailPage />

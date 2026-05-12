@@ -8,8 +8,9 @@ import { useGetOrganizationServices } from "../../api/hooks/services/Organizatio
 import { useGetDashboardMetrics } from "../../api/hooks/metrics/DashboardMetrics.hook";
 
 function DashboardPage() {
-  const { isAuthenticated, session } = useAuthContext();
-  const roles = session?.roles ?? [];
+  const { isAuthenticated, session, workspaceRoles } = useAuthContext();
+  const roles = workspaceRoles;
+  console.log(workspaceRoles)
   const isSuperAdmin = roles.includes("SUPER_ADMIN");
   const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");
   const isServiceAdmin = roles.includes("SERVICE_ADMIN");

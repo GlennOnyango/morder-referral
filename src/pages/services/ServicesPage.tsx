@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
 import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
@@ -13,7 +13,6 @@ import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import DataTable from "../../components/DataTable";
 import { useAuthContext } from "../../context/useAuthContext";
-import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
 type OrganizationServiceRow = {
   id: string;
@@ -23,26 +22,21 @@ type OrganizationServiceRow = {
 };
 
 function OrganizationServicesPage() {
-  const { workspaceId: organizationId } = useWorkspace();
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
-  const canManageOrganizations = isFacilityManager(roles);
+  const { workspaceId: serviceProviderId } = useWorkspace();
+  const { session } = useAuthContext();
   const queryClient = useQueryClient();
 
-  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
-    enabled: canManageOrganizations && organizationId.length > 0,
+  const organizationQuery = useGetOrganizationById(serviceProviderId, session?.accessToken, {
+    enabled: serviceProviderId.length > 0,
   });
 
-  const servicesQuery = useGetOrganizationServices(organizationId, session?.accessToken, {
-    enabled:
-      canManageOrganizations &&
-      organizationId.length > 0 &&
-      canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
+  const servicesQuery = useGetOrganizationServices(serviceProviderId, session?.accessToken, {
+    enabled: serviceProviderId.length > 0,
   });
 
   const deleteMutation = useDeleteService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", serviceProviderId] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
     },
   });
@@ -56,25 +50,6 @@ function OrganizationServicesPage() {
     deleteMutation.mutate(serviceId);
   };
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (!canManageOrganizations) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (!organizationId) {
-    return <Navigate to="/facilities" replace />;
-  }
-
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
 
   const facilityName =
     organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
@@ -111,7 +86,7 @@ function OrganizationServicesPage() {
             {serviceId ? (
               <Link
                 className="btn btn-ghost org-btn"
-                to={`/${organizationId}/services/${serviceId}/edit`}
+                to={`/${serviceProviderId}/services/${serviceId}/edit`}
               >
                 Edit
               </Link>
@@ -142,7 +117,7 @@ function OrganizationServicesPage() {
             </h1>
             <p className="text-sm text-slate-500">View facility services and open a dedicated page to create or update them.</p>
           </div>
-          <Link className="btn btn-primary" to={`/${organizationId}/services/create`}>
+          <Link className="btn btn-primary" to={`/${serviceProviderId}/services/create`}>
             Create Service
           </Link>
         </CardContent>
@@ -150,7 +125,7 @@ function OrganizationServicesPage() {
 
       <Breadcrumbs
         items={[
-          { label: facilityName, to: `/${organizationId}/organization` },
+          { label: facilityName, to: `/${serviceProviderId}/organization` },
           { label: "Services" },
         ]}
       />

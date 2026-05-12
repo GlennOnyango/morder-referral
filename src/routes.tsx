@@ -7,8 +7,11 @@ import { AuthRoutes } from "./pages/auth/AuthRoutes";
 import { DashboardRoutes } from "./pages/dashboard/DashboardRoutes";
 import { ReferralRoutes } from "./pages/referrals/ReferralRoutes";
 import { FacilityRoutes } from "./pages/facilities/FacilityRoutes";
+import { ServiceRoutes } from "./pages/services/ServiceRoutes";
+import { FacilityServicesRoutes } from "./pages/facility-services/FacilityServicesRoutes";
 import { AdminRoutes } from "./pages/admin/AdminRoutes";
 import { NotificationRoutes } from "./pages/notifications/NotificationRoutes";
+import { OrganizationRoutes } from "./pages/organization/OrganizationRoutes";
 import { SettingsRoutes } from "./pages/settings/SettingsRoutes";
 
 function WorkspaceFallback() {
@@ -68,7 +71,10 @@ export default function RootRoutes() {
         {DashboardRoutes()}
         {ReferralRoutes()}
         {FacilityRoutes()}
+        {ServiceRoutes()}
+        {FacilityServicesRoutes()}
         {AdminRoutes()}
+        {OrganizationRoutes()}
         {NotificationRoutes()}
         {SettingsRoutes()}
       </Route>

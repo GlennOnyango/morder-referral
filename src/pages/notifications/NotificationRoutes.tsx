@@ -7,7 +7,7 @@ export function NotificationRoutes() {
     <Route
       path="notifications"
       element={
-        <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "SUPER_ADMIN"]}>
+        <ProtectedRoute>
           <NotificationsPage />
         </ProtectedRoute>
       }

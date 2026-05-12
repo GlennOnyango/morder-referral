@@ -1,12 +1,13 @@
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { formatError } from "../../utils/format";
-import { useState } from "react";
-import type { SubmitEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useWorkspace } from "../../context/WorkspaceContext";
+import { useAuthContext } from "../../context/useAuthContext";
 import {
   type OrganizationCreateInput,
   type OrganizationUpdateInput,
@@ -16,9 +17,6 @@ import { usePostOrganization } from "../../api/hooks/organizations/CreateOrganiz
 import { usePutOrganization } from "../../api/hooks/organizations/UpdateOrganization.hook";
 import { useDeleteOrganization } from "../../api/hooks/organizations/DeleteOrganization.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { useAuthContext } from "../../context/useAuthContext";
-import { canManageFacilityCatalog } from "../../utils/facilityAccess";
 
 type OrganizationFormState = {
   name: string;
@@ -34,20 +32,9 @@ type OrganizationFormState = {
   organization_type: "facility" | "service";
 };
 
-type WardOption = {
-  name: string;
-};
-
-type SubcountyOption = {
-  name: string;
-  wards: WardOption[];
-};
-
-type CountyOption = {
-  name: string;
-  code: string;
-  subcounties: SubcountyOption[];
-};
+type WardOption = { name: string };
+type SubcountyOption = { name: string; wards: WardOption[] };
+type CountyOption = { name: string; code: string; subcounties: SubcountyOption[] };
 
 const defaultFormState: OrganizationFormState = {
   name: "",
@@ -64,34 +51,22 @@ const defaultFormState: OrganizationFormState = {
 };
 
 function readOptionalString(source: unknown, keys: string[]): string {
-  if (!source || typeof source !== "object") {
-    return "";
-  }
-
+  if (!source || typeof source !== "object") return "";
   const record = source as Record<string, unknown>;
   for (const key of keys) {
     const value = record[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
   }
-
   return "";
 }
 
 function readOptionalBoolean(source: unknown, keys: string[]): boolean {
-  if (!source || typeof source !== "object") {
-    return false;
-  }
-
+  if (!source || typeof source !== "object") return false;
   const record = source as Record<string, unknown>;
   for (const key of keys) {
     const value = record[key];
-    if (typeof value === "boolean") {
-      return value;
-    }
+    if (typeof value === "boolean") return value;
   }
-
   return false;
 }
 
@@ -110,12 +85,11 @@ function mapOrgToForm(org: Record<string, unknown>): OrganizationFormState {
       org.ownership_type === "private" || org.ownership_type === "faith_based"
         ? org.ownership_type
         : "public",
-    organization_type:
-      org.organization_type === "service" ? "service" : "facility",
+    organization_type: org.organization_type === "service" ? "service" : "facility",
   };
 }
 
-function mapFormToCreatePayload(form: OrganizationFormState): OrganizationCreateInput | null {
+function mapFormToPayload(form: OrganizationFormState): OrganizationCreateInput | null {
   const county = Number(form.county);
   const level = Number(form.level);
   const lat = Number(form.lat);
@@ -123,9 +97,7 @@ function mapFormToCreatePayload(form: OrganizationFormState): OrganizationCreate
   const subCounty = form.subcounty.trim();
   const ward = form.ward.trim();
 
-  if ([county, level, lat, lng].some((value) => Number.isNaN(value)) || !subCounty || !ward) {
-    return null;
-  }
+  if ([county, level, lat, lng].some((v) => Number.isNaN(v)) || !subCounty || !ward) return null;
 
   return {
     name: form.name.trim(),
@@ -142,62 +114,57 @@ function mapFormToCreatePayload(form: OrganizationFormState): OrganizationCreate
   };
 }
 
-function mapFormToUpdatePayload(form: OrganizationFormState): OrganizationUpdateInput | null {
-  const payload = mapFormToCreatePayload(form);
-  if (!payload) {
-    return null;
-  }
-
-  return payload;
-}
-
-function OrganizationFormPage() {
+function FacilityFormPage() {
   const { workspaceId: organizationId } = useWorkspace();
-  const isEdit = Boolean(organizationId);
+  const { session, activeWorkspace, activeWorkspaceId } = useAuthContext();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
-  const canManageOrganizations = canManageFacilityCatalog(roles);
 
-  const [formOverrides, setFormOverrides] = useState<OrganizationFormState | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isEdit = pathname.endsWith("/organization/edit");
+
+  // Use activeWorkspace if it matches the org being edited — avoids a redundant fetch during impersonation.
+  const workspaceMatchesOrg =
+    isEdit &&
+    activeWorkspace != null &&
+    (String(activeWorkspace.id) === organizationId ||
+      activeWorkspace.facility_code === organizationId);
 
   const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
-    enabled: isEdit && canManageOrganizations && Boolean(organizationId),
+    enabled: isEdit && !workspaceMatchesOrg && Boolean(organizationId),
   });
+
+  const orgData = workspaceMatchesOrg
+    ? (activeWorkspace as unknown as Record<string, unknown>)
+    : (organizationQuery.data as Record<string, unknown> | undefined);
 
   const countyOptionsQuery = useQuery({
     queryKey: ["kenya-administrative-units"],
     queryFn: async (): Promise<CountyOption[]> => {
       const response = await fetch("/kenya-administrative-units.json", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Could not load county, sub-county, and ward data.");
-      }
-
+      if (!response.ok) throw new Error("Could not load county, sub-county, and ward data.");
       return (await response.json()) as CountyOption[];
     },
     staleTime: Infinity,
   });
 
-  const formState: OrganizationFormState =
-    formOverrides ??
-    (organizationQuery.data
-      ? mapOrgToForm(organizationQuery.data as Record<string, unknown>)
-      : defaultFormState);
+  const [formOverrides, setFormOverrides] = useState<OrganizationFormState | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const setFormState = (
-    updater: OrganizationFormState | ((prev: OrganizationFormState) => OrganizationFormState),
-  ) => {
+  const formState: OrganizationFormState = formOverrides ?? (orgData ? mapOrgToForm(orgData) : defaultFormState);
+
+  const setFormState = (updater: OrganizationFormState | ((prev: OrganizationFormState) => OrganizationFormState)) => {
     setFormOverrides(typeof updater === "function" ? updater(formState) : updater);
   };
+
+  const listPath = `/${activeWorkspaceId}/organizations`;
 
   const createMutation = usePostOrganization(session?.accessToken, {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
-      navigate("/facilities", { replace: true });
+      navigate(listPath, { replace: true });
     },
   });
 
@@ -205,7 +172,7 @@ function OrganizationFormPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
-      navigate("/facilities", { replace: true });
+      navigate(`/${organizationId}/organization`, { replace: true });
     },
   });
 
@@ -213,57 +180,45 @@ function OrganizationFormPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
-      navigate("/facilities", { replace: true });
+      navigate(listPath, { replace: true });
     },
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const submitError = createMutation.error ?? updateMutation.error;
 
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setValidationError(null);
-
-    const payload = isEdit
-      ? mapFormToUpdatePayload(formState)
-      : mapFormToCreatePayload(formState);
+    const payload = mapFormToPayload(formState);
     if (!payload) {
-      setValidationError(
-        "County, sub-county, ward, level, latitude, and longitude are required and must be valid.",
-      );
+      setValidationError("County, sub-county, ward, level, latitude, and longitude are required.");
       return;
     }
-
     if (isEdit) {
-      updateMutation.mutate({ id: organizationId, payload });
-      return;
+      updateMutation.mutate({ id: organizationId, payload: payload as OrganizationUpdateInput });
+    } else {
+      createMutation.mutate(payload);
     }
-
-    createMutation.mutate(payload);
   };
 
   const handleConfirmDelete = () => {
-    if (!isEdit || !organizationId || deleteMutation.isPending) {
-      return;
-    }
-
+    if (!isEdit || !organizationId || deleteMutation.isPending) return;
     deleteMutation.mutate(organizationId);
   };
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
+  const facilityName = orgData
+    ? String((orgData as Record<string, unknown>).name ?? "Facility")
+    : "Facility";
 
-  if (!canManageOrganizations) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  const facilityNameForEdit = organizationQuery.data?.name ?? "Facility";
   const countyOptions = countyOptionsQuery.data ?? [];
-  const selectedCounty = countyOptions.find((county) => county.code === formState.county);
+  const selectedCounty = countyOptions.find((c) => c.code === formState.county);
   const subcountyOptions = selectedCounty?.subcounties ?? [];
-  const selectedSubcounty = subcountyOptions.find((subcounty) => subcounty.name === formState.subcounty);
+  const selectedSubcounty = subcountyOptions.find((s) => s.name === formState.subcounty);
   const wardOptions = selectedSubcounty?.wards ?? [];
+
+  const isLoading = isEdit && !workspaceMatchesOrg && organizationQuery.isLoading;
+  const isError = isEdit && !workspaceMatchesOrg && organizationQuery.isError;
 
   return (
     <section className="org-shell reveal delay-1">
@@ -278,7 +233,10 @@ function OrganizationFormPage() {
               {isEdit ? "Edit facility details and save updates." : "Register a new facility."}
             </p>
           </div>
-          <Link className="btn btn-ghost" to={isEdit && organizationId ? `/${organizationId}/organization` : "../organizations"}>
+          <Link
+            className="btn btn-ghost"
+            to={isEdit ? `/${organizationId}/organization` : listPath}
+          >
             {isEdit ? "Back to Facility Workspace" : "Back to Facilities"}
           </Link>
         </CardContent>
@@ -286,40 +244,40 @@ function OrganizationFormPage() {
 
       <Breadcrumbs
         items={
-          isEdit && organizationId
+          isEdit
             ? [
-                { label: facilityNameForEdit, to: `/${organizationId}/organization` },
+                { label: facilityName, to: `/${organizationId}/organization` },
                 { label: "Edit" },
               ]
             : [
-                { label: "Organizations", to: `/${organizationId}/organizations` },
+                { label: "Organizations", to: listPath },
                 { label: "Create" },
               ]
         }
       />
 
-      {isEdit && organizationQuery.isLoading ? (
+      {isLoading && (
         <article className="access-note">
           <h2>Loading facility</h2>
           <p>Fetching facility details...</p>
         </article>
-      ) : null}
+      )}
 
-      {isEdit && organizationQuery.isError ? (
+      {isError && (
         <article className="access-note error-block">
           <h2>Could not load facility</h2>
           <p>{formatError(organizationQuery.error)}</p>
         </article>
-      ) : null}
+      )}
 
-      {countyOptionsQuery.isError ? (
+      {countyOptionsQuery.isError && (
         <article className="access-note error-block">
           <h2>Could not load county data</h2>
           <p>{formatError(countyOptionsQuery.error)}</p>
         </article>
-      ) : null}
+      )}
 
-      {(!isEdit || organizationQuery.data) && !organizationQuery.isError ? (
+      {(!isEdit || orgData) && !isError && (
         <article className="org-form-card">
           <form className="org-form" onSubmit={handleSubmit}>
             <label className="field">
@@ -327,7 +285,7 @@ function OrganizationFormPage() {
               <input
                 className="field-input"
                 value={formState.name}
-                onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
                 required
               />
             </label>
@@ -337,9 +295,7 @@ function OrganizationFormPage() {
               <input
                 className="field-input"
                 value={formState.facility_code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, facility_code: event.target.value }))
-                }
+                onChange={(e) => setFormState((prev) => ({ ...prev, facility_code: e.target.value }))}
                 required
               />
             </label>
@@ -349,24 +305,15 @@ function OrganizationFormPage() {
                 <span>County</span>
                 <Select
                   value={formState.county || undefined}
-                  onValueChange={(v) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      county: v,
-                      subcounty: "",
-                      ward: "",
-                    }))
-                  }
+                  onValueChange={(v) => setFormState((prev) => ({ ...prev, county: v, subcounty: "", ward: "" }))}
                 >
                   <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
                   <SelectContent>
-                    {formState.county && !selectedCounty ? (
+                    {formState.county && !selectedCounty && (
                       <SelectItem value={formState.county}>{`County Code ${formState.county}`}</SelectItem>
-                    ) : null}
+                    )}
                     {countyOptions.map((county) => (
-                      <SelectItem key={county.code} value={county.code}>
-                        {county.name}
-                      </SelectItem>
+                      <SelectItem key={county.code} value={county.code}>{county.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -380,7 +327,7 @@ function OrganizationFormPage() {
                   min={1}
                   max={6}
                   value={formState.level}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, level: event.target.value }))}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, level: e.target.value }))}
                   required
                 />
               </label>
@@ -391,21 +338,13 @@ function OrganizationFormPage() {
                 <span>Sub-county</span>
                 <Select
                   value={formState.subcounty || undefined}
-                  onValueChange={(v) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      subcounty: v,
-                      ward: "",
-                    }))
-                  }
+                  onValueChange={(v) => setFormState((prev) => ({ ...prev, subcounty: v, ward: "" }))}
                   disabled={!formState.county}
                 >
                   <SelectTrigger><SelectValue placeholder="Select sub-county" /></SelectTrigger>
                   <SelectContent>
-                    {subcountyOptions.map((subcounty) => (
-                      <SelectItem key={subcounty.name} value={subcounty.name}>
-                        {subcounty.name}
-                      </SelectItem>
+                    {subcountyOptions.map((s) => (
+                      <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -420,10 +359,8 @@ function OrganizationFormPage() {
                 >
                   <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
                   <SelectContent>
-                    {wardOptions.map((ward) => (
-                      <SelectItem key={ward.name} value={ward.name}>
-                        {ward.name}
-                      </SelectItem>
+                    {wardOptions.map((w) => (
+                      <SelectItem key={w.name} value={w.name}>{w.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -438,7 +375,7 @@ function OrganizationFormPage() {
                   type="number"
                   step="any"
                   value={formState.lat}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, lat: event.target.value }))}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, lat: e.target.value }))}
                   required
                 />
               </label>
@@ -450,7 +387,7 @@ function OrganizationFormPage() {
                   type="number"
                   step="any"
                   value={formState.lng}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, lng: event.target.value }))}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, lng: e.target.value }))}
                   required
                 />
               </label>
@@ -460,12 +397,7 @@ function OrganizationFormPage() {
               <span>Organization Type</span>
               <Select
                 value={formState.organization_type}
-                onValueChange={(v) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    organization_type: v as OrganizationFormState["organization_type"],
-                  }))
-                }
+                onValueChange={(v) => setFormState((prev) => ({ ...prev, organization_type: v as OrganizationFormState["organization_type"] }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -479,12 +411,7 @@ function OrganizationFormPage() {
               <span>Ownership Type</span>
               <Select
                 value={formState.ownership_type}
-                onValueChange={(v) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    ownership_type: v as OrganizationFormState["ownership_type"],
-                  }))
-                }
+                onValueChange={(v) => setFormState((prev) => ({ ...prev, ownership_type: v as OrganizationFormState["ownership_type"] }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -502,9 +429,7 @@ function OrganizationFormPage() {
                   id="transport-available"
                   type="checkbox"
                   checked={formState.transport_available}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, transport_available: event.target.checked }))
-                  }
+                  onChange={(e) => setFormState((prev) => ({ ...prev, transport_available: e.target.checked }))}
                 />
                 <span>Transportation available</span>
               </label>
@@ -512,16 +437,9 @@ function OrganizationFormPage() {
 
             <div className="org-form-actions">
               <Button type="submit" className="btn btn-primary" disabled={isSubmitting || deleteMutation.isPending}>
-                {isSubmitting
-                  ? isEdit
-                    ? "Saving..."
-                    : "Creating..."
-                  : isEdit
-                    ? "Save Changes"
-                    : "Create Facility"}
+                {isSubmitting ? (isEdit ? "Saving..." : "Creating...") : isEdit ? "Save Changes" : "Create Facility"}
               </Button>
-
-              {isEdit ? (
+              {isEdit && (
                 <Button
                   type="button"
                   className="btn btn-outline"
@@ -530,19 +448,15 @@ function OrganizationFormPage() {
                 >
                   Delete Facility
                 </Button>
-              ) : null}
+              )}
             </div>
           </form>
         </article>
-      ) : null}
+      )}
 
-      {validationError ? <p className="result-note error-note">{validationError}</p> : null}
-
-      {submitError ? <p className="result-note error-note">{formatError(submitError)}</p> : null}
-
-      {deleteMutation.isError ? (
-        <p className="result-note error-note">{formatError(deleteMutation.error)}</p>
-      ) : null}
+      {validationError && <p className="result-note error-note">{validationError}</p>}
+      {submitError && <p className="result-note error-note">{formatError(submitError)}</p>}
+      {deleteMutation.isError && <p className="result-note error-note">{formatError(deleteMutation.error)}</p>}
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => { if (!open) setIsDeleteDialogOpen(false); }}>
         <DialogContent>
@@ -550,16 +464,10 @@ function OrganizationFormPage() {
             <DialogTitle>Delete facility?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Are you sure you wish to delete{" "}
-            <strong>{organizationQuery.data?.name ?? "this facility"}</strong>? This action cannot be undone.
+            Are you sure you wish to delete <strong>{facilityName}</strong>? This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={deleteMutation.isPending}
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
+            <Button type="button" variant="outline" disabled={deleteMutation.isPending} onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
             <Button
@@ -578,4 +486,4 @@ function OrganizationFormPage() {
   );
 }
 
-export default OrganizationFormPage;
+export default FacilityFormPage;

@@ -9,6 +9,21 @@ export function isFacilityManager(roles?: AppRole[] | null): boolean {
   return Boolean(roles?.includes("HOSPITAL_ADMIN") || roles?.includes("SUPER_ADMIN"));
 }
 
+export function canManageServices(roles?: AppRole[] | null): boolean {
+  return Boolean(
+    roles?.includes("SERVICE_ADMIN") ||
+    roles?.includes("HOSPITAL_ADMIN") ||
+    roles?.includes("SUPER_ADMIN"),
+  );
+}
+
+export function canManageServicesProvider(roles?: AppRole[] | null): boolean {
+  return Boolean(
+    roles?.includes("SERVICE_ADMIN") ||
+    roles?.includes("SUPER_ADMIN"),
+  );
+}
+
 export function canManageFacilityCatalog(roles?: AppRole[] | null): boolean {
   return Boolean(roles?.includes("SUPER_ADMIN"));
 }
@@ -42,6 +57,10 @@ export function canAccessOrganization(
 ): boolean {
   if (roles?.includes("SUPER_ADMIN")) {
     return true;
+  }
+
+  if (roles?.includes("SERVICE_ADMIN")) {
+    return isOrganizationOwnedBySessionFacility(organization, sessionFacilityId);
   }
 
   if (!roles?.includes("HOSPITAL_ADMIN")) {

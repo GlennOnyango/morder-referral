@@ -15,16 +15,17 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { useAuthContext } from "../context/useAuthContext";
-import type { AppRole } from "../context/authTypes";
+import type { AppRole, OrgType } from "../context/authTypes";
+
+type OrgTypeKey = OrgType | "admin";
 
 type NavItem = {
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  allowedRoles?: AppRole[];
   end?: boolean;
-  hideInSystem?: boolean;
+  showFor: OrgTypeKey[];
+  requiredRoles?: AppRole[];
   getPath: (workspaceId: string, isSuperAdmin: boolean) => string;
-  showWhen?: (opts: { isFacilityOrg: boolean }) => boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -32,96 +33,93 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     icon: LayoutDashboard,
     end: true,
+    showFor: ["facility", "service-provider"],
     getPath: (w) => `/${w}/dashboard`,
   },
   {
     label: "Referral Pool",
     icon: Inbox,
     end: false,
+    showFor: ["facility", "service-provider", "admin"],
     getPath: (w) => `/${w}/referral-pool`,
   },
   {
     label: "Facility Referrals",
     icon: ArrowLeftRight,
-    allowedRoles: ["HOSPITAL_ADMIN", "HOSPITAL_MEMBER", "SUPER_ADMIN"],
-    hideInSystem: true,
     end: false,
-    getPath: (w) => `/${w}/referrals/facility`,
+    showFor: ["facility"],
+    getPath: (w) => `/${w}/referrals-facility`,
   },
   {
     label: "Services",
     icon: Activity,
-    allowedRoles: ["SERVICE_ADMIN", "SUPER_ADMIN"],
-    hideInSystem: true,
     end: false,
+    showFor: ["service-provider"],
     getPath: (w) => `/${w}/services`,
   },
   {
     label: "Facility Service",
     icon: Stethoscope,
-    allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
-    hideInSystem: true,
     end: false,
+    showFor: ["facility"],
     getPath: (w) => `/${w}/facility-services`,
-    showWhen: ({ isFacilityOrg }) => isFacilityOrg,
   },
   {
     label: "Organization",
     icon: Building2,
-    allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
-    hideInSystem: true,
     end: true,
+    showFor: ["facility", "service-provider"],
+    requiredRoles: ["HOSPITAL_ADMIN", "SERVICE_ADMIN", "SUPER_ADMIN"],
     getPath: (w, isSuperAdmin) =>
       isSuperAdmin ? `/${w}/organizations` : `/${w}/organization`,
   },
   {
     label: "Admin",
     icon: ShieldCheck,
-    allowedRoles: ["SUPER_ADMIN"],
     end: true,
+    showFor: ["admin"],
     getPath: (w) => `/${w}/admin`,
   },
   {
     label: "Notifications",
     icon: Bell,
-    allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
     end: true,
+    showFor: ["facility", "service-provider", "admin"],
     getPath: (w) => `/${w}/notifications`,
   },
   {
     label: "Settings",
     icon: Settings,
-    allowedRoles: ["HOSPITAL_ADMIN", "SUPER_ADMIN"],
     end: false,
+    showFor: ["facility", "service-provider"],
     getPath: (w) => `/${w}/settings`,
   },
 ];
 
 export default function AppSidebar() {
-  const { session, logout, activeWorkspaceId, activeWorkspace } =
+  const { session, logout, activeWorkspaceId, activeWorkspace, workspaceRoles } =
     useAuthContext();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const roles = session?.roles ?? [];
-  const isSuperAdmin = roles.includes("SUPER_ADMIN");
+  const isSuperAdmin = workspaceRoles.includes("SUPER_ADMIN");
+  const workspaceId = activeWorkspaceId ?? "";
+  const isSystemWorkspace = workspaceId === "system";
+
+  const currentOrgType: OrgTypeKey = isSystemWorkspace || !activeWorkspace
+    ? "admin"
+    : activeWorkspace.organizationType;
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.showFor.includes(currentOrgType)) return false;
+    if (item.requiredRoles && !item.requiredRoles.some((r) => workspaceRoles.includes(r))) return false;
+    return true;
+  });
+
   const email = session?.email ?? "";
   const avatarLetter = email.charAt(0).toUpperCase() || "U";
   const displayName = email.split("@")[0] || "User";
-  const workspaceId = activeWorkspaceId ?? "";
   const orgLabel =
     activeWorkspace?.name ?? (workspaceId.slice(0, 8).toUpperCase() || "ORG");
-
-  const isFacilityOrg = activeWorkspace?.organization_type !== "service";
-
-  const isSystemWorkspace = workspaceId === "system";
-
-  const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.allowedRoles && !item.allowedRoles.some((r) => roles.includes(r)))
-      return false;
-    if (item.hideInSystem && isSystemWorkspace) return false;
-    if (item.showWhen && !item.showWhen({ isFacilityOrg })) return false;
-    return true;
-  });
 
   const closeMobile = () => setMobileOpen(false);
 

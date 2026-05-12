@@ -20,9 +20,9 @@ import {
 import { readStoredSettings } from "./utils";
 
 const SettingsPage = () => {
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
-  const canAccessSettings = roles.includes("SUPER_ADMIN") || roles.includes("HOSPITAL_ADMIN");
+  const { session, isAuthenticated, workspaceRoles } = useAuthContext();
+  const roles = workspaceRoles;
+  const canAccessSettings = roles.includes("SUPER_ADMIN") || roles.includes("HOSPITAL_ADMIN") || roles.includes("SERVICE_ADMIN");
 
   const [settings, setSettings] = useState<SettingsState>(() => readStoredSettings());
   const [settingsSaved, setSettingsSaved] = useState(false);
