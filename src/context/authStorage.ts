@@ -38,6 +38,7 @@ const parseStoredSession = (value: unknown): AuthSession | null => {
     roles: parseStoredRoles(value.roles ?? value.role),
     email: typeof value.email === "string" ? value.email : undefined,
     facilityId: typeof value.facilityId === "string" ? value.facilityId : undefined,
+    userOrganizations: Array.isArray(value.userOrganizations) ? value.userOrganizations : [],
   };
 };
 

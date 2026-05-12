@@ -53,8 +53,8 @@ function PoolReferralDetailPage() {
   const { referralCode: referralCodeParam } = useParams<{ referralCode: string }>();
   const { workspaceId: organizationId } = useWorkspace();
   const referralCode = safeDecode((referralCodeParam ?? "").trim());
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
+  const { session, isAuthenticated, workspaceRoles } = useAuthContext();
+  const roles = workspaceRoles;
   const canManageReferrals = isFacilityManager(roles);
   const queryClient = useQueryClient();
 

@@ -51,8 +51,8 @@ const getNotificationSummary = (n: Notification): string =>
   "Referral workflow update";
 
 const NotificationsMenu = () => {
-  const { isAuthenticated, session } = useAuthContext();
-  const roles = session?.roles ?? [];
+  const { isAuthenticated, session, workspaceRoles } = useAuthContext();
+  const roles = workspaceRoles;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");

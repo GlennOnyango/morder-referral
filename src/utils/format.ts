@@ -41,3 +41,14 @@ export function safeDecode(value: string): string {
     return value;
   }
 }
+
+
+
+export const formatEventType = (value?: string): string => {
+  if (!value) return "Notification";
+  return value
+    .split(/[._-]+/)
+    .filter((p) => p.length > 0)
+    .map((p) => `${p[0]?.toUpperCase() ?? ""}${p.slice(1).toLowerCase()}`)
+    .join(" ");
+};

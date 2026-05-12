@@ -10,8 +10,9 @@ import { Card, CardContent } from "../../components/ui/card";
 import { useAuthContext } from "../../context/useAuthContext";
 import type { GithubComVaudKKNrsNotificationsInternalModelsNotification as Notification } from "../../types/notifications.generated";
 import { isOrganizationOwnedBySessionFacility } from "../../utils/facilityAccess";
+import { formatDateTime, formatEventType } from "@/utils/format";
+import { PAGE_SIZE } from "@/utils/constants";
 
-const PAGE_SIZE = 10;
 
 type NotificationFacilityContext = {
   facilityId: string;
@@ -21,20 +22,6 @@ type NotificationFacilityContext = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const formatDateTime = (value?: string): string => {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
-};
-
-const formatEventType = (value?: string): string => {
-  if (!value) return "Notification";
-  return value
-    .split(/[._-]+/)
-    .filter((p) => p.length > 0)
-    .map((p) => `${p[0]?.toUpperCase() ?? ""}${p.slice(1).toLowerCase()}`)
-    .join(" ");
-};
 
 const extractPayloadMessage = (payload: unknown): string | null => {
   if (!isRecord(payload)) return null;
@@ -52,8 +39,8 @@ const getNotificationSummary = (n: Notification): string =>
   "Referral workflow update";
 
 function NotificationsPage() {
-  const { isAuthenticated, session } = useAuthContext();
-  const roles = session?.roles ?? [];
+  const { isAuthenticated, session, workspaceRoles, activeWorkspaceId } = useAuthContext();
+  const roles = workspaceRoles;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isHospitalAdmin = roles.includes("HOSPITAL_ADMIN");
@@ -108,12 +95,13 @@ function NotificationsPage() {
   const openNotification = (n: Notification) => {
     if (n.id && !n.isRead) markAsReadMutation.mutate({ id: n.id, query: { facilityCode } });
     const code = n.referralCode?.trim() ?? "";
-    if (code && facilityId) {
-      navigate(`/${facilityId}/referrals/pool/${encodeURIComponent(code)}`);
-    } else if (facilityId) {
-      navigate(`/${facilityId}/referrals`);
+    const navId = facilityId ?? activeWorkspaceId;
+    if (code && navId) {
+      navigate(`/${navId}/referrals/pool/${encodeURIComponent(code)}`);
+    } else if (navId) {
+      navigate(`/${navId}/referrals`);
     } else {
-      navigate("/dashboard");
+      navigate(`/${activeWorkspaceId}/dashboard`);
     }
   };
 

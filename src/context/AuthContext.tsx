@@ -5,9 +5,10 @@ import { AUTH_REFRESHED_EVENT, AUTH_REQUIRED_EVENT } from "../authEvents";
 import { AuthContext } from "./authContextValue";
 import { buildAuthSession } from "./authSession";
 import { persistSession, readStoredSession } from "./authStorage";
-import type { AuthContextValue, AuthSession } from "./authTypes";
+import type { ActiveWorkspace, AppRole, AuthContextValue, AuthSession, OrgType } from "./authTypes";
 import type { ModelOrganization } from "../types/organizations.generated";
 import { getOrganizationById } from "../api/organizations";
+import { normalizeRole } from "./authRole";
 
 const WORKSPACE_STORAGE_KEY = "refconnect.active.workspace";
 const WORKSPACE_DETAILS_KEY = "refconnect.active.workspace.details";
@@ -66,6 +67,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const activeWorkspaceId = resolveWorkspace(storedWorkspaceId, session);
+
+  const workspaceRoles = useMemo<AppRole[]>(() => {
+    if (!session) return [];
+    if (session.roles.includes("SUPER_ADMIN")) return ["SUPER_ADMIN"];
+    const membership = session.userOrganizations.find(
+      (o) => o.organizationId === activeWorkspaceId && o.active !== false,
+    );
+    if (!membership?.roleName) return [];
+    const role = normalizeRole(membership.roleName);
+    return role ? [role] : [];
+  }, [session, activeWorkspaceId]);
+
+  const organizationType = useMemo<OrgType | undefined>(() => {
+    if (workspaceRoles.includes("HOSPITAL_ADMIN") || workspaceRoles.includes("HOSPITAL_MEMBER")) {
+      return "facility";
+    }
+    if (workspaceRoles.includes("SERVICE_ADMIN")) {
+      return "service-provider";
+    }
+    if (workspaceRoles.includes("SUPER_ADMIN") && activeWorkspace) {
+      return activeWorkspace.organization_type === "service" ? "service-provider" : "facility";
+    }
+    return undefined;
+  }, [workspaceRoles, activeWorkspace]);
+
+  const activeWorkspaceWithType = useMemo<ActiveWorkspace | null>(() => {
+    if (!activeWorkspace || organizationType === undefined) return null;
+    return { ...activeWorkspace, organizationType };
+  }, [activeWorkspace, organizationType]);
 
   const setActiveWorkspace = useCallback((id: string, workspace?: ModelOrganization | null) => {
     const details = workspace ?? null;
@@ -192,7 +222,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       session,
       isAuthenticated: Boolean(session?.accessToken),
       activeWorkspaceId,
-      activeWorkspace,
+      activeWorkspace: activeWorkspaceWithType,
+      workspaceRoles,
       setActiveWorkspace,
       signIn,
       logout,
@@ -201,7 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       startImpersonation,
       stopImpersonation,
     }),
-    [activeWorkspace, activeWorkspaceId, impersonatedOrg, logout, refreshSession, session, setActiveWorkspace, signIn, startImpersonation, stopImpersonation],
+    [activeWorkspaceWithType, activeWorkspaceId, workspaceRoles, impersonatedOrg, logout, refreshSession, session, setActiveWorkspace, signIn, startImpersonation, stopImpersonation],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

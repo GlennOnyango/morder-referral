@@ -229,13 +229,13 @@ export type AuthUser = {
   updatedAt?: string;
 };
 
-export type AuthGroupName = "HOSPITAL_ADMIN" | "DOCTOR" | "NURSE";
+export type AuthGroupName = "HOSPITAL_ADMIN" | "HOSPITAL_MEMBER" | "SERVICE_ADMIN";
 export const FACILITY_USER_GROUP_FILTERS = [
   "none",
   "all",
   "hospital_admin",
-  "doctor",
-  "nurse",
+  "hospital_member",
+  "service_admin",
 ] as const;
 export type FacilityUserGroupFilter = (typeof FACILITY_USER_GROUP_FILTERS)[number];
 

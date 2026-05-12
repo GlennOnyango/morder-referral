@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUpDown, Search } from "lucide-react";
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useWorkspace } from "../../../context/WorkspaceContext";
 import { useGetOrganizationById } from "../../../api/hooks/organizations/OrganizationById.hook";
 import { useGetFacilityReferrals } from "../../../api/hooks/referrals/FacilityReferrals.hook";
@@ -17,7 +17,6 @@ import { Card, CardContent } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { useAuthContext } from "../../../context/useAuthContext";
 import type { ModelsReferral, ModelsReferralStatus } from "../../../types/referrals.generated";
-import { canAccessOrganization, isFacilityManager } from "../../../utils/facilityAccess";
 import { formatError, formatDateTime } from "../../../utils/format";
 
 type StatusFilter = "all" | ModelsReferralStatus;
@@ -51,28 +50,25 @@ function SortableHeader({
 
 function FacilityReferralsPage() {
   const { workspaceId: organizationId } = useWorkspace();
-  const { session, isAuthenticated } = useAuthContext();
+  const { session } = useAuthContext();
   const navigate = useNavigate();
-  const roles = session?.roles ?? [];
-  const canManageReferrals = isFacilityManager(roles);
-
+  
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
   const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
-    enabled: canManageReferrals && organizationId.length > 0,
+    enabled: organizationId.length > 0,
   });
 
-  const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
   const facilityCode = organizationQuery.data?.facility_code?.trim() ?? "";
 
   const facilityReferralsQuery = useGetFacilityReferrals(
     facilityCode,
     { status: statusFilter === "all" ? undefined : statusFilter },
     session?.accessToken,
-    { enabled: canManageReferrals && facilityCode.length > 0 && hasFacilityAccess },
+    { enabled: facilityCode.length > 0  },
   );
 
   const columns: ColumnDef<ModelsReferral>[] = [
@@ -161,13 +157,6 @@ function FacilityReferralsPage() {
     ];
 
   const tableData: ModelsReferral[] = facilityReferralsQuery.data ?? [];
-
-  if (!isAuthenticated) return <Navigate to="/signin" replace />;
-  if (!canManageReferrals) return <Navigate to="/dashboard" replace />;
-  if (!organizationId) return <Navigate to="/facilities" replace />;
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) return <Navigate to="/dashboard" replace />;
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data))
-    return <Navigate to="/dashboard" replace />;
 
   const facilityName = organizationQuery.data?.name ?? organizationQuery.data?.facility_code ?? "Facility";
 
