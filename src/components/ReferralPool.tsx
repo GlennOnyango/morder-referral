@@ -85,7 +85,7 @@ function ReferralPool({
   };
 
   const openReferralDetail = (referralCode: string) => {
-    navigate(`/${organizationId}/referrals/pool/${encodeURIComponent(referralCode)}`);
+    navigate(`/${organizationId}/referral-pool/${encodeURIComponent(referralCode)}`);
   };
 
   const openAiSearchDialog = () => {

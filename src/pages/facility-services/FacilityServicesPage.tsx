@@ -49,9 +49,9 @@ function availabilityBadgeClass(a?: string) {
 
 function FacilityServicesPage() {
   const { workspaceId: organizationId } = useWorkspace();
-  const { session, isAuthenticated } = useAuthContext();
+  const { session, isAuthenticated, workspaceRoles } = useAuthContext();
   const queryClient = useQueryClient();
-  const roles = session?.roles ?? [];
+  const roles = workspaceRoles;
   const canManage = isFacilityManager(roles);
 
   const [serviceName, setServiceName] = useState("");

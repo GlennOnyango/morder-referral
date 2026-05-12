@@ -1,13 +1,16 @@
 import {
   type ColumnDef,
 } from "@tanstack/react-table";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatError } from "../../utils/format";
 import { Card, CardContent } from "../../components/ui/card";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { type ServiceUpsertInput } from "../../api/services";
+import { type OrganizationUpdateInput } from "../../api/organizations";
 import { useGetOrganizationById } from "../../api/hooks/organizations/OrganizationById.hook";
+import { usePutOrganization } from "../../api/hooks/organizations/UpdateOrganization.hook";
+import { usePutService } from "../../api/hooks/services/UpdateService.hook";
 import { useGetOrganizationServices } from "../../api/hooks/services/OrganizationServices.hook";
 import { usePostOrganizationService } from "../../api/hooks/services/CreateOrganizationService.hook";
 import { useDeleteService } from "../../api/hooks/services/DeleteService.hook";
@@ -34,6 +37,96 @@ import {
 import { useAuthContext } from "../../context/useAuthContext";
 
 type OrgDetailTab = "details" | "services" | "team";
+
+type OrgEditFormState = {
+  name: string;
+  facility_code: string;
+  county: string;
+  subcounty: string;
+  ward: string;
+  transport_available: boolean;
+  level: string;
+  lat: string;
+  lng: string;
+  ownership_type: "public" | "private" | "faith_based";
+  organization_type: "facility" | "service";
+};
+
+type CountyOption = { name: string; code: string; subcounties: { name: string; wards: { name: string }[] }[] };
+
+const defaultEditForm: OrgEditFormState = {
+  name: "", facility_code: "", county: "", subcounty: "", ward: "",
+  transport_available: false, level: "", lat: "", lng: "",
+  ownership_type: "public", organization_type: "facility",
+};
+
+function mapOrgToEditForm(org: Record<string, unknown>): OrgEditFormState {
+  return {
+    name: typeof org.name === "string" ? org.name : "",
+    facility_code: typeof org.facility_code === "string" ? org.facility_code : "",
+    county: typeof org.county === "number" ? org.county.toString().padStart(3, "0") : "",
+    subcounty: typeof org.sub_county === "string" ? org.sub_county : "",
+    ward: typeof org.ward === "string" ? org.ward : "",
+    transport_available: typeof org.transport_available === "boolean" ? org.transport_available : false,
+    level: typeof org.level === "number" ? org.level.toString() : "",
+    lat: typeof org.lat === "number" ? org.lat.toString() : "",
+    lng: typeof org.lng === "number" ? org.lng.toString() : "",
+    ownership_type:
+      org.ownership_type === "private" || org.ownership_type === "faith_based"
+        ? org.ownership_type
+        : "public",
+    organization_type: org.organization_type === "service" ? "service" : "facility",
+  };
+}
+
+function mapEditFormToPayload(form: OrgEditFormState): OrganizationUpdateInput | null {
+  const county = Number(form.county);
+  const level = Number(form.level);
+  const lat = Number(form.lat);
+  const lng = Number(form.lng);
+  if ([county, level, lat, lng].some(Number.isNaN) || !form.subcounty.trim() || !form.ward.trim()) {
+    return null;
+  }
+  return {
+    name: form.name.trim(),
+    facility_code: form.facility_code.trim(),
+    county,
+    sub_county: form.subcounty.trim(),
+    ward: form.ward.trim(),
+    transport_available: form.transport_available,
+    level,
+    lat,
+    lng,
+    ownership_type: form.ownership_type,
+    organization_type: form.organization_type,
+  };
+}
+
+type ServiceOrgEditFormState = {
+  service_name: string;
+  service_type: string;
+  availability: "available" | "limited" | "unavailable";
+  notes: string;
+};
+
+const defaultServiceOrgEditForm: ServiceOrgEditFormState = {
+  service_name: "",
+  service_type: "",
+  availability: "available",
+  notes: "",
+};
+
+function mapOrgToServiceEditForm(org: Record<string, unknown>): ServiceOrgEditFormState {
+  return {
+    service_name: typeof org.name === "string" ? org.name : "",
+    service_type: typeof org.service_type === "string" ? org.service_type : "",
+    availability:
+      org.availability === "limited" || org.availability === "unavailable"
+        ? org.availability
+        : "available",
+    notes: typeof org.notes === "string" ? org.notes : "",
+  };
+}
 
 const defaultAddServiceForm: ServiceUpsertInput = {
   service_name: "",
@@ -83,11 +176,8 @@ function OrgTypeBadge({ type }: { type: string }) {
 function AdminOrgPage() {
   const { orgId, workspaceId } = useParams<{ orgId: string; workspaceId: string }>();
   const navigate = useNavigate();
-  const { session, isAuthenticated } = useAuthContext();
+  const { session } = useAuthContext();
   const queryClient = useQueryClient();
-
-  const roles = session?.roles ?? [];
-  const isSuperAdmin = roles.includes("SUPER_ADMIN");
 
   const [activeTab, setActiveTab] = useState<OrgDetailTab>("details");
   const [showAddService, setShowAddService] = useState(false);
@@ -95,22 +185,26 @@ function AdminOrgPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("HOSPITAL_ADMIN");
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormOverrides, setEditFormOverrides] = useState<OrgEditFormState | null>(null);
+  const [serviceOrgEditFormOverrides, setServiceOrgEditFormOverrides] = useState<ServiceOrgEditFormState | null>(null);
+  const [editValidationError, setEditValidationError] = useState<string | null>(null);
 
   const orgDetailQuery = useGetOrganizationById(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId),
+    enabled: Boolean(orgId),
     staleTime: 5 * 60 * 1000,
   });
 
   const orgServicesQuery = useGetOrganizationServices(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId),
+    enabled: Boolean(orgId),
   });
 
   const pendingInvitesQuery = useGetPendingInvites(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId) && activeTab === "team",
+    enabled: Boolean(orgId) && activeTab === "team",
   });
 
   const orgMembersQuery = useGetOrganizationMembers(orgId ?? "", session?.accessToken, {
-    enabled: isAuthenticated && isSuperAdmin && Boolean(orgId) && activeTab === "team",
+    enabled: Boolean(orgId) && activeTab === "team",
   });
 
   const addServiceMutation = usePostOrganizationService(session?.accessToken, {
@@ -137,13 +231,52 @@ function AdminOrgPage() {
     },
   });
 
-  if (!isAuthenticated) return <Navigate to="/signin" replace />;
-  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
+  const countyOptionsQuery = useQuery<CountyOption[]>({
+    queryKey: ["kenya-administrative-units"],
+    queryFn: async () => {
+      const res = await fetch("/kenya-administrative-units.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("Could not load county data.");
+      return res.json() as Promise<CountyOption[]>;
+    },
+    staleTime: Infinity,
+    enabled: isEditing,
+  });
+
+  const updateOrgMutation = usePutOrganization(session?.accessToken, {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["organization", orgId] });
+      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      setIsEditing(false);
+      setEditFormOverrides(null);
+      setEditValidationError(null);
+    },
+  });
+
+  const updateServiceOrgMutation = usePutService(session?.accessToken, {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["organization", orgId] });
+      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      setIsEditing(false);
+      setServiceOrgEditFormOverrides(null);
+      setEditValidationError(null);
+    },
+  });
+
   if (!orgId) return <Navigate to={`/${workspaceId}/admin`} replace />;
 
   const org = orgDetailQuery.data as Record<string, unknown> | undefined;
   const orgName = org ? String(org.name ?? orgId) : orgId;
   const orgType = org ? String((org as Record<string, unknown>).organization_type ?? "") : "";
+  const isServiceOrg = orgType === "service";
+  const roleOptions = isServiceOrg
+    ? [{ value: "SERVICE_ADMIN", label: "Service Admin" }]
+    : [
+        { value: "HOSPITAL_ADMIN", label: "Hospital Admin" },
+        { value: "HOSPITAL_MEMBER", label: "Hospital Member" },
+      ];
+  const effectiveInviteRole = roleOptions.some((r) => r.value === inviteRole)
+    ? inviteRole
+    : roleOptions[0]?.value ?? "HOSPITAL_ADMIN";
   const services = Array.isArray(orgServicesQuery.data) ? orgServicesQuery.data : [];
 
   const serviceRows: AdminOrgServiceRow[] = services.map((svc) => ({
@@ -291,42 +424,290 @@ function AdminOrgPage() {
         </div>
 
         {/* ── DETAILS TAB ── */}
-        {activeTab === "details" && (
-          <div>
-            {orgDetailQuery.isLoading && <p className="org-empty text-sm">Loading details…</p>}
-            {orgDetailQuery.isError && <p className="text-sm text-destructive">{formatError(orgDetailQuery.error)}</p>}
-            {org && (
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {[
-                  { label: "Name", value: String(org.name ?? "—") },
-                  { label: "Facility Code", value: String(org.facility_code ?? "—") || "—", mono: true },
-                  { label: "Type", value: String(org.organization_type ?? "—").replace("_", " "), capitalize: true },
-                  { label: "Ownership", value: String(org.ownership_type ?? "—").replace("_", " "), capitalize: true },
-                  { label: "County", value: String(org.county ?? "—") },
-                  { label: "Sub-county", value: String(org.sub_county ?? "—") },
-                  { label: "Ward", value: String(org.ward ?? "—") },
-                  { label: "Level", value: String(org.level ?? "—") },
-                  { label: "Latitude", value: org.lat != null ? String(org.lat) : "—", mono: true },
-                  { label: "Longitude", value: org.lng != null ? String(org.lng) : "—", mono: true },
-                  { label: "ID", value: orgId ?? "—", mono: true, small: true },
-                ].map(({ label, value, mono, capitalize, small }) => (
-                  <div key={label} className="field">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-                    <p className={`mt-0.5 ${small ? "text-xs" : "text-sm"} ${mono ? "font-mono" : ""} ${capitalize ? "capitalize" : ""} text-slate-800`}>
-                      {value}
-                    </p>
+        {activeTab === "details" && (() => {
+          // ── shared read view ──────────────────────────────────────────────
+          const readFields = isServiceOrg
+            ? [
+                { label: "Name", value: String(org?.name ?? "—") },
+                { label: "Type", value: "Service Provider" },
+                { label: "ID", value: orgId ?? "—", mono: true, small: true },
+              ]
+            : [
+                { label: "Name", value: String(org?.name ?? "—") },
+                { label: "Facility Code", value: String(org?.facility_code ?? "—") || "—", mono: true },
+                { label: "Type", value: String(org?.organization_type ?? "—").replace("_", " "), capitalize: true },
+                { label: "Ownership", value: String(org?.ownership_type ?? "—").replace("_", " "), capitalize: true },
+                { label: "County", value: String(org?.county ?? "—") },
+                { label: "Sub-county", value: String(org?.sub_county ?? "—") },
+                { label: "Ward", value: String(org?.ward ?? "—") },
+                { label: "Level", value: String(org?.level ?? "—") },
+                { label: "Latitude", value: org?.lat != null ? String(org.lat) : "—", mono: true },
+                { label: "Longitude", value: org?.lng != null ? String(org.lng) : "—", mono: true },
+                { label: "ID", value: orgId ?? "—", mono: true, small: true },
+              ];
+
+          // ── facility edit helpers ─────────────────────────────────────────
+          const countyOptions = countyOptionsQuery.data ?? [];
+          const facilityForm: OrgEditFormState =
+            editFormOverrides ?? (org ? mapOrgToEditForm(org) : defaultEditForm);
+          const selectedCounty = countyOptions.find((c) => c.code === facilityForm.county);
+          const subcountyOptions = selectedCounty?.subcounties ?? [];
+          const selectedSubcounty = subcountyOptions.find((s) => s.name === facilityForm.subcounty);
+          const wardOptions = selectedSubcounty?.wards ?? [];
+          const setFacilityField = <K extends keyof OrgEditFormState>(key: K, value: OrgEditFormState[K]) =>
+            setEditFormOverrides((prev) => ({ ...(prev ?? facilityForm), [key]: value }));
+
+          // ── service edit helpers ──────────────────────────────────────────
+          const serviceForm: ServiceOrgEditFormState =
+            serviceOrgEditFormOverrides ?? (org ? mapOrgToServiceEditForm(org) : defaultServiceOrgEditForm);
+          const setServiceField = <K extends keyof ServiceOrgEditFormState>(key: K, value: ServiceOrgEditFormState[K]) =>
+            setServiceOrgEditFormOverrides((prev) => ({ ...(prev ?? serviceForm), [key]: value }));
+
+          const cancelEdit = () => {
+            setIsEditing(false);
+            setEditFormOverrides(null);
+            setServiceOrgEditFormOverrides(null);
+            setEditValidationError(null);
+          };
+
+          return (
+            <div>
+              {orgDetailQuery.isLoading && <p className="org-empty text-sm">Loading details…</p>}
+              {orgDetailQuery.isError && <p className="text-sm text-destructive">{formatError(orgDetailQuery.error)}</p>}
+
+              {/* ── READ VIEW ── */}
+              {org && !isEditing && (
+                <>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {readFields.map(({ label, value, mono, capitalize, small }) => (
+                      <div key={label} className="field">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+                        <p className={`mt-0.5 ${small ? "text-xs" : "text-sm"} ${mono ? "font-mono" : ""} ${capitalize ? "capitalize" : ""} text-slate-800`}>
+                          {value}
+                        </p>
+                      </div>
+                    ))}
+                    {!isServiceOrg && (
+                      <div className="field">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transport</span>
+                        <p className={`text-sm mt-0.5 font-semibold ${org.transport_available ? "text-emerald-700" : "text-slate-400"}`}>
+                          {org.transport_available ? "✓ Available" : "—"}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ))}
-                <div className="field">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transport</span>
-                  <p className={`text-sm mt-0.5 font-semibold ${org.transport_available ? "text-emerald-700" : "text-slate-400"}`}>
-                    {org.transport_available ? "✓ Available" : "—"}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                  <div className="mt-5">
+                    <Button type="button" size="sm" onClick={() => { setEditFormOverrides(null); setServiceOrgEditFormOverrides(null); setIsEditing(true); }}>
+                      Edit Details
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* ── SERVICE ORG EDIT FORM ── */}
+              {org && isEditing && isServiceOrg && (
+                <form
+                  className="grid gap-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setEditValidationError(null);
+                    if (!serviceForm.service_name.trim()) {
+                      setEditValidationError("Service name is required.");
+                      return;
+                    }
+                    updateServiceOrgMutation.mutate({
+                      serviceId: orgId!,
+                      payload: {
+                        service_name: serviceForm.service_name.trim(),
+                        service_type: serviceForm.service_type.trim() || undefined,
+                        availability: serviceForm.availability,
+                        notes: serviceForm.notes.trim() || undefined,
+                      },
+                    });
+                  }}
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="field">
+                      <span>Service Name <span className="text-red-500">*</span></span>
+                      <input className="field-input" required value={serviceForm.service_name}
+                        onChange={(e) => setServiceField("service_name", e.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Service Type</span>
+                      <input className="field-input" value={serviceForm.service_type}
+                        onChange={(e) => setServiceField("service_type", e.target.value)} />
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>Availability</span>
+                    <Select value={serviceForm.availability}
+                      onValueChange={(v) => setServiceField("availability", v as ServiceOrgEditFormState["availability"])}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="limited">Limited</SelectItem>
+                        <SelectItem value="unavailable">Unavailable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label className="field">
+                    <span>Notes</span>
+                    <input className="field-input" value={serviceForm.notes}
+                      onChange={(e) => setServiceField("notes", e.target.value)} />
+                  </label>
+
+                  {editValidationError && <p className="text-sm text-destructive">{editValidationError}</p>}
+                  {updateServiceOrgMutation.isError && (
+                    <p className="text-sm text-destructive">{formatError(updateServiceOrgMutation.error)}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm" disabled={updateServiceOrgMutation.isPending}>
+                      {updateServiceOrgMutation.isPending ? "Saving…" : "Save Changes"}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" disabled={updateServiceOrgMutation.isPending} onClick={cancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              {/* ── FACILITY EDIT FORM ── */}
+              {org && isEditing && !isServiceOrg && (
+                <form
+                  className="grid gap-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setEditValidationError(null);
+                    const payload = mapEditFormToPayload(facilityForm);
+                    if (!payload) {
+                      setEditValidationError("County, sub-county, ward, level, latitude, and longitude are required and must be valid numbers.");
+                      return;
+                    }
+                    updateOrgMutation.mutate({ id: orgId!, payload });
+                  }}
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="field">
+                      <span>Name <span className="text-red-500">*</span></span>
+                      <input className="field-input" required value={facilityForm.name}
+                        onChange={(e) => setFacilityField("name", e.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Facility Code <span className="text-red-500">*</span></span>
+                      <input className="field-input" required value={facilityForm.facility_code}
+                        onChange={(e) => setFacilityField("facility_code", e.target.value)} />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="field">
+                      <span>Organisation Type</span>
+                      <Select value={facilityForm.organization_type}
+                        onValueChange={(v) => setFacilityField("organization_type", v as OrgEditFormState["organization_type"])}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="facility">Facility</SelectItem>
+                          <SelectItem value="service">Service</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </label>
+                    <label className="field">
+                      <span>Ownership Type</span>
+                      <Select value={facilityForm.ownership_type}
+                        onValueChange={(v) => setFacilityField("ownership_type", v as OrgEditFormState["ownership_type"])}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="public">Public</SelectItem>
+                          <SelectItem value="private">Private</SelectItem>
+                          <SelectItem value="faith_based">Faith Based</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="field">
+                      <span>County</span>
+                      <Select value={facilityForm.county || undefined}
+                        onValueChange={(v) => setEditFormOverrides((prev) => ({ ...(prev ?? facilityForm), county: v, subcounty: "", ward: "" }))}>
+                        <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
+                        <SelectContent>
+                          {facilityForm.county && !selectedCounty && (
+                            <SelectItem value={facilityForm.county}>{`County ${facilityForm.county}`}</SelectItem>
+                          )}
+                          {countyOptions.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                    <label className="field">
+                      <span>Sub-county</span>
+                      <Select value={facilityForm.subcounty || undefined} disabled={!facilityForm.county}
+                        onValueChange={(v) => setEditFormOverrides((prev) => ({ ...(prev ?? facilityForm), subcounty: v, ward: "" }))}>
+                        <SelectTrigger><SelectValue placeholder="Select sub-county" /></SelectTrigger>
+                        <SelectContent>
+                          {subcountyOptions.map((s) => (
+                            <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                    <label className="field">
+                      <span>Ward</span>
+                      <Select value={facilityForm.ward || undefined} disabled={!facilityForm.subcounty}
+                        onValueChange={(v) => setFacilityField("ward", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
+                        <SelectContent>
+                          {wardOptions.map((w) => (
+                            <SelectItem key={w.name} value={w.name}>{w.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="field">
+                      <span>Level (1–6)</span>
+                      <input className="field-input" type="number" min={1} max={6} required
+                        value={facilityForm.level} onChange={(e) => setFacilityField("level", e.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Latitude</span>
+                      <input className="field-input" type="number" step="any" required
+                        value={facilityForm.lat} onChange={(e) => setFacilityField("lat", e.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Longitude</span>
+                      <input className="field-input" type="number" step="any" required
+                        value={facilityForm.lng} onChange={(e) => setFacilityField("lng", e.target.value)} />
+                    </label>
+                  </div>
+
+                  <label className="field-checkbox" htmlFor="admin-transport">
+                    <input id="admin-transport" type="checkbox" checked={facilityForm.transport_available}
+                      onChange={(e) => setFacilityField("transport_available", e.target.checked)} />
+                    <span className="text-sm">Transport available</span>
+                  </label>
+
+                  {editValidationError && <p className="text-sm text-destructive">{editValidationError}</p>}
+                  {updateOrgMutation.isError && (
+                    <p className="text-sm text-destructive">{formatError(updateOrgMutation.error)}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm" disabled={updateOrgMutation.isPending}>
+                      {updateOrgMutation.isPending ? "Saving…" : "Save Changes"}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" disabled={updateOrgMutation.isPending} onClick={cancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── SERVICES TAB ── */}
         {activeTab === "services" && (
@@ -450,7 +831,7 @@ function AdminOrgPage() {
                   inviteMutation.mutate({
                     organizationId: orgId!,
                     organizationName: orgName,
-                    roleName: inviteRole,
+                    roleName: effectiveInviteRole,
                     targetEmail: inviteEmail.trim(),
                   });
                 }}
@@ -468,12 +849,12 @@ function AdminOrgPage() {
                 </label>
                 <label className="field">
                   <span>Role</span>
-                  <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <Select value={effectiveInviteRole} onValueChange={setInviteRole}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="HOSPITAL_ADMIN">Hospital Admin</SelectItem>
-                      <SelectItem value="DOCTOR">Doctor</SelectItem>
-                      <SelectItem value="NURSE">Nurse</SelectItem>
+                      {roleOptions.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </label>

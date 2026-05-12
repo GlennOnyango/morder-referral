@@ -25,9 +25,10 @@ export const buildAuthSession = async (): Promise<AuthSession | null> => {
     ]);
 
     let facilityId: string | undefined;
+    let userOrganizations: Awaited<ReturnType<typeof listUserOrganizations>> = [];
     try {
-      const orgs = await listUserOrganizations(accessToken);
-      const first = orgs.find((o) => o.organizationId && o.active !== false);
+      userOrganizations = await listUserOrganizations(accessToken);
+      const first = userOrganizations.find((o) => o.organizationId && o.active !== false);
       facilityId = first?.organizationId?.trim() || undefined;
     } catch {
       // fall back to JWT claims if the /me/organizations call fails
@@ -41,6 +42,7 @@ export const buildAuthSession = async (): Promise<AuthSession | null> => {
       roles: Array.from(seen),
       email: getEmailFromClaims(idTokenPayload) ?? getEmailFromClaims(accessTokenPayload),
       facilityId,
+      userOrganizations,
     };
   } catch {
     return null;

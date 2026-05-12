@@ -34,7 +34,7 @@ export type QueryInfo = {
 
 export const SETTINGS_STORAGE_KEY = "refconnect.settings.v1";
 
-export const ROLE_ORDER: AppRole[] = ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "NURSE"];
+export const ROLE_ORDER: AppRole[] = ["SUPER_ADMIN", "HOSPITAL_ADMIN", "SERVICE_ADMIN", "HOSPITAL_MEMBER"];
 
 export const PERMISSION_ROWS: { key: PermissionKey; label: string; description: string }[] = [
   {

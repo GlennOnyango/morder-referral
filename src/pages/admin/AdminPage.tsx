@@ -53,10 +53,10 @@ function OrgTypeBadge({ type }: { type: string }) {
 ───────────────────────────────────────────── */
 
 function AdminPage() {
-  const { session, isAuthenticated, startImpersonation, impersonatedOrg } = useAuthContext();
+  const { session, isAuthenticated, startImpersonation, impersonatedOrg, workspaceRoles } = useAuthContext();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
-  const roles = session?.roles ?? [];
+  const roles = workspaceRoles;
   const isSuperAdmin = roles.includes("SUPER_ADMIN");
 
   const [createModal, setCreateModal] = useState<null | "facility" | "service">(null);

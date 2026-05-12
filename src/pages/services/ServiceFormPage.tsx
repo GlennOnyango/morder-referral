@@ -15,7 +15,6 @@ import { usePutService } from "../../api/hooks/services/UpdateService.hook";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAuthContext } from "../../context/useAuthContext";
 import type { ModelService as Service } from "../../types/organizations.generated";
-import { canAccessOrganization, isFacilityManager } from "../../utils/facilityAccess";
 
 type ServiceFormState = {
   service_name: string;
@@ -60,13 +59,11 @@ function toServicePayload(form: ServiceFormState): ServiceUpsertInput | null {
 
 function OrganizationServiceFormPage() {
   const { serviceId } = useParams<{ serviceId?: string }>();
-  const { workspaceId: organizationId } = useWorkspace();
+  const { workspaceId: serviceProviderId } = useWorkspace();
   const isEdit = Boolean(serviceId);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session, isAuthenticated } = useAuthContext();
-  const roles = session?.roles ?? [];
-  const canManageOrganizations = isFacilityManager(roles);
+  const { session } = useAuthContext();
 
   const [formSnapshot, setFormSnapshot] = useState<ServiceFormSnapshot>({
     sourceServiceId: null,
@@ -74,16 +71,12 @@ function OrganizationServiceFormPage() {
   });
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
-    enabled: canManageOrganizations && organizationId.length > 0,
+  const organizationQuery = useGetOrganizationById(serviceProviderId, session?.accessToken, {
+    enabled: serviceProviderId.length > 0,
   });
 
-  const servicesQuery = useGetOrganizationServices(organizationId, session?.accessToken, {
-    enabled:
-      isEdit &&
-      canManageOrganizations &&
-      organizationId.length > 0 &&
-      canAccessOrganization(roles, session?.facilityId, organizationQuery.data),
+  const servicesQuery = useGetOrganizationServices(serviceProviderId, session?.accessToken, {
+    enabled: isEdit && serviceProviderId.length > 0,
   });
 
   const selectedService = useMemo(
@@ -109,12 +102,12 @@ function OrganizationServiceFormPage() {
   };
 
   const navigateToServicesTable = () => {
-    navigate(`/${organizationId}/services`, { replace: true });
+    navigate(`/${serviceProviderId}/services`, { replace: true });
   };
 
   const createMutation = usePostOrganizationService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", serviceProviderId] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigateToServicesTable();
     },
@@ -122,7 +115,7 @@ function OrganizationServiceFormPage() {
 
   const updateMutation = usePutService(session?.accessToken, {
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["services", "list", organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ["services", "list", serviceProviderId] });
       await queryClient.invalidateQueries({ queryKey: ["metrics", "dashboard"] });
       navigateToServicesTable();
     },
@@ -146,31 +139,11 @@ function OrganizationServiceFormPage() {
       return;
     }
 
-    createMutation.mutate({ organizationId, payload });
+    createMutation.mutate({ organizationId: serviceProviderId, payload });
   };
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (!canManageOrganizations) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (!organizationId) {
-    return <Navigate to="/facilities" replace />;
-  }
-
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId) {
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data)) {
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  }
-
   if (isEdit && servicesQuery.data && !selectedService) {
-    return <Navigate to={`/${organizationId}/services`} replace />;
+    return <Navigate to={`/${serviceProviderId}/services`} replace />;
   }
 
   const facilityName =
@@ -191,7 +164,7 @@ function OrganizationServiceFormPage() {
                 : "Add a new service and return to the services table."}
             </p>
           </div>
-          <Link className="btn btn-ghost" to={`/${organizationId}/services`}>
+          <Link className="btn btn-ghost" to={`/${serviceProviderId}/services`}>
             Back to Services
           </Link>
         </CardContent>
@@ -199,8 +172,8 @@ function OrganizationServiceFormPage() {
 
       <Breadcrumbs
         items={[
-          { label: facilityName, to: `/${organizationId}/organization` },
-          { label: "Services", to: `/${organizationId}/services` },
+          { label: facilityName, to: `/${serviceProviderId}/organization` },
+          { label: "Services", to: `/${serviceProviderId}/services` },
           { label: isEdit ? "Edit" : "Create" },
         ]}
       />
@@ -280,7 +253,7 @@ function OrganizationServiceFormPage() {
               <Button type="submit" className="btn btn-primary" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : isEdit ? "Save Service" : "Create Service"}
               </Button>
-              <Link className="btn btn-ghost" to={`/${organizationId}/services`}>
+              <Link className="btn btn-ghost" to={`/${serviceProviderId}/services`}>
                 Cancel
               </Link>
             </div>

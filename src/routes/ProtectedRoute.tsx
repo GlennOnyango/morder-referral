@@ -10,13 +10,13 @@ type ProtectedRouteProps = {
 };
 
 function ProtectedRoute({ children, allowedRoles, fallbackPath = "/dashboard" }: ProtectedRouteProps) {
-  const { isAuthenticated, session } = useAuthContext();
+  const { isAuthenticated, workspaceRoles } = useAuthContext();
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
   }
 
-  if (allowedRoles && !session?.roles.some((r) => allowedRoles.includes(r))) {
+  if (allowedRoles && !workspaceRoles.some((r) => allowedRoles.includes(r))) {
     return <Navigate to={fallbackPath} replace />;
   }
 
