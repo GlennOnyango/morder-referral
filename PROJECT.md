@@ -218,9 +218,10 @@ src/
 
 ### Components and Exports
 
-- Keep one component/page per file.
+- **One component per file** — every React component must live in its own file, named after the component (e.g. `HistoryTimeline.tsx` for `HistoryTimeline`). Never define multiple exported components in the same file.
 - Component/page modules use **default exports**.
 - Shared helpers, API functions, and types use **named exports**.
+- When a page grows to include sub-components, extract them into sibling files in the same directory and import them into the page.
 
 ### UI Components
 

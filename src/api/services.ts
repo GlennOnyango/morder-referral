@@ -80,6 +80,14 @@ export async function deleteServiceById(serviceId: string, accessToken?: string)
   });
 }
 
+export async function listAllServices(accessToken?: string): Promise<Service[]> {
+  const response = await servicesApi.get<Service[] | ApiPaginatedResponse>("/services", {
+    params: { limit: 1000, offset: 0 },
+    headers: authHeaders(accessToken),
+  });
+  return normalizeServiceList(response.data);
+}
+
 export async function listFacilityServicesByCode(
   facilityCode: string,
   accessToken?: string,

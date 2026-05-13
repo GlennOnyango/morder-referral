@@ -146,7 +146,7 @@ function FacilityReferralsPage() {
               size="sm"
               disabled={!code}
               onClick={() =>
-                navigate(`/${organizationId}/referrals/facility/${encodeURIComponent(code)}`)
+                navigate(`/${organizationId}/referrals-facility/${encodeURIComponent(code)}`)
               }
             >
               View

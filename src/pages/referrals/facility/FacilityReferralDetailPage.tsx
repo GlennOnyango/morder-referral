@@ -1,21 +1,18 @@
-import { Pencil, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import {  useParams } from "react-router-dom";
 import { useWorkspace } from "../../../context/WorkspaceContext";
 import { useGetOrganizationById } from "../../../api/hooks/organizations/OrganizationById.hook";
 import { useGetReferralByCode } from "../../../api/hooks/referrals/ReferralByCode.hook";
-import { useGetReferralHistory } from "../../../api/hooks/referrals/ReferralHistory.hook";
 import { usePatchReferral } from "../../../api/hooks/referrals/PatchReferral.hook";
 import Breadcrumbs from "../../../components/Breadcrumbs";
 import { PriorityBadge, StatusBadge } from "../../../components/ReferralBadges";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { useAuthContext } from "../../../context/useAuthContext";
 import type { ModelsReferral } from "../../../types/referrals.generated";
-import { canAccessOrganization, isFacilityManager } from "../../../utils/facilityAccess";
 import {
   formatError,
   formatDateTime,
@@ -24,28 +21,12 @@ import {
   safeDecode,
 } from "../../../utils/format";
 import type { ReferralUpdateInput } from "../../../api/referrals";
-
-// ── Read-only display helpers ────────────────────────────────────────────────
-
-function InfoField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
-      <dd className="text-sm font-medium text-slate-800 wrap-break-word">{value || "—"}</dd>
-    </div>
-  );
-}
-
-function InfoFieldLong({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
-      <dd className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap wrap-break-word">{value || "—"}</dd>
-    </div>
-  );
-}
-
-// ── Edit form state ──────────────────────────────────────────────────────────
+import InfoField from "./components/InfoField";
+import InfoFieldLong from "./components/InfoFieldLong";
+import EditField from "./components/EditField";
+import EditTextarea from "./components/EditTextarea";
+import HistoryTimeline from "./components/HistoryTimeline";
+import ServiceRequestsSection from "./components/ServiceRequestsSection";
 
 type EditState = {
   serviceType: string;
@@ -89,7 +70,9 @@ function referralToEditState(referral: ModelsReferral): EditState {
 function editStateToPayload(s: EditState): ReferralUpdateInput {
   const dobNum = Number(s.patientDob);
   const validDob =
-    Number.isInteger(dobNum) && dobNum >= 1900 && dobNum <= new Date().getFullYear() ? dobNum : undefined;
+    Number.isInteger(dobNum) && dobNum >= 1900 && dobNum <= new Date().getFullYear()
+      ? dobNum
+      : undefined;
   return {
     serviceType: s.serviceType.trim() || undefined,
     priority: s.priority.trim() || undefined,
@@ -108,143 +91,11 @@ function editStateToPayload(s: EditState): ReferralUpdateInput {
   };
 }
 
-// ── Labelled edit field components ──────────────────────────────────────────
-
-function EditField({
-  label,
-  id,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400" htmlFor={id}>
-      {label}
-      <Input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="normal-case text-[0.9rem] tracking-normal"
-      />
-    </label>
-  );
-}
-
-function EditTextarea({
-  label,
-  id,
-  value,
-  onChange,
-  rows = 3,
-  placeholder,
-}: {
-  label: string;
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  rows?: number;
-  placeholder?: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400" htmlFor={id}>
-      {label}
-      <textarea
-        id={id}
-        className="w-full resize-none rounded-xl border border-teal-900/19 bg-white/95 px-3.5 py-2.5 font-[inherit] normal-case text-[0.9rem] tracking-normal text-[#0d2230] placeholder:text-[#506071]/60 focus:border-emerald-700/70 focus:outline-none focus:shadow-[0_0_0_3px_rgba(17,122,101,0.13)]"
-        rows={rows}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-    </label>
-  );
-}
-
-// ── History timeline ─────────────────────────────────────────────────────────
-
-function HistoryTimeline({ referralCode, accessToken }: { referralCode: string; accessToken?: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const historyQuery = useGetReferralHistory(referralCode, accessToken, {
-    enabled: expanded && referralCode.length > 0,
-  });
-
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 px-5 py-5">
-        <button
-          type="button"
-          className="flex items-center justify-between gap-2 w-full"
-          onClick={() => setExpanded((p) => !p)}
-        >
-          <div className="flex items-center gap-2">
-            <Clock className="size-4 text-slate-400" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Audit History
-            </p>
-          </div>
-          {expanded ? (
-            <ChevronUp className="size-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="size-4 text-slate-400" />
-          )}
-        </button>
-
-        {expanded && (
-          <div className="flex flex-col gap-0 mt-1">
-            {historyQuery.isLoading && (
-              <p className="text-sm text-slate-400 italic py-2">Loading history…</p>
-            )}
-            {historyQuery.isError && (
-              <p className="text-xs text-rose-600">{formatError(historyQuery.error)}</p>
-            )}
-            {historyQuery.data?.length === 0 && (
-              <p className="text-sm text-slate-400 italic">No history events recorded.</p>
-            )}
-            {historyQuery.data && historyQuery.data.length > 0 && (
-              <ol className="relative border-l border-slate-200 ml-2 flex flex-col gap-0">
-                {historyQuery.data.map((entry, i) => (
-                  <li
-                    key={entry.id ?? `${entry.action ?? "event"}-${i}`}
-                    className="ml-4 pb-5 last:pb-0"
-                  >
-                    <span className="absolute -left-1.5 mt-1.5 size-3 rounded-full border-2 border-white bg-slate-300" />
-                    <p className="text-xs font-semibold text-slate-700">
-                      {entry.action ?? "Event"}
-                    </p>
-                    {entry.description && (
-                      <p className="text-xs text-slate-500 mt-0.5">{entry.description}</p>
-                    )}
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {entry.actorName ?? entry.actorSub ?? "System"} &middot;{" "}
-                      {formatDateTime(entry.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ── Page ─────────────────────────────────────────────────────────────────────
-
 function FacilityReferralDetailPage() {
   const { referralCode: referralCodeParam } = useParams<{ referralCode: string }>();
   const { workspaceId: organizationId } = useWorkspace();
   const referralCode = safeDecode((referralCodeParam ?? "").trim());
-  const { session, isAuthenticated, workspaceRoles } = useAuthContext();
-  const roles = workspaceRoles;
-  const canManageReferrals = isFacilityManager(roles);
+  const { session} = useAuthContext();
   const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -252,13 +103,12 @@ function FacilityReferralDetailPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const organizationQuery = useGetOrganizationById(organizationId, session?.accessToken, {
-    enabled: canManageReferrals && organizationId.length > 0,
+    enabled:  organizationId.length > 0,
   });
 
-  const hasFacilityAccess = canAccessOrganization(roles, session?.facilityId, organizationQuery.data);
-
+ 
   const referralQuery = useGetReferralByCode(referralCode, session?.accessToken, {
-    enabled: canManageReferrals && referralCode.length > 0 && hasFacilityAccess,
+    enabled: referralCode.length > 0 
   });
 
   const patchMutation = usePatchReferral(session?.accessToken, {
@@ -269,15 +119,6 @@ function FacilityReferralDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ["referrals", "facility"] });
     },
   });
-
-  if (!isAuthenticated) return <Navigate to="/signin" replace />;
-  if (!canManageReferrals) return <Navigate to="/dashboard" replace />;
-  if (!organizationId) return <Navigate to="/facilities" replace />;
-  if (!referralCode) return <Navigate to={`/${organizationId}/referrals/facility`} replace />;
-  if (roles.includes("HOSPITAL_ADMIN") && !session?.facilityId)
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
-  if (organizationQuery.data && !canAccessOrganization(roles, session?.facilityId, organizationQuery.data))
-    return <Navigate to={`/${organizationId}/dashboard`} replace />;
 
   const referral = referralQuery.data;
   const patient = referral?.patient;
@@ -307,7 +148,6 @@ function FacilityReferralDetailPage() {
 
   return (
     <section className="org-shell reveal delay-1">
-      {/* Header */}
       <Card>
         <CardContent className="flex items-start justify-between gap-3 px-5 py-4">
           <div className="flex flex-col gap-1">
@@ -334,7 +174,6 @@ function FacilityReferralDetailPage() {
         ]}
       />
 
-      {/* Loading / error states */}
       {referralQuery.isLoading && (
         <article className="access-note">
           <h2>Loading referral</h2>
@@ -356,7 +195,7 @@ function FacilityReferralDetailPage() {
 
       {referral && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* ── Left: detail cards ── */}
+          {/* ── Left: referral detail cards ── */}
           <div className="flex flex-col gap-4 lg:col-span-2">
             {/* Referral Information */}
             <Card>
@@ -552,7 +391,7 @@ function FacilityReferralDetailPage() {
             </Card>
           </div>
 
-          {/* ── Right: actions + history ── */}
+          {/* ── Right: actions, service requests, history ── */}
           <div className="flex flex-col gap-4">
             <Card>
               <CardContent className="flex flex-col gap-3 px-5 py-5">
@@ -606,7 +445,6 @@ function FacilityReferralDetailPage() {
                   </div>
                 )}
 
-                {/* Immutable metadata */}
                 {!isEditing && (
                   <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-3">
                     <InfoField label="Referral Code" value={formatFieldValue(referral.referralCode)} />
@@ -621,6 +459,12 @@ function FacilityReferralDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            <ServiceRequestsSection
+              organizationId={organizationId}
+              currentOrgDbId={organizationQuery.data?.id}
+              accessToken={session?.accessToken}
+            />
 
             <HistoryTimeline
               referralCode={referralCode}
